@@ -8,3 +8,7 @@ type Range struct {
 	Body Block
 	Post ast.Statement
 }
+
+func (r *Range) AddStatement(statement ast.Statement) error {
+	return r.Body.AddStatement(statement)
+}

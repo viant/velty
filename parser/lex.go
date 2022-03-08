@@ -15,6 +15,10 @@ const (
 	selectorToken
 
 	ifToken
+	endToken
+	elseIfToken
+	elseToken
+
 	expressionBlockToken
 	expressionEndToken
 
@@ -43,13 +47,17 @@ const (
 )
 
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
-var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", matcher.NewRunes([]rune{'#', '$'}))
+var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", vMatcher.NewExpression(true, '#', '$'))
 
 var SelectorBlock = parsly.NewToken(selectorBlockToken, "Selector block", matcher.NewBlock('{', '}', '\\'))
 var Selector = parsly.NewToken(selectorToken, "Selector", vMatcher.NewIdentity())
 var SelectorStart = parsly.NewToken(selectorStartToken, "Selector start", matcher.NewRunes([]rune{'$'}))
 
 var If = parsly.NewToken(ifToken, "If", matcher.NewFragment("if"))
+var ElseIf = parsly.NewToken(elseIfToken, "Else if", matcher.NewFragment("elseif"))
+var Else = parsly.NewToken(elseToken, "Else", matcher.NewFragment("else"))
+var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
+
 var ExpressionBlock = parsly.NewToken(expressionBlockToken, "Expression block", matcher.NewBlock('(', ')', '\\'))
 var ExpressionEnd = parsly.NewToken(expressionEndToken, "Expression end", vMatcher.NewExpressionEnd())
 

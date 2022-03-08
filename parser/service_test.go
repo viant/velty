@@ -17,7 +17,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "selector",
 			input:       "${VARIABLE}",
-			output:      `{"ID":"VARIABLE"}`,
+			output:      `{"Stmt": [{"ID": "VARIABLE"}]}`,
 		},
 		{
 			description: "empty selector",
@@ -27,123 +27,118 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "if statement",
 			input:       `#if("1"=="1")abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"RType": "string","Value": "1"},"Y":{"RType": "string","Value": "1"}}}`,
+			output:      `{"Stmt": [{"Condition": {"X": {"Value": "1"}, "Token": "==", "Y": {"Value": "1"}}, "Body": {"Stmt": [{"Append": "abc"}]}}]}`,
 		},
 		{
 			description: "if statement with left selector",
 			input:       `#if(${USER_ID}=="1")abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "USER_ID"},"Y":{"RType": "string","Value": "1"}}}`,
+			output:      `{"Stmt": [{"Condition": {"X": { "ID": "USER_ID" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with both side selector",
 			input:       `#if(${USER_ID}==${LOGGED_USER})abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "USER_ID"},"Y": {"ID": "LOGGED_USER"}}}`,
-		},
-		{
-			description: "if statement with both side selector",
-			input:       `#if(${USER_ID}==${LOGGED_USER})abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "USER_ID"},"Y": {"ID": "LOGGED_USER"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "USER_ID" }, "Token": "==", "Y": { "ID": "LOGGED_USER" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with int",
 			input:       `#if(${USER_ID}==1)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "USER_ID"},"Y": {"RType": "float64", "Value": 1}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "USER_ID" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with boolean",
 			input:       `#if(${LOGGED_USER}==true)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "LOGGED_USER"},"Y": {"RType": "bool", "Value": "true"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
-			description: "if statement with float",
+			description: "if statement with number",
 			input:       `#if(${LOGGED_USER}==1.005)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "==", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with greater",
 			input:       `#if(${LOGGED_USER} > 1.005)abc#end`,
-			output:      `{"Condition": {"Token": ">","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": ">", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with less",
 			input:       `#if(${LOGGED_USER} < 1.005)abc#end`,
-			output:      `{"Condition": {"Token": "<","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "<", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with less or equal",
 			input:       `#if(${LOGGED_USER} <= 1.005)abc#end`,
-			output:      `{"Condition": {"Token": "<=","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "<=", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with greater or equal",
 			input:       `#if(${LOGGED_USER} >= 1.005)abc#end`,
-			output:      `{"Condition": {"Token": ">=","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": ">=", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with not equal",
 			input:       `#if(${LOGGED_USER} != 1.005)abc#end`,
-			output:      `{"Condition": {"Token": "!=","X": {"ID": "LOGGED_USER"},"Y": {"RType": "float64", "Value": "1.005"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "!=", "Y": { "Value": "1.005" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with negation",
 			input:       `#if(!${LOGGED_USER})abc#end`,
-			output:      `{"Condition":{"Token": "!", "X": {"ID": "LOGGED_USER"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "Token": "!", "X": { "ID": "LOGGED_USER" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with AND",
 			input:       `#if(!${LOGGED_USER} && ${USER_ID} == 10)abc#end`,
-			output:      `{"Condition": {"Token": "&&","X": {"Token": "!", "X": {"ID": "LOGGED_USER"}},"Y": {"Token": "==", "X": {"ID": "USER_ID"}, "Y": {"Value": "10"}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Token": "!", "X": { "ID": "LOGGED_USER" } }, "Token": "&&", "Y": { "X": { "ID": "USER_ID" }, "Token": "==", "Y": { "Value": "10" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with OR",
 			input:       `#if(!${LOGGED_USER} || ${USER_ID} == 10)abc#end`,
-			output:      `{"Condition": {"Token": "||","X": {"Token": "!", "X": {"ID": "LOGGED_USER"}},"Y": {"Token": "==", "X": {"ID": "USER_ID"}, "Y": {"Value": "10"}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Token": "!", "X": { "ID": "LOGGED_USER" } }, "Token": "||", "Y": { "X": { "ID": "USER_ID" }, "Token": "==", "Y": { "Value": "10" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement with brackets ( ) #1",
 			input:       `#if((1==1 && 2==2) && (3 ==3 || 4 == 4))abc#end`,
-			output:      `{"Condition": {"Token": "&&","X": {"Token": "&&","X": {"Token": "==","X": {"Value": "1"},"Y": {"Value": "1"}},"Y": {"Token": "==","X": {"Value": "2"},"Y": {"Value": "2"}}},"Y": {"Token": "||","X": {"Token": "==","X": {"Value": "3"}, "Y": {"Value": "3"}},"Y": {"Token": "==","X":{"Value": "4"},"Y": {"Value": "4"}}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "X": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Token": "&&", "Y": { "X": { "Value": "2" }, "Token": "==", "Y": { "Value": "2" } } }, "Token": "&&", "Y": { "X": { "X": { "Value": "3" }, "Token": "==", "Y": { "Value": "3" } }, "Token": "||", "Y": { "X": { "Value": "4"  }, "Token": "==", "Y": { "Value": "4" } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement binary without token and right hand",
 			input:       `#if( ${LOGGED_USER} )abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"ID": "LOGGED_USER"},"Y": {"Value": "true"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement && token",
 			input:       `#if( ${LOGGED_USER} && true )abc#end`,
-			output:      `{"Condition": {"Token": "&&", "X": {"ID": "LOGGED_USER"}, "Y": {"Value": "true"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "&&", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement || token",
 			input:       `#if( ${LOGGED_USER} || true )abc#end`,
-			output:      `{"Condition": {"Token": "||", "X": {"ID": "LOGGED_USER"}, "Y": {"Value": "true"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "||", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement, add equation",
 			input:       `#if( 2 == 1+1)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"Value": "2"},"Y": {"Token": "+","X": {"Value": "1"},"Y": {"Value": "1"}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "2" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "+", "Y": { "Value": "1" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement, nested add equation",
 			input:       `#if( 2 == 1+1+1)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"Value": "2"},"Y": {"Token": "+","X": {"Value": "1"},"Y": {"Token": "+","X": {"Value": "1"},"Y": {"Value": "1"}}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "2" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "+", "Y": { "X": { "Value": "1" }, "Token": "+", "Y": { "Value": "1" } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement, sub equation",
 			input:       `#if( 0 == 1 - 1)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"Value": "0"},"Y": {"Token": "-","X": {"Value": "1"},"Y": {"Value": "1"}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "0" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "-", "Y": { "Value": "1" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement, mul equation",
 			input:       `#if( 1 == 1 * 1)abc#end`,
-			output:      `{"Condition": {"Token": "==","X": {"Value": "1"},"Y": {"Token": "*","X": {"Value": "1"},"Y": {"Value": "1"}}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "*", "Y": { "Value": "1" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
-		//{
-		//	description: "if statement, quo equation",
-		//	input:       `#if( 1 == 1 / 1)abc#end`,
-		//	output:      `{"Condition": {"Token": "==","X": {"Value": "1"},"Y": {"Token": "/","X": {"Value": "1"},"Y": {"Value": "1"}}}}`,
-		//},
+		{
+			description: "if statement, quo equation",
+			input:       `#if( 1 == 1 / 1)abc#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "/", "Y": { "Value": "1" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+		},
 		{
 			description: "if statement, different types",
 			input:       `#if( 1 > "1")abc#end`,
@@ -152,12 +147,17 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "if statement, boolean",
 			input:       `#if( true != true)abc#end`,
-			output:      `{"Condition": {"Token": "!=","X": {"Value": "true"},"Y": {"Value": "true"}}}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "!=", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement, add to boolean",
 			input:       `#if( false + false != true)abc#end`,
 			expectError: true,
+		},
+		{
+			description: "if statement, elseif",
+			input:       `#if(true)abc#elseif("abc"=="abc")cdef#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" }, { "Append": "cdef" } ] }, "Else": { "Condition": { "X": { "Value": "abc" }, "Token": "==", "Y": { "Value": "abc" } } } } ] }`,
 		},
 	}
 

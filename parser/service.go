@@ -1,52 +1,137 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/viant/parsly"
 	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/ast/stmt"
 )
 
-func Parse(input []byte) (ast.Node, error) {
+func Parse(input []byte) (*stmt.Block, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
+
+	stack := NewStack()
 	var tokenMatch *parsly.TokenMatch
 	cursor := parsly.NewCursor("", input, 0)
+	for cursor.Pos < len(input) {
+		tokenMatch = cursor.MatchOne(SpecialSign)
+		text := tokenMatch.Text(cursor)
 
-	tokenMatch = cursor.MatchOne(SpecialSign)
-	switch tokenMatch.Code {
-	case parsly.EOF:
-		return nil, nil
-	case specialSignToken:
-		switch cursor.Input[cursor.Pos-1] {
-		case '$':
-			return matchSelector(tokenMatch, cursor)
-		case '#':
-			return matchExpression(tokenMatch, cursor)
+		switch tokenMatch.Code {
+		case parsly.EOF:
+			if err := stack.AppendStatement(stmt.NewAppend(text)); err != nil {
+				return nil, err
+			}
+			return nil, nil
 		}
-	}
-	return nil, cursor.NewError(SpecialSign)
-}
 
-func matchExpression(match *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Node, error) {
-	candidates := []*parsly.Token{If}
-	match = cursor.MatchAfterOptional(WhiteSpace, candidates...)
-	switch match.Code {
-	case parsly.EOF, parsly.Invalid:
-		return nil, cursor.NewError(candidates...)
-	case ifToken:
-		match = cursor.MatchAfterOptional(WhiteSpace, ExpressionBlock)
-		if match.Code == parsly.EOF || match.Code == parsly.Invalid {
-			return nil, cursor.NewError(ExpressionBlock)
-		}
-		ifCondition := match.Text(cursor)
-		conditionCursor := parsly.NewCursor("", []byte(ifCondition[1:len(ifCondition)-1]), 0)
-		ifStmt, err := matchIf(conditionCursor)
+		err := appendStatementIfNeeded(text, stack)
 		if err != nil {
 			return nil, err
 		}
-		return ifStmt, nil
+
+		switch cursor.Input[cursor.Pos-1] {
+		case '$':
+			statement, err := matchSelector(tokenMatch, cursor)
+			if err != nil {
+				return nil, err
+			}
+			if err = stack.AppendStatement(statement); err != nil {
+				return nil, err
+			}
+		case '#':
+			expression, match, err := matchExpression(tokenMatch, cursor)
+			if err != nil {
+				return nil, err
+			}
+
+			switch match {
+			case ifToken:
+				stack.Push(expression)
+			case elseIfToken, elseToken:
+				lastNode := stack.Last()
+				if err = addIfExpression(lastNode, expression); err != nil {
+					return nil, err
+				}
+			case endToken:
+				if err = stack.TransferToBlock(); err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 
-	return nil, cursor.NewError(candidates...)
+	if stack.Size() != 0 {
+		return nil, fmt.Errorf("unterminated statements on stack: %v", stack.Nodes)
+	}
+
+	return stack.Block(), nil
+}
+
+func appendStatementIfNeeded(text string, stack *Stack) error {
+	text = text[:len(text)-1]
+	if len(text) == 0 {
+		return nil
+	}
+
+	if err := stack.AppendStatement(stmt.NewAppend(text)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func addIfExpression(node ast.Node, expression ast.Node) error {
+	switch nodeType := node.(type) {
+	case stmt.Condition:
+		switch exprType := expression.(type) {
+		case *stmt.If:
+			nodeType.AddCondition(exprType)
+			return nil
+		default:
+			return fmt.Errorf("expected stmt.If but got %T", expression)
+		}
+	}
+	return fmt.Errorf("expected stmt.Condition but got %T", node)
+}
+
+func matchExpression(expressionMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Statement, int, error) {
+	candidates := []*parsly.Token{If, ElseIf, End}
+	expressionMatch = cursor.MatchAfterOptional(WhiteSpace, candidates...)
+	expressionCode := expressionMatch.Code
+
+	switch expressionMatch.Code {
+	case parsly.EOF, parsly.Invalid:
+		return nil, 0, cursor.NewError(candidates...)
+	case ifToken, elseIfToken:
+		expressionMatch = cursor.MatchAfterOptional(WhiteSpace, ExpressionBlock)
+		if expressionMatch.Code == parsly.EOF || expressionMatch.Code == parsly.Invalid {
+			return nil, 0, cursor.NewError(ExpressionBlock)
+		}
+		ifCondition := expressionMatch.Text(cursor)
+		conditionCursor := parsly.NewCursor("", []byte(ifCondition[1:len(ifCondition)-1]), 0)
+		ifStmt, err := matchIf(conditionCursor)
+		if err != nil {
+			return nil, 0, err
+		}
+		return ifStmt, expressionCode, nil
+	case elseToken:
+		return &stmt.If{
+			Condition: &expr.Binary{
+				X:     expr.BoolExpression("true"),
+				Token: "==",
+				Y:     expr.BoolExpression("true"),
+			},
+			Body: stmt.Block{},
+			Else: nil,
+		}, expressionCode, nil
+	case endToken:
+		return nil, expressionCode, nil
+	}
+
+	return nil, 0, cursor.NewError(candidates...)
 }
 
 //TODO: Implement #end, #else, handling statements
@@ -284,7 +369,7 @@ func matchEquationToken(matched *parsly.TokenMatch) ast.Token {
 	return token
 }
 
-func matchSelector(tokenMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Node, error) {
+func matchSelector(tokenMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Statement, error) {
 	tokenMatch = cursor.MatchOne(SelectorBlock)
 	if tokenMatch.Code == parsly.EOF {
 		return nil, cursor.NewError(SelectorBlock)

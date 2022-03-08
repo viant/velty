@@ -12,8 +12,12 @@ github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5Cc
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/viant/assertly v0.9.0 h1:uB3jO+qmWQcrSCHQRxA2kk88eXAdaklUUDxxCU5wBHQ=
 github.com/viant/assertly v0.9.0/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
+github.com/viant/assertly v0.9.1-0.20220308232634-4242424ccaf5 h1:QheBAHMHJnZwE0aJTudQPEG6xO6Fi3Lo9jssrd8Oj5k=
+github.com/viant/assertly v0.9.1-0.20220308232634-4242424ccaf5/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/parsly v0.0.0-20220217213746-bb166fe746b9 h1:oIiN7UnHjo3jDxKYBSjdXbbsEgNo5QFEEr7pzuMhEmE=
 github.com/viant/parsly v0.0.0-20220217213746-bb166fe746b9/go.mod h1:4PKQzioRT9R99ceIhZ6tCD3tp0H0n2dEoIOaLulVvrg=
+github.com/viant/parsly v0.0.0-20220308231008-ffc49c12e703 h1:i01tpSKXgvW+/TdwDw4xWr2WmMrUOKoNnHYJAW7c1/o=
+github.com/viant/parsly v0.0.0-20220308231008-ffc49c12e703/go.mod h1:4PKQzioRT9R99ceIhZ6tCD3tp0H0n2dEoIOaLulVvrg=
 github.com/viant/toolbox v0.34.5 h1:szWNPiGHjo8Dd4v2a59saEhG31DRL2Xf3aJ0ZtTSuqc=
 github.com/viant/toolbox v0.34.5/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
