@@ -31,10 +31,3 @@ func BoolExpression(value string) *Literal {
 		RType: reflect.TypeOf(true),
 	}
 }
-
-func FloatExpression(value string) *Literal {
-	return &Literal{
-		Value: value,
-		RType: reflect.TypeOf(0.0),
-	}
-}

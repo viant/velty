@@ -18,4 +18,7 @@ const (
 	ADD_ASSIGN = Token("+=")
 	INC        = Token("++")
 	DEC        = Token("--")
+
+	AND = Token("&&")
+	OR  = Token("||")
 )

@@ -28,14 +28,14 @@ func Parse(input []byte) (ast.Node, error) {
 
 func matchExpression(match *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Node, error) {
 	candidates := []*parsly.Token{If}
-	match = cursor.MatchAny(candidates...)
+	match = cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch match.Code {
 	case parsly.EOF, parsly.Invalid:
 		return nil, cursor.NewError(candidates...)
 	case ifToken:
-		match = cursor.MatchOne(IfBlock)
+		match = cursor.MatchAfterOptional(WhiteSpace, ExpressionBlock)
 		if match.Code == parsly.EOF || match.Code == parsly.Invalid {
-			return nil, cursor.NewError(IfBlock)
+			return nil, cursor.NewError(ExpressionBlock)
 		}
 		ifCondition := match.Text(cursor)
 		conditionCursor := parsly.NewCursor("", []byte(ifCondition[1:len(ifCondition)-1]), 0)
@@ -49,19 +49,9 @@ func matchExpression(match *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Node,
 	return nil, cursor.NewError(candidates...)
 }
 
-//TODO: Implement #end, #else, unary if, condition composition, type checking, handling statements
+//TODO: Implement #end, #else, handling statements
 func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
-	operandCandidates := []*parsly.Token{Negation}
-	matched := cursor.MatchAny(operandCandidates...)
-
-	var err error
-	var expression ast.Expression
-	if matched.Code != parsly.EOF && matched.Code != parsly.Invalid {
-		expression, err = matchUnaryExpression(cursor, matched)
-	} else {
-		expression, err = matchBinaryExpression(cursor, matched)
-	}
-
+	expression, err := matchIfExpression(cursor)
 	if err != nil {
 		return nil, err
 	}
@@ -74,26 +64,82 @@ func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
 
 }
 
-func matchBinaryExpression(cursor *parsly.Cursor, matched *parsly.TokenMatch) (ast.Expression, error) {
-	operandCandidates := []*parsly.Token{StringMatcher, NumberMatcher, BooleanMatcher}
+func matchIfExpression(cursor *parsly.Cursor) (ast.Expression, error) {
+	candidates := []*parsly.Token{Negation, ExpressionBlock}
+	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
-	leftSideMatcher, leftOperand, err := matchOperand(cursor, operandCandidates)
+	var expression ast.Expression
+	var err error
+	if isUnaryMatched(matched) {
+		expression, err = matchUnaryExpression(cursor, matched)
+	} else if matched.Code == expressionBlockToken {
+		expressionValue := matched.Text(cursor)
+		expressionCursor := parsly.NewCursor("", []byte(expressionValue[1:len(expressionValue)-1]), 0)
+		expression, err = matchIfExpression(expressionCursor)
+	} else {
+		expression, err = matchBinaryExpression(cursor, matched)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	tokenCandidates := []*parsly.Token{NotEqual, Equal, GreaterEqual, Greater, LessEqual, Less}
-	matched = cursor.MatchAfterOptional(WhiteSpace, tokenCandidates...)
-	token, err := matchToken(cursor, matched, tokenCandidates)
+	candidates = []*parsly.Token{And, Or}
+	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
+	switch matched.Code {
+	case andToken:
+		return matchExpressionCombination(cursor, expression, ast.AND)
+	case orToken:
+		return matchExpressionCombination(cursor, expression, ast.OR)
+	case parsly.EOF:
+		return expression, nil
+	default:
+		return nil, cursor.NewError(candidates...)
+	}
+}
+
+func matchExpressionCombination(cursor *parsly.Cursor, expression ast.Expression, token ast.Token) (ast.Expression, error) {
+	rightExpression, err := matchIfExpression(cursor)
 	if err != nil {
 		return nil, err
+	}
+
+	return &expr.Binary{
+		X:     expression,
+		Token: token,
+		Y:     rightExpression,
+	}, nil
+}
+
+func matchBinaryExpression(cursor *parsly.Cursor, matched *parsly.TokenMatch) (ast.Expression, error) {
+	operandCandidates := []*parsly.Token{String, Number, Boolean}
+
+	leftSideMatcher, leftOperand, err := matchOperand(cursor, operandCandidates...)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenCandidates := []*parsly.Token{NotEqual, Equal, GreaterEqual, Greater, LessEqual, Less, And, Or, ExpressionEnd}
+	matched = cursor.MatchAfterOptional(WhiteSpace, tokenCandidates...)
+	switch matched.Code {
+	case parsly.EOF, expressionEndToken:
+		return &expr.Binary{
+			X:     leftOperand,
+			Token: ast.EQ,
+			Y:     expr.BoolExpression("true"),
+		}, nil
+	}
+
+	token := matchExpressionToken(matched)
+	if token == "" {
+		return nil, cursor.NewError(tokenCandidates...)
 	}
 
 	if leftSideMatcher.Code != selectorToken {
-		operandCandidates = []*parsly.Token{Selector, leftSideMatcher}
+		operandCandidates = []*parsly.Token{leftSideMatcher}
 	}
 
-	_, rightOperand, err := matchOperand(cursor, operandCandidates)
+	_, rightOperand, err := matchOperand(cursor, operandCandidates...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +153,7 @@ func matchBinaryExpression(cursor *parsly.Cursor, matched *parsly.TokenMatch) (a
 func matchUnaryExpression(cursor *parsly.Cursor, matched *parsly.TokenMatch) (ast.Expression, error) {
 	switch matched.Code {
 	case negationToken:
-		_, expression, err := matchOperand(cursor, []*parsly.Token{BooleanMatcher})
+		_, expression, err := matchOperand(cursor, Boolean)
 		if err != nil {
 			return nil, err
 		}
@@ -118,14 +164,12 @@ func matchUnaryExpression(cursor *parsly.Cursor, matched *parsly.TokenMatch) (as
 		}, nil
 	}
 
-	return nil, cursor.NewError(BooleanMatcher, Selector)
+	return nil, cursor.NewError(Boolean, Selector)
 }
 
-func matchToken(cursor *parsly.Cursor, matched *parsly.TokenMatch, tokenCandidates []*parsly.Token) (ast.Token, error) {
+func matchExpressionToken(matched *parsly.TokenMatch) ast.Token {
 	var token ast.Token
 	switch matched.Code {
-	case parsly.EOF, parsly.Invalid:
-		return "", cursor.NewError(tokenCandidates...)
 	case equalToken:
 		token = ast.EQ
 	case greaterToken:
@@ -138,20 +182,30 @@ func matchToken(cursor *parsly.Cursor, matched *parsly.TokenMatch, tokenCandidat
 		token = ast.GTE
 	case notEqualToken:
 		token = ast.NEQ
+	case orToken:
+		token = ast.OR
+	case andToken:
+		token = ast.AND
 	}
-	return token, nil
+	return token
 }
 
-func matchOperand(cursor *parsly.Cursor, candidates []*parsly.Token) (*parsly.Token, ast.Expression, error) {
+func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.Token, ast.Expression, error) {
 	candidates = append([]*parsly.Token{SelectorStart}, candidates...)
 
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
+
+	var matcher *parsly.Token
+	var expression ast.Expression
+	var err error
+
 	switch matched.Code {
 	case parsly.EOF, parsly.Invalid:
 		return nil, nil, cursor.NewError(candidates...)
 	case stringToken:
 		value := matched.Text(cursor)
-		return StringMatcher, expr.StringExpression(value[1 : len(value)-1]), nil
+		matcher = String
+		expression = expr.StringExpression(value[1 : len(value)-1])
 	case selectorStartToken:
 		matched = cursor.MatchOne(SelectorBlock)
 		if matched.Code == parsly.EOF || matched.Code == parsly.Invalid {
@@ -160,20 +214,74 @@ func matchOperand(cursor *parsly.Cursor, candidates []*parsly.Token) (*parsly.To
 
 		selector := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(selector[1:len(selector)-1]), 0)
-		operand, err := parseSelector(selectorCursor)
+		expression, err = parseSelector(selectorCursor)
 		if err != nil {
 			return nil, nil, err
 		}
-		return Selector, operand, nil
+		matcher = Selector
+
 	case numberMatcher:
 		value := matched.Text(cursor)
-		return NumberMatcher, expr.NumberExpression(value), nil
+		matcher = Number
+		expression = expr.NumberExpression(value)
 
 	case booleanToken:
 		value := matched.Text(cursor)
-		return BooleanMatcher, expr.BoolExpression(value), nil
+		matcher = Boolean
+		expression = expr.BoolExpression(value)
 	}
-	return nil, nil, cursor.NewError(candidates...)
+
+	if matched != nil && matched.Code != booleanToken {
+		err = addEquationIfNeeded(cursor, &expression, matcher)
+		if err != nil {
+			return nil, nil, err
+		}
+
+	}
+	return matcher, expression, nil
+}
+
+func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression, expressionMatcher *parsly.Token) error {
+	candidates := []*parsly.Token{Add, Sub, Multiply, Quo}
+	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
+
+	switch matched.Code {
+	case parsly.EOF, binaryExpressionStartToken, parsly.Invalid:
+		return nil
+	}
+
+	token := matchEquationToken(matched)
+	switch actual := (*expression).(type) {
+	case *expr.Literal:
+		_, equationExpression, err := matchOperand(cursor, expressionMatcher)
+		if err != nil {
+			return err
+		}
+
+		*expression = &expr.Binary{
+			X:     actual,
+			Token: token,
+			Y:     equationExpression,
+		}
+	}
+
+	return nil
+}
+
+func matchEquationToken(matched *parsly.TokenMatch) ast.Token {
+	var token ast.Token
+	switch matched.Code {
+	case addToken:
+		token = ast.ADD
+	case subToken:
+		token = ast.SUB
+	case mulToken:
+		token = ast.MUL
+	case quoToken:
+		token = ast.QUO
+	}
+
+	return token
 }
 
 func matchSelector(tokenMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Node, error) {
