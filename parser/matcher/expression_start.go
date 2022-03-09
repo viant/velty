@@ -26,9 +26,6 @@ outer:
 		matched = 0
 	}
 
-	if !hasMatch {
-		return 0
-	}
 	return matched
 }
 

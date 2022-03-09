@@ -15,6 +15,11 @@ func TestService_Parse(t *testing.T) {
 		expectError bool
 	}{
 		{
+			description: "without velocity tags",
+			input:       "<h3>Some h3 title</h3>",
+			output:      `{ "Stmt": [ { "Append": "<h3>Some h3 title</h3>" } ] }`,
+		},
+		{
 			description: "selector",
 			input:       "${VARIABLE}",
 			output:      `{"Stmt": [{"ID": "VARIABLE"}]}`,
@@ -158,6 +163,21 @@ func TestService_Parse(t *testing.T) {
 			description: "if statement, elseif",
 			input:       `#if(true)abc#elseif("abc"=="abc")cdef#end`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" }, { "Append": "cdef" } ] }, "Else": { "Condition": { "X": { "Value": "abc" }, "Token": "==", "Y": { "Value": "abc" } } } } ] }`,
+		},
+		{
+			description: "if statement, else",
+			input:       `#if(true)abc#elsecdef#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" }, { "Append": "cdef" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } } } } ] }`,
+		},
+		{
+			description: "set value",
+			input:       `#set ($message="Hello World")`,
+			output:      `{ "Stmt": [ { "X": { "ID": "message" }, "Op": "=", "Y": { "Value": "Hello World" } } ] }`,
+		},
+		{
+			description: "set value as equation",
+			input:       `#set ($value= 10 + 10 * 10)`,
+			output:      `{ "Stmt": [ { "X": { "ID": "value" }, "Op": "=", "Y": { "X": { "Value": "10" }, "Token": "+", "Y": { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } } } } ] }`,
 		},
 	}
 

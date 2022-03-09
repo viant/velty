@@ -20,12 +20,11 @@ func Parse(input []byte) (*stmt.Block, error) {
 		tokenMatch = cursor.MatchOne(SpecialSign)
 		text := tokenMatch.Text(cursor)
 
-		switch tokenMatch.Code {
-		case parsly.EOF:
+		if tokenMatch.Code == parsly.EOF || cursor.Pos >= len(input) {
 			if err := stack.AppendStatement(stmt.NewAppend(text)); err != nil {
 				return nil, err
 			}
-			return nil, nil
+			break
 		}
 
 		err := appendStatementIfNeeded(text, stack)
@@ -58,6 +57,10 @@ func Parse(input []byte) (*stmt.Block, error) {
 				}
 			case endToken:
 				if err = stack.TransferToBlock(); err != nil {
+					return nil, err
+				}
+			case setToken:
+				if err = stack.AppendStatement(expression); err != nil {
 					return nil, err
 				}
 			}
@@ -98,7 +101,7 @@ func addIfExpression(node ast.Node, expression ast.Node) error {
 }
 
 func matchExpression(expressionMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.Statement, int, error) {
-	candidates := []*parsly.Token{If, ElseIf, End}
+	candidates := []*parsly.Token{If, ElseIf, Else, Set, End}
 	expressionMatch = cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	expressionCode := expressionMatch.Code
 
@@ -127,6 +130,21 @@ func matchExpression(expressionMatch *parsly.TokenMatch, cursor *parsly.Cursor) 
 			Body: stmt.Block{},
 			Else: nil,
 		}, expressionCode, nil
+
+	case setToken:
+		expressionMatch = cursor.MatchAfterOptional(WhiteSpace, ExpressionBlock)
+		if expressionMatch.Code == parsly.EOF || expressionMatch.Code == parsly.Invalid {
+			return nil, 0, cursor.NewError(ExpressionBlock)
+		}
+		setValue := expressionMatch.Text(cursor)
+		setValueCursor := parsly.NewCursor("", []byte(setValue[1:len(setValue)-1]), 0)
+
+		assignStmt, err := matchAssign(setValueCursor)
+		if err != nil {
+			return nil, expressionCode, err
+		}
+
+		return assignStmt, expressionCode, nil
 	case endToken:
 		return nil, expressionCode, nil
 	}
@@ -134,7 +152,52 @@ func matchExpression(expressionMatch *parsly.TokenMatch, cursor *parsly.Cursor) 
 	return nil, 0, cursor.NewError(candidates...)
 }
 
-//TODO: Implement #end, #else, handling statements
+func matchAssign(cursor *parsly.Cursor) (*stmt.Statement, error) {
+	candidates := []*parsly.Token{SelectorStart}
+	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
+	switch matched.Code {
+	case selectorStartToken:
+		selector, err := parseIdentity(cursor, false)
+		if err != nil {
+			return nil, err
+		}
+
+		tokenCandidates := []*parsly.Token{Assign}
+		matched = cursor.MatchAfterOptional(WhiteSpace, tokenCandidates...)
+		if matched.Code == parsly.EOF || matched.Code == parsly.Invalid {
+			return nil, cursor.NewError(tokenCandidates...)
+		}
+
+		token := matchAssignmentToken(matched)
+		if token == "" {
+			return nil, fmt.Errorf("didn't found operator token for given token %v", matched.Name)
+		}
+
+		_, expression, err := matchOperand(cursor, Boolean, String, Number)
+		if err != nil {
+			return nil, err
+		}
+
+		return &stmt.Statement{
+			X:  selector,
+			Op: token,
+			Y:  expression,
+		}, nil
+	}
+
+	return nil, cursor.NewError(candidates...)
+}
+
+func matchAssignmentToken(matched *parsly.TokenMatch) ast.Token {
+	var token ast.Token
+	switch matched.Code {
+	case assignToken:
+		token = ast.ASSIGN
+	}
+
+	return token
+}
+
 func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
 	expression, err := matchIfExpression(cursor)
 	if err != nil {
@@ -146,7 +209,6 @@ func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
 		Body:      stmt.Block{},
 		Else:      nil,
 	}, nil
-
 }
 
 func matchIfExpression(cursor *parsly.Cursor) (ast.Expression, error) {
@@ -299,7 +361,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 
 		selector := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(selector[1:len(selector)-1]), 0)
-		expression, err = parseSelector(selectorCursor)
+		expression, err = parseIdentity(selectorCursor, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -378,15 +440,20 @@ func matchSelector(tokenMatch *parsly.TokenMatch, cursor *parsly.Cursor) (ast.St
 	ID := tokenMatch.Text(cursor)
 
 	selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)
-	selector, err := parseSelector(selectorCursor)
+	selector, err := parseIdentity(selectorCursor, true)
 	if err != nil {
 		return nil, err
 	}
 	return selector, nil
 }
 
-func parseSelector(cursor *parsly.Cursor) (*expr.Select, error) {
-	matched := cursor.MatchOne(Selector)
+func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) {
+	var matched *parsly.TokenMatch
+	if fullMatch {
+		matched = cursor.MatchOne(Selector)
+	} else {
+		matched = cursor.MatchOne(NewVariable)
+	}
 
 	id := matched.Text(cursor)
 	switch matched.Code {

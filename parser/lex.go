@@ -13,11 +13,13 @@ const (
 	selectorStartToken
 	selectorBlockToken
 	selectorToken
+	variableNameToken
 
 	ifToken
-	endToken
 	elseIfToken
 	elseToken
+	setToken
+	endToken
 
 	expressionBlockToken
 	expressionEndToken
@@ -35,6 +37,8 @@ const (
 	notEqualToken
 	negationToken
 
+	assignToken
+
 	andToken
 	orToken
 
@@ -50,12 +54,15 @@ var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhite
 var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", vMatcher.NewExpression(true, '#', '$'))
 
 var SelectorBlock = parsly.NewToken(selectorBlockToken, "Selector block", matcher.NewBlock('{', '}', '\\'))
-var Selector = parsly.NewToken(selectorToken, "Selector", vMatcher.NewIdentity())
+var Selector = parsly.NewToken(selectorToken, "Selector", vMatcher.NewIdentity(true))
+
+var NewVariable = parsly.NewToken(variableNameToken, "New variable", vMatcher.NewIdentity(false))
 var SelectorStart = parsly.NewToken(selectorStartToken, "Selector start", matcher.NewRunes([]rune{'$'}))
 
 var If = parsly.NewToken(ifToken, "If", matcher.NewFragment("if"))
 var ElseIf = parsly.NewToken(elseIfToken, "Else if", matcher.NewFragment("elseif"))
 var Else = parsly.NewToken(elseToken, "Else", matcher.NewFragment("else"))
+var Set = parsly.NewToken(setToken, "Set", matcher.NewFragment("set"))
 var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
 
 var ExpressionBlock = parsly.NewToken(expressionBlockToken, "Expression block", matcher.NewBlock('(', ')', '\\'))
@@ -64,6 +71,8 @@ var ExpressionEnd = parsly.NewToken(expressionEndToken, "Expression end", vMatch
 var Equal = parsly.NewToken(equalToken, "Equal", matcher.NewFragment("=="))
 var NotEqual = parsly.NewToken(notEqualToken, "Not equal", matcher.NewFragment("!="))
 var Negation = parsly.NewToken(negationToken, "Negation", matcher.NewByte('!'))
+
+var Assign = parsly.NewToken(assignToken, "Assign", matcher.NewFragment("="))
 
 var Greater = parsly.NewToken(greaterToken, "Greater", matcher.NewByte('>'))
 var GreaterEqual = parsly.NewToken(greaterEqualToken, "Greater or equal", matcher.NewFragment(">="))
