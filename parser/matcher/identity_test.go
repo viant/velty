@@ -25,7 +25,7 @@ func TestIdentity_Match(t *testing.T) {
 		{
 			description: "underscore matches",
 			input:       []byte("ABc_test"),
-			matched:     false,
+			matched:     true,
 		},
 		{
 			description: "- doesnt match",
@@ -45,7 +45,7 @@ func TestIdentity_Match(t *testing.T) {
 	}
 
 	for _, useCase := range useCases {
-		matcher := NewIdentity()
+		matcher := NewIdentity(true, false)
 		matched := matcher.Match(parsly.NewCursor("", useCase.input, 0))
 		assert.Equal(t, useCase.matched, matched > 0, useCase.description)
 	}
