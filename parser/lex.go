@@ -66,6 +66,7 @@ const (
 	binaryExpressionStartToken
 
 	comaToken
+	newLineToken
 )
 
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
@@ -124,3 +125,4 @@ var Decrement = parsly.NewToken(decrementToken, "Decrement", matcher.NewBytes([]
 var Increment = parsly.NewToken(incrementToken, "Increment", matcher.NewBytes([]byte("++")))
 
 var Coma = parsly.NewToken(comaToken, "Coma", matcher.NewByte(','))
+var NewLine = parsly.NewToken(newLineToken, "New line", vMatcher.NewNewLine())

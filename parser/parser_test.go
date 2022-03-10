@@ -215,9 +215,16 @@ func TestService_Parse(t *testing.T) {
 			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
 			output:      `{ "Stmt": [ { "ID": "foo.Function", "Call": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } ] }`,
 		},
+		{
+			description: "comments",
+			input: `## THIS IS COMMENT
+#if(1==1)abc#end
+## THIS IS ALSO COMMENT`,
+			output: `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+		},
 	}
 
-	//for _, useCase := range useCases[len(useCases)-1:] {
+	//for i, useCase := range useCases[len(useCases)-1:] {
 	for i, useCase := range useCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		node, err := Parse([]byte(useCase.input))

@@ -16,6 +16,7 @@ func Parse(input []byte) (*stmt.Block, error) {
 	builder := NewBuilder()
 	var tokenMatch *parsly.TokenMatch
 	cursor := parsly.NewCursor("", input, 0)
+
 	for cursor.Pos < len(input) {
 		tokenMatch = cursor.MatchOne(SpecialSign)
 		text := tokenMatch.Text(cursor)
@@ -25,6 +26,11 @@ func Parse(input []byte) (*stmt.Block, error) {
 				return nil, err
 			}
 			break
+		}
+
+		if cursor.Input[cursor.Pos] == '#' {
+			cursor.MatchOne(NewLine)
+			continue
 		}
 
 		err := appendStatementIfNeeded(text, builder)

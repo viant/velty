@@ -22,3 +22,20 @@ func (t *whitespaceOnly) Match(cursor *parsly.Cursor) (matched int) {
 func NewWhitespaceOnly() *whitespaceOnly {
 	return &whitespaceOnly{}
 }
+
+type newLine struct {
+}
+
+func (t *newLine) Match(cursor *parsly.Cursor) (matched int) {
+	for i := cursor.Pos; i < cursor.InputSize; i++ {
+		matched++
+		if cursor.Input[i] == '\n' {
+			return matched
+		}
+	}
+	return matched
+}
+
+func NewNewLine() *newLine {
+	return &newLine{}
+}
