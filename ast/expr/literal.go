@@ -1,6 +1,9 @@
 package expr
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 type Literal struct {
 	Value string
@@ -19,9 +22,13 @@ func StringExpression(value string) *Literal {
 }
 
 func NumberExpression(value string) *Literal {
+	numType := reflect.TypeOf(0.0)
+	if !(strings.Contains(value, ".") || strings.Contains(value, "e")) {
+		numType = reflect.TypeOf(0)
+	}
 	return &Literal{
 		Value: value,
-		RType: reflect.TypeOf(0.0),
+		RType: numType,
 	}
 }
 

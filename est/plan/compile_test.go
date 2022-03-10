@@ -15,31 +15,41 @@ func TestPlanner_Compile(t *testing.T) {
 		expect      string
 	}{
 		{
-			template: `
-			#set($percent = $number / 100)$percent`,
+			template: `#set($var1 = 123)$var1`,
+			expect:   `123`,
+		},
+		{
+			template: `#set($var1 = 12400/100)$var1`,
+			expect:   `124`,
+		},
+		{
+			template: `#set($var1 = 3 + $num)$var1`,
+			expect:   `13`,
 			vars: map[string]interface{}{
-				"number": 12000,
+				"num": 10,
 			},
-			expect: `120`,
 		},
 	}
-
+outer:
 	for _, testCase := range testCases {
-		planner := plan.New()
+		planner := plan.New(8192)
 
 		for k, v := range testCase.vars {
 			err := planner.DefineVariable(k, v)
 			if !assert.Nil(t, err, testCase.description) {
-				continue
+				continue outer
 			}
 		}
-		exec, newState, err := planner.Compile(testCase.template)
+		exec, newState, err := planner.Compile([]byte(testCase.template))
 		if !assert.Nil(t, err, testCase.description) {
 			continue
 		}
 		state := newState()
 		for k, v := range testCase.vars {
-			state.SetValue(k, v)
+			err = state.SetValue(k, v)
+			if !assert.Nil(t, err, testCase.description+" var "+k) {
+				continue outer
+			}
 		}
 		exec.Exec(state)
 		output := state.Buffer.Bytes()

@@ -72,12 +72,12 @@ const (
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
 var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", vMatcher.NewVelty(true, '#', '$'))
 
-var SelectorBlock = parsly.NewToken(selectorBlockToken, "Selector block", matcher.NewBlock('{', '}', '\\'))
-var Selector = parsly.NewToken(selectorToken, "Selector", vMatcher.NewIdentity(false, true))
+var SelectorBlock = parsly.NewToken(selectorBlockToken, "Sel block", matcher.NewBlock('{', '}', '\\'))
+var Selector = parsly.NewToken(selectorToken, "Sel", vMatcher.NewIdentity(false, true))
 var ComplexSelector = parsly.NewToken(complexSelectorToken, "Complex selector", vMatcher.NewIdentity(true, false))
 
 var NewVariable = parsly.NewToken(variableNameToken, "New variable", vMatcher.NewIdentity(false, false))
-var SelectorStart = parsly.NewToken(selectorStartToken, "Selector start", matcher.NewRunes([]rune{'$'}))
+var SelectorStart = parsly.NewToken(selectorStartToken, "Sel start", matcher.NewRunes([]rune{'$'}))
 
 var If = parsly.NewToken(ifToken, "If", matcher.NewFragment("if"))
 var ElseIf = parsly.NewToken(elseIfToken, "Else if", matcher.NewFragment("elseif"))

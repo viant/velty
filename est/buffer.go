@@ -1,5 +1,7 @@
 package est
 
+import "strconv"
+
 type Buffer struct {
 	buf      []byte
 	index    int
@@ -29,6 +31,17 @@ func (b *Buffer) AppendByte(bs byte) {
 	b.buf[b.index] = bs
 	b.index++
 }
+
+func (b *Buffer) AppendInt(v int) {
+	s := strconv.Itoa(v)
+	b.AppendString(s)
+}
+
+func (b *Buffer) AppendBool(v bool) {
+	s := strconv.FormatBool(v)
+	b.AppendString(s)
+}
+
 func (b *Buffer) AppendString(s string) {
 	sLen := len(s)
 	if sLen == 0 {
@@ -52,4 +65,8 @@ func (b *Buffer) Reset() {
 
 func (b *Buffer) Bytes() []byte {
 	return b.buf[:b.index]
+}
+
+func NewBuffer(size int) *Buffer {
+	return &Buffer{buf: make([]byte, size)}
 }

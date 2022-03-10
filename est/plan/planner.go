@@ -3,6 +3,7 @@ package plan
 import (
 	"fmt"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/plan/scope"
 	"reflect"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 type (
 	Planner struct {
+		bufferSize int
 		count      *int
 		transients *int
 		*est.Control
@@ -25,99 +27,114 @@ type (
 	}
 )
 
-func (s *Planner) AddNamedType(name string, t reflect.Type) {
-	s.types[name] = t
+func (p *Planner) AddNamedType(name string, t reflect.Type) {
+	p.types[name] = t
 }
 
-func (s *Planner) AddType(t reflect.Type) {
-	s.types[t.Name()] = t
+func (p *Planner) AddType(t reflect.Type) {
+	p.types[t.Name()] = t
 }
 
-func (s *Planner) NewScope() *Planner {
-	*s.count++
+func (p *Planner) NewScope() *Planner {
+	*p.count++
 	var types = make(map[string]reflect.Type)
-	for k, v := range s.types {
+	for k, v := range p.types {
 		types[k] = v
 	}
 	return &Planner{
-		Control: s.Control,
+		Control: p.Control,
 		Scope: Scope{
-			upstream: append(s.upstream, s.prefix),
-			prefix:   "s" + strconv.Itoa(*s.count),
+			upstream: append(p.upstream, p.prefix),
+			prefix:   "p" + strconv.Itoa(*p.count),
 		},
-		selectors:  s.selectors,
+		selectors:  p.selectors,
 		types:      types,
-		transients: s.transients,
-		count:      s.count,
+		transients: p.transients,
+		count:      p.count,
 	}
 }
 
-func (s *Planner) DefineVariable(name string, v interface{}) error {
+func (p *Planner) DefineVariable(name string, v interface{}) error {
 	var sType reflect.Type
 	switch t := v.(type) {
 	case reflect.Type:
 		sType = t
 	default:
-		t = reflect.TypeOf(v)
+		sType = reflect.TypeOf(v)
 	}
 	sel := est.NewSelector(name, name, sType)
-	return s.addSelector(sel)
+	return p.addSelector(sel)
 }
 
-func (s *Planner) Selector(ID string) *est.Selector {
-	if idx, ok := s.index[s.prefix+ID]; ok {
-		return (*s.selectors)[idx]
+func (p *Planner) Selector(name string) *est.Selector {
+
+	//TODO add support for . in name
+
+	if idx, ok := p.index[p.prefix+name]; ok {
+		return (*p.selectors)[idx]
 	}
 	//check selector in upstream scopes
-	for i := len(s.upstream) - 1; i >= 0; i-- {
-		if idx, ok := s.index[s.upstream[i]+ID]; ok {
-			return (*s.selectors)[idx]
+	for i := len(p.upstream) - 1; i >= 0; i-- {
+		if idx, ok := p.index[p.upstream[i]+name]; ok {
+			return (*p.selectors)[idx]
 		}
 	}
 	//check global scope
-	if idx, ok := s.index[ID]; ok {
-		return (*s.selectors)[idx]
+	if idx, ok := p.index[name]; ok {
+		return (*p.selectors)[idx]
 	}
 	return nil
 }
 
-func (s *Planner) selectorID(name string) string {
-	return s.prefix + name
+func (p *Planner) selectorID(name string) string {
+	return p.prefix + name
 }
 
-func (s *Planner) AddRegistry(t reflect.Type) *est.Selector {
-	name := "_T" + strconv.Itoa(*s.transients)
-	*s.transients++
-	sel := est.NewSelector(s.selectorID(name), name, t)
-	_ = s.addSelector(sel)
+func (p *Planner) accumulator(t reflect.Type) *est.Selector {
+	name := "_T" + strconv.Itoa(*p.transients)
+	*p.transients++
+	sel := est.NewSelector(p.selectorID(name), name, t)
+	if t != nil {
+		_ = p.addSelector(sel)
+	}
 	return sel
 }
 
-func (s *Planner) addSelector(sel *est.Selector) error {
-	index := len(*s.selectors)
+func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
+	if expr.Selector.Type != nil {
+		return nil
+	}
+	expr.Type = t
+	expr.Selector.Type = t
+	return p.addSelector(expr.Selector)
+}
+
+func (p *Planner) addSelector(sel *est.Selector) error {
+	index := len(*p.selectors)
 	if sel.ID == "" {
 		return fmt.Errorf("selector ID was empty")
 	}
 	if sel.Type == nil {
 		return fmt.Errorf("selector %v type was empty", sel.Name)
 	}
-	if s.Selector(sel.ID) != nil {
+	if p.Selector(sel.ID) != nil {
 		return fmt.Errorf("variable %v already defined", sel.Name)
 	}
-	s.index[sel.ID] = index
+	p.index[sel.ID] = index
 	if len(sel.Ancestors) == 0 {
-		sel.Field = s.Type.AddField(sel.Name, sel.Type)
+		sel.Field = p.Type.AddField(sel.Name, sel.Type)
 	}
-	*s.selectors = append(*s.selectors, sel)
+	*p.selectors = append(*p.selectors, sel)
 	return nil
 }
 
-func New() *Planner {
+func New(bufferSize int) *Planner {
 	count := 0
 	transients := 0
 	ctl := est.Control(0)
 	var selectors []*est.Selector
 	return &Planner{
+		bufferSize: bufferSize,
 		count:      &count,
 		transients: &transients,
 		Control:    &ctl,

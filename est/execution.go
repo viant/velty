@@ -5,5 +5,9 @@ type Execution struct {
 }
 
 func (e *Execution) Exec(stat *State) {
+	e.compute(stat)
+}
 
+func NewExecution(compute Compute) *Execution {
+	return &Execution{compute: compute}
 }
