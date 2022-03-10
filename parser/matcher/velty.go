@@ -2,12 +2,12 @@ package matcher
 
 import "github.com/viant/parsly"
 
-type expressionStart struct {
+type veltyStart struct {
 	values    []byte
 	inclusive bool
 }
 
-func (t *expressionStart) Match(cursor *parsly.Cursor) (matched int) {
+func (t *veltyStart) Match(cursor *parsly.Cursor) (matched int) {
 	hasMatch := false
 outer:
 	for _, c := range cursor.Input[cursor.Pos:] {
@@ -29,7 +29,7 @@ outer:
 	return matched
 }
 
-//NewExpression creates a terminator byte matcher
-func NewExpression(inclusive bool, values ...byte) *expressionStart {
-	return &expressionStart{values: values, inclusive: inclusive}
+//NewVelty creates a terminator byte matcher
+func NewVelty(inclusive bool, values ...byte) *veltyStart {
+	return &veltyStart{values: values, inclusive: inclusive}
 }

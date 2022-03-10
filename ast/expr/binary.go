@@ -17,3 +17,11 @@ func (b *Binary) Type() reflect.Type {
 	}
 	return b.Y.Type()
 }
+
+func BinaryExpression(left ast.Expression, token ast.Token, right ast.Expression) *Binary {
+	return &Binary{
+		X:     left,
+		Token: token,
+		Y:     right,
+	}
+}

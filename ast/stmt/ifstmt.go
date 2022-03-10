@@ -8,8 +8,8 @@ type If struct {
 	Else      *If
 }
 
-func (i *If) AddStatement(statement ast.Statement) error {
-	return i.Body.AddStatement(statement)
+func (i *If) AddStatement(statement ast.Statement) {
+	i.Body.AddStatement(statement)
 }
 
 func (i *If) AddCondition(next *If) {

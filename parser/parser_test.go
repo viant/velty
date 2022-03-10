@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/assertly"
 	"github.com/viant/toolbox"
@@ -179,10 +180,46 @@ func TestService_Parse(t *testing.T) {
 			input:       `#set ($value= 10 + 10 * 10)`,
 			output:      `{ "Stmt": [ { "X": { "ID": "value" }, "Op": "=", "Y": { "X": { "Value": "10" }, "Token": "+", "Y": { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } } } } ] }`,
 		},
+		{
+			description: "foreach",
+			input:       `<ul>#foreach( $value in $values)<li>${value}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Item": { "ID": "value" }, "Set": { "ID": "values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
+		},
+		{
+			description: "foreach with index",
+			input:       `<ul>#foreach( $value, $index in $values)<li>${value}, ${index}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Index": { "ID": "index" }, "Item": { "ID": "value" }, "Set": { "ID": "values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": ", " }, { "ID": "index" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
+		},
+		{
+			description: "for loop",
+			input:       `<ul>#for( $var = 1; $var < 10; $var++ )<li>${value}, ${index}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Init": { "X": { "ID": "var" }, "Op": "=", "Y": { "Value": "1" } }, "Cond": { "X": { "ID": "var" }, "Token": "<", "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": ", " }, { "ID": "index" }, { "Append": "</li>" } ] }, "Post": { "X": { "ID": "var" }, "Op": "=", "Y": { "X": { "ID": "var" }, "Token": "+", "Y": { "Value": "1" } } } }, { "Append": "</ul>" } ] }`,
+		},
+		{
+			description: "different selectors",
+			input:       `#if( $id == ${id3.Name} )#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "id3.Name" } } } ] }`,
+		},
+		{
+			description: "selector without brackets and number",
+			input:       `#if( $id == 1 )#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "Value": "1" } } } ] }`,
+		},
+		{
+			description: "multiple comparisons",
+			input:       `#if( $id == 1 == true == false )#end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "X": { "ID": "id" }, "Token": "==", "Y": { "Value": "1" } }, "Token": "==", "Y": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "false" } } } } ] }`,
+		},
+		{
+			description: "function call",
+			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
+			output:      `{ "Stmt": [ { "ID": "foo.Function", "Call": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } ] }`,
+		},
 	}
 
 	//for _, useCase := range useCases[len(useCases)-1:] {
-	for _, useCase := range useCases {
+	for i, useCase := range useCases {
+		fmt.Printf("Running testcase: %v\n", i)
 		node, err := Parse([]byte(useCase.input))
 
 		if useCase.expectError {

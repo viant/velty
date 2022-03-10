@@ -6,7 +6,6 @@ type Block struct {
 	Stmt []ast.Statement
 }
 
-func (b *Block) AddStatement(statement ast.Statement) error {
+func (b *Block) AddStatement(statement ast.Statement) {
 	b.Stmt = append(b.Stmt, statement)
-	return nil
 }

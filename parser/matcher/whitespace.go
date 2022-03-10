@@ -4,10 +4,10 @@ import (
 	"github.com/viant/parsly"
 )
 
-type expressionEnd struct {
+type whitespaceOnly struct {
 }
 
-func (t *expressionEnd) Match(cursor *parsly.Cursor) (matched int) {
+func (t *whitespaceOnly) Match(cursor *parsly.Cursor) (matched int) {
 	for i := cursor.Pos; i < cursor.InputSize; i++ {
 		switch cursor.Input[i] {
 		case ' ', '\n', '\t', '\r', '\v', '\f', 0x85, 0x40:
@@ -19,6 +19,6 @@ func (t *expressionEnd) Match(cursor *parsly.Cursor) (matched int) {
 	return matched
 }
 
-func NewExpressionEnd() *expressionEnd {
-	return &expressionEnd{}
+func NewWhitespaceOnly() *whitespaceOnly {
+	return &whitespaceOnly{}
 }
