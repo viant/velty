@@ -40,6 +40,20 @@ func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
 	return nil
 }
 
+func addIfExpression(node ast.Node, expression ast.Node) error {
+	switch nodeType := node.(type) {
+	case stmt.ConditionContainer:
+		switch exprType := expression.(type) {
+		case *stmt.If:
+			nodeType.AddCondition(exprType)
+			return nil
+		default:
+			return fmt.Errorf("expected stmt.If but got %T", expression)
+		}
+	}
+	return fmt.Errorf("expected stmt.Condition but got %T", node)
+}
+
 func (s *Builder) terminateStatement() error {
 	if len(s.buffer) == 0 {
 		return fmt.Errorf("unexpected expression end")

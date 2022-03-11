@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/parser"
 	"github.com/viant/xunsafe"
@@ -12,16 +13,18 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 	if err != nil {
 		return nil, nil, err
 	}
-	computeNew, err := p.compileBlock(root)
+
+	exec, err := p.newExecution(root)
 	if err != nil {
 		return nil, nil, err
 	}
-	compute, err := computeNew(*p.Control)
-	if err != nil {
-		return nil, nil, err
-	}
-	exec := est.NewExecution(compute)
-	newState := func() *est.State {
+
+	newState := p.stateProvider()
+	return exec, newState, nil
+}
+
+func (p *Planner) stateProvider() func() *est.State {
+	return func() *est.State {
 		mem := reflect.New(p.Type.Type).Interface()
 		state := &est.State{
 			Mem:       mem,
@@ -32,5 +35,26 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 		}
 		return state
 	}
-	return exec, newState, nil
+}
+
+func (p *Planner) newExecution(root *stmt.Block) (*est.Execution, error) {
+	compute, err := p.newCompute(root)
+	if err != nil {
+		return nil, err
+	}
+
+	exec := est.NewExecution(compute)
+	return exec, nil
+}
+
+func (p *Planner) newCompute(root *stmt.Block) (est.Compute, error) {
+	computeNew, err := p.compileBlock(root)
+	if err != nil {
+		return nil, err
+	}
+	compute, err := computeNew(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+	return compute, nil
 }

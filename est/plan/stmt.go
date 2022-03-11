@@ -13,18 +13,7 @@ func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 
 	switch actual := statement.(type) {
 	case *stmt.Statement:
-		x, err := p.compileExpr(actual.X)
-		if err != nil {
-			return nil, err
-		}
-		y, err := p.compileExpr(actual.Y)
-		if err != nil {
-			return nil, err
-		}
-		if err = p.adjustSelector(x, y.Type); err != nil {
-			return nil, err
-		}
-		return estmt.Assign(x, y)
+		return p.computeDirectAssignment(actual)
 	case *stmt.Append:
 		fmt.Printf("append: !%v!\n", actual.Append)
 	case *expr.Select:
@@ -32,5 +21,21 @@ func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 	case *stmt.Block:
 		return p.compileStmt(actual.Stmt)
 	}
+
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)
+}
+
+func (p *Planner) computeDirectAssignment(actual *stmt.Statement) (est.New, error) {
+	x, err := p.compileExpr(actual.X)
+	if err != nil {
+		return nil, err
+	}
+	y, err := p.compileExpr(actual.Y)
+	if err != nil {
+		return nil, err
+	}
+	if err = p.adjustSelector(x, y.Type); err != nil {
+		return nil, err
+	}
+	return estmt.Assign(x, y)
 }

@@ -29,7 +29,15 @@ func (b *directBinary) add(state *est.State) unsafe.Pointer {
 	z := state.Pointer(*b.z.Offset)
 	*(*int)(z) = *(*int)(x) + *(*int)(y)
 
-	fmt.Printf("add %v %v %v\n", *(*int)(z), *(*int)(x), *(*int)(y))
+	return z
+}
+
+func (b *directBinary) sub(state *est.State) unsafe.Pointer {
+	x := b.x.Exec(state)
+	y := b.y.Exec(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*int)(z) = *(*int)(x) - *(*int)(y)
+
 	return z
 }
 
@@ -40,7 +48,6 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("ADD BINARY: %v\n", token)
 		binary := &directBinary{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
 		switch exprs[0].Type.Kind() {
 
@@ -50,6 +57,8 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 				return binary.quo, nil
 			case ast.ADD:
 				return binary.add, nil
+			case ast.SUB:
+				return binary.sub, nil
 			}
 
 		case reflect.String:

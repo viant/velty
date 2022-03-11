@@ -5,8 +5,7 @@ import (
 )
 
 type identity struct {
-	fullMatch   bool
-	onlyLetters bool
+	fullMatch bool
 }
 
 //Match matches a string
@@ -58,9 +57,8 @@ func IsLetter(b byte) bool {
 }
 
 //NewIdentity creates a string matcher
-func NewIdentity(fullMatch bool, onlyLetters bool) *identity {
+func NewIdentity(fullMatch bool) *identity {
 	return &identity{
-		fullMatch:   fullMatch,
-		onlyLetters: onlyLetters,
+		fullMatch: fullMatch,
 	}
 }

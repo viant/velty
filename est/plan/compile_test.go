@@ -29,6 +29,20 @@ func TestPlanner_Compile(t *testing.T) {
 				"num": 10,
 			},
 		},
+		{
+			template: `#set($var1 = $num +  3)$var1`,
+			expect:   `13`,
+			vars: map[string]interface{}{
+				"num": 10,
+			},
+		},
+		{
+			template: `#set($var1 = $num - 3)$var1`,
+			expect:   `7`,
+			vars: map[string]interface{}{
+				"num": 10,
+			},
+		},
 	}
 outer:
 	for _, testCase := range testCases {
