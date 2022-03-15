@@ -6,7 +6,6 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"reflect"
-	"unsafe"
 )
 
 type directBinary struct {
@@ -15,34 +14,7 @@ type directBinary struct {
 	z *op.Operand
 }
 
-func (b *directBinary) quo(state *est.State) unsafe.Pointer {
-	x := b.x.Exec(state)
-	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
-	*(*int)(z) = *(*int)(x) / *(*int)(y)
-	return z
-}
-
-func (b *directBinary) add(state *est.State) unsafe.Pointer {
-	x := b.x.Exec(state)
-	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
-	*(*int)(z) = *(*int)(x) + *(*int)(y)
-
-	return z
-}
-
-func (b *directBinary) sub(state *est.State) unsafe.Pointer {
-	x := b.x.Exec(state)
-	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
-	*(*int)(z) = *(*int)(x) - *(*int)(y)
-
-	return z
-}
-
 func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
-
 	return func(control est.Control) (est.Compute, error) {
 		oprands, err := op.Expressions(exprs).Operands(control)
 		if err != nil {
@@ -52,18 +24,14 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		switch exprs[0].Type.Kind() {
 
 		case reflect.Int:
-			switch token {
-			case ast.QUO:
-				return binary.quo, nil
-			case ast.ADD:
-				return binary.add, nil
-			case ast.SUB:
-				return binary.sub, nil
-			}
-
+			return computeInt(token, binary)
+		case reflect.Float64:
+			return computeFloat(token, binary)
 		case reflect.String:
-
+			return computeString(token, binary)
+		case reflect.Bool:
+			return computeBool(token, binary)
 		}
-		return nil, fmt.Errorf("unsupported")
+		return nil, fmt.Errorf("unsupported %v", exprs[0].Type.String())
 	}, nil
 }

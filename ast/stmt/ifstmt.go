@@ -1,11 +1,18 @@
 package stmt
 
-import "github.com/viant/velty/ast"
+import (
+	"github.com/viant/velty/ast"
+	"reflect"
+)
 
 type If struct {
 	Condition ast.Expression
 	Body      Block
 	Else      *If
+}
+
+func (i *If) Type() reflect.Type {
+	return reflect.TypeOf(true)
 }
 
 func (i *If) Statements() []ast.Statement {

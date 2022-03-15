@@ -4,6 +4,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 	cexpr "github.com/viant/velty/est/expr"
 	"github.com/viant/velty/est/op"
+	"reflect"
 )
 
 //Binary
@@ -19,6 +20,9 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 	}
 
 	resultType := actual.Type()
+	if resultType == nil {
+		resultType = nonEmptyType(leftOperand.Type, rightOperand.Type)
+	}
 	acc := p.accumulator(resultType)
 	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
 
@@ -31,4 +35,14 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 		Type: resultType,
 		New:  computeNew,
 	}, nil
+}
+
+func nonEmptyType(types ...reflect.Type) reflect.Type {
+	for _, r := range types {
+		if r != nil {
+			return r
+		}
+	}
+
+	return nil
 }

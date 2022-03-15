@@ -2,6 +2,7 @@ package est
 
 import (
 	"fmt"
+	"reflect"
 	"unsafe"
 )
 
@@ -30,4 +31,26 @@ func (s State) SetValue(k string, v interface{}) error {
 	}
 	sel.SetValue(s.MemPtr, v)
 	return nil
+}
+
+func (s *State) Reset() {
+	for _, sel := range s.Selectors {
+		switch sel.Type.Kind() {
+		case reflect.Int:
+			sel.SetInt(s.MemPtr, 0)
+		case reflect.Int64:
+			sel.SetInt64(s.MemPtr, 0)
+		case reflect.Uint64:
+			sel.SetUint64(s.MemPtr, 0)
+
+		case reflect.String:
+			sel.SetString(s.MemPtr, "")
+		case reflect.Float64:
+			sel.SetFloat64(s.MemPtr, 0.0)
+		case reflect.Bool:
+			sel.SetBool(s.MemPtr, false)
+		}
+	}
+
+	s.Buffer.Reset()
 }

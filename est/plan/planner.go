@@ -9,6 +9,8 @@ import (
 	"strconv"
 )
 
+const currentPkg = "github.com/viant/velty/est/plan"
+
 type (
 	Planner struct {
 		bufferSize int
@@ -17,9 +19,10 @@ type (
 		*est.Control
 		Type scope.Type
 		Scope
-		selectors *[]*est.Selector
-		index     map[string]int
-		types     map[string]reflect.Type
+		selectors    *[]*est.Selector
+		index        map[string]int
+		types        map[string]reflect.Type
+		indexCounter int
 	}
 	Scope struct {
 		upstream []string
@@ -55,6 +58,10 @@ func (p *Planner) NewScope() *Planner {
 }
 
 func (p *Planner) DefineVariable(name string, v interface{}) error {
+	return p.defineVariable(name, name, v)
+}
+
+func (p *Planner) defineVariable(name string, id string, v interface{}) error {
 	var sType reflect.Type
 	switch t := v.(type) {
 	case reflect.Type:
@@ -62,7 +69,8 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	default:
 		sType = reflect.TypeOf(v)
 	}
-	sel := est.NewSelector(name, name, sType)
+
+	sel := est.NewSelector(name, id, sType)
 	return p.addSelector(sel)
 }
 
@@ -126,6 +134,22 @@ func (p *Planner) addSelector(sel *est.Selector) error {
 	}
 	*p.selectors = append(*p.selectors, sel)
 	return nil
+}
+
+func (p *Planner) compileIndexSelectorExpr() (*op.Expression, error) {
+	p.indexCounter++
+	fieldName := "_indexP_" + strconv.Itoa(p.indexCounter)
+
+	indexType := reflect.TypeOf(0)
+	selector := est.NewSelector(p.prefix+fieldName, fieldName, indexType)
+	if err := p.addSelector(selector); err != nil {
+		return nil, err
+	}
+
+	return &op.Expression{
+		Type:     indexType,
+		Selector: selector,
+	}, nil
 }
 
 func New(bufferSize int) *Planner {

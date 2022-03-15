@@ -35,7 +35,7 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast.Expression, error) {
 			return nil, err
 		}
 
-		var result ast.Expression = &expr.Parentheses{Parentheses: expression}
+		var result ast.Expression = &expr.Parentheses{P: expression}
 		if shouldNegate {
 			result = &expr.Unary{
 				Token: ast.NEG,

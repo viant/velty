@@ -6,9 +6,9 @@ import (
 )
 
 type Parentheses struct {
-	Parentheses ast.Expression
+	P ast.Expression
 }
 
 func (p *Parentheses) Type() reflect.Type {
-	return p.Parentheses.Type()
+	return p.P.Type()
 }

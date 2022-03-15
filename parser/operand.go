@@ -78,13 +78,23 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression) erro
 		var rightExpression ast.Expression
 		if err == nil {
 			rightExpression, err = matchEquationExpression(eprCursor)
-			rightExpression = &expr.Parentheses{Parentheses: rightExpression}
+			rightExpression = &expr.Parentheses{P: rightExpression}
 		} else {
 			_, rightExpression, err = matchOperand(cursor, dataTypeMatchers...)
 		}
 
 		if err != nil {
 			return err
+		}
+		hasPrecedence := isPrecedenceToken(token)
+
+		if hasPrecedence {
+			y, ok := rightExpression.(*expr.Binary)
+			if ok && !isPrecedenceToken(y.Token) {
+				expression = adjustPrecedence(expression, token, y)
+				continue
+			}
+
 		}
 
 		*expression = &expr.Binary{
@@ -93,4 +103,25 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression) erro
 			Y:     rightExpression,
 		}
 	}
+}
+
+func adjustPrecedence(expression *ast.Expression, token ast.Token, y *expr.Binary) *ast.Expression {
+	p := &expr.Parentheses{}
+	p.P = &expr.Binary{
+		X:     *expression,
+		Token: token,
+		Y:     y.X,
+	}
+
+	*expression = &expr.Binary{
+		X:     p,
+		Token: y.Token,
+		Y:     y.Y,
+	}
+	return expression
+}
+
+func isPrecedenceToken(token ast.Token) bool {
+	hasPrecedence := token == ast.MUL || token == ast.QUO
+	return hasPrecedence
 }

@@ -15,13 +15,18 @@ type Expression struct {
 
 func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	operand := &Operand{}
+
 	if e.LiteralPtr != nil {
 		operand.LiteralPtr = e.LiteralPtr
+		operand.Type = e.Type
 		return operand, nil
 	}
 	if e.Selector != nil {
 		//TODO check direct (no ptr, slice etc ...)
 		operand.Offset = &e.Selector.Offset
+		operand.Type = e.Selector.Type
+		operand.Sel = e.Selector
+
 		return operand, nil
 
 		//		operand.Sel = e.Selector

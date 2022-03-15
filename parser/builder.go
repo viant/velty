@@ -32,6 +32,9 @@ func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
 
 	switch actual := statement.(type) {
 	case ast.StatementContainer:
+		if last := s.Last(); last != nil {
+			last.AddStatement(actual)
+		}
 		s.buffer = append(s.buffer, actual)
 	default:
 		s.appendStatement(actual)
@@ -62,7 +65,10 @@ func (s *Builder) terminateStatement() error {
 	node := s.buffer[len(s.buffer)-1]
 	s.buffer = s.buffer[:len(s.buffer)-1]
 
-	s.block.AddStatement(node)
+	if len(s.buffer) == 0 {
+		s.block.AddStatement(node)
+	}
+
 	return nil
 }
 

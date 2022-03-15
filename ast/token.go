@@ -18,4 +18,6 @@ const (
 
 	AND = Token("&&")
 	OR  = Token("||")
+
+	SliceValue = Token("[]")
 )

@@ -88,7 +88,7 @@ var For = parsly.NewToken(forToken, "For", matcher.NewFragment("for"))
 var In = parsly.NewToken(inToken, "In", matcher.NewFragment("in"))
 var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
 
-var Parentheses = parsly.NewToken(parentheses, "Parentheses", matcher.NewBlock('(', ')', '\\'))
+var Parentheses = parsly.NewToken(parentheses, "P", matcher.NewBlock('(', ')', '\\'))
 var WhitespaceOnly = parsly.NewToken(whitespaceOnlyToken, "Whitespace only", vMatcher.NewWhitespaceOnly())
 var ExpressionBlock = parsly.NewToken(expressionBlockToken, "Expression block", matcher.NewBlock(';', ';', '\\'))
 var ExpressionStart = parsly.NewToken(expressionStartToken, "Expression start", matcher.NewByte(';'))

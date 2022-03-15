@@ -6,6 +6,7 @@ import (
 	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/ast/stmt"
+	"strings"
 )
 
 func Parse(input []byte) (*stmt.Block, error) {
@@ -21,7 +22,7 @@ func Parse(input []byte) (*stmt.Block, error) {
 		text := tokenMatch.Text(cursor)
 
 		if tokenMatch.Code == parsly.EOF || cursor.Pos >= len(input) {
-			if err := builder.PushStatement(appendToken, stmt.NewAppend(text)); err != nil {
+			if err := builder.PushStatement(appendToken, stmt.NewAppend(strings.TrimSpace(text))); err != nil {
 				return nil, err
 			}
 			break
@@ -70,7 +71,7 @@ func appendStatementIfNeeded(text string, stack *Builder) error {
 		return nil
 	}
 
-	if err := stack.PushStatement(appendToken, stmt.NewAppend(text)); err != nil {
+	if err := stack.PushStatement(appendToken, stmt.NewAppend(strings.TrimSpace(text))); err != nil {
 		return err
 	}
 	return nil

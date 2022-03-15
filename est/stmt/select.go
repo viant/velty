@@ -34,6 +34,13 @@ func (a *directAppender) appendBool(state *est.State) unsafe.Pointer {
 	return ptr
 }
 
+func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
+	ptr := state.Pointer(*a.x.Offset)
+	val := *(*float64)(ptr)
+	state.Buffer.AppendFloat(val)
+	return ptr
+}
+
 func Selector(expr *op.Expression) est.New {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
@@ -46,9 +53,11 @@ func Selector(expr *op.Expression) est.New {
 		case reflect.Int:
 			return result.appendInt, nil
 		case reflect.String:
-			return result.appendInt, nil
+			return result.appendString, nil
 		case reflect.Bool:
 			return result.appendBool, nil
+		case reflect.Float64:
+			return result.appendFloat64, nil
 		default:
 			return nil, fmt.Errorf("unsupported append selector: %s", expr.Type.String())
 		}

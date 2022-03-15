@@ -103,7 +103,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "if statement with brackets ( ) #1",
 			input:       `#if((1==1 && 2==2) && (3 ==3 || 4 == 4))abc#end`,
-			output:      `{ "Stmt": [ { "Condition": { "Parentheses": { "X": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "&&", "Y": { "X": { "Value": "2" }, "Token": "==", "Y": { "Value": "2" } } } }, "Token": "&&", "Y": { "Parentheses": { "X": { "Value": "3" }, "Token": "==", "Y": { "X": { "Value": "3" }, "Token": "||", "Y": { "X": { "Value": "4" }, "Token": "==", "Y": { "Value": "4" } } } } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "P": { "X": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "&&", "Y": { "X": { "Value": "2" }, "Token": "==", "Y": { "Value": "2" } } } }, "Token": "&&", "Y": { "P": { "X": { "Value": "3" }, "Token": "==", "Y": { "X": { "Value": "3" }, "Token": "||", "Y": { "X": { "Value": "4" }, "Token": "==", "Y": { "Value": "4" } } } } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement binary without token and right hand",
