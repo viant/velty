@@ -19,7 +19,7 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast.Expression, error) {
 		}
 		unary.X = expression
 		return unary, nil
-	case parentheses:
+	case parenthesesToken:
 		expressionValue := matched.Text(cursor)
 
 		matched = cursor.MatchAfterOptional(WhiteSpace, Negation)

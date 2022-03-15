@@ -53,39 +53,75 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 
 func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) {
 	var candidates []*parsly.Token
-	if fullMatch {
-		candidates = []*parsly.Token{ComplexSelector}
-	} else {
-		candidates = []*parsly.Token{NewVariable}
+	candidates = []*parsly.Token{Selector}
+	matched := cursor.MatchAny(candidates...)
+
+	selectorId := matched.Text(cursor)
+	switch matched.Code {
+	case parsly.Invalid:
+		return nil, cursor.NewError(candidates...)
+	case parsly.EOF:
+		return &expr.Select{ID: selectorId}, nil
 	}
 
-	matched := cursor.MatchAny(candidates...)
-	id := matched.Text(cursor)
-
+	candidates = []*parsly.Token{Dot, Parentheses, SquareBrackets}
+	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
+	selector := &expr.Select{ID: selectorId}
 	switch matched.Code {
 	case parsly.EOF, parsly.Invalid:
-		return nil, cursor.NewError(candidates...)
-	}
-
-	candidates = []*parsly.Token{Parentheses}
-	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
-
-	var call *expr.Call
-	if matched.Code == parentheses {
-		callValue := matched.Text(cursor)
-		callCursor := parsly.NewCursor("", []byte(callValue[1:len(callValue)-1]), 0)
-
-		var err error
-		call, err = matchFunctionCall(callCursor)
+		return selector, nil
+	case dotToken:
+		call, err := parseIdentity(cursor, fullMatch)
 		if err != nil {
 			return nil, err
 		}
+		selector.X = call
+
+	case parenthesesToken:
+		text := matched.Text(cursor)
+		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
+		call, err := matchFunctionCall(newCursor)
+		if err != nil {
+			return nil, err
+		}
+		selector.X = call
+		if matchNextIdentity(cursor) {
+			call.X, err = parseIdentity(cursor, fullMatch)
+			if err != nil {
+				return nil, err
+			}
+		}
+	case squareBracketsToken:
+		text := matched.Text(cursor)
+		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
+		_, operandExpr, err := matchOperand(newCursor, dataTypeMatchers...)
+		if err != nil {
+			return nil, err
+		}
+
+		call := &expr.SliceIndex{X: operandExpr}
+		if matchNextIdentity(cursor) {
+			call.Y, err = parseIdentity(cursor, fullMatch)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		selector.X = call
+		return selector, nil
 	}
 
-	return &expr.Select{
-		ID:   id,
-		Call: call,
-	}, nil
+	if fullMatch {
+		cursor.MatchOne(WhiteSpace)
+		if cursor.Pos != cursor.InputSize {
+			return nil, cursor.NewError(WhiteSpace)
+		}
+	}
+	return selector, nil
+}
+
+func matchNextIdentity(cursor *parsly.Cursor) bool {
+	return cursor.MatchAfterOptional(WhiteSpace, Dot).Code == dotToken
 }
 
 func matchFunctionCall(cursor *parsly.Cursor) (*expr.Call, error) {

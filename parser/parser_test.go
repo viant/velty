@@ -26,11 +26,6 @@ func TestService_Parse(t *testing.T) {
 			output:      `{"Stmt": [{"ID": "VARIABLE"}]}`,
 		},
 		{
-			description: "empty selector",
-			input:       "${}",
-			expectError: true,
-		},
-		{
 			description: "if statement",
 			input:       `#if("1"=="1")abc#end`,
 			output:      `{"Stmt": [{"Condition": {"X": {"Value": "1"}, "Token": "==", "Y": {"Value": "1"}}, "Body": {"Stmt": [{"Append": "abc"}]}}]}`,
@@ -188,7 +183,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "different selectors",
 			input:       `#if( $id == ${id3.Name} )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "id3.Name" } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "id3", "X": { "ID": "Name" } } } } ] }`,
 		},
 		{
 			description: "selector without brackets and number",
@@ -203,7 +198,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "function call",
 			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
-			output:      `{ "Stmt": [ { "ID": "foo.Function", "Call": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } ] }`,
+			output:      `{ "Stmt": [ { "ID": "foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
 		},
 		{
 			description: "comments",
@@ -221,6 +216,11 @@ func TestService_Parse(t *testing.T) {
 			description: `assign binary expression`,
 			input:       `#set( $var1 = $foo != 10)abc`,
 			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "!=", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
+		},
+		{
+			description: `index`,
+			input:       `${employees[2]}`,
+			output:      `{ "Stmt": [ { "ID": "employees", "X": { "X": { "Value": "2" } } } ] }`,
 		},
 	}
 

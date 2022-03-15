@@ -5,7 +5,6 @@ import (
 )
 
 type identity struct {
-	fullMatch bool
 }
 
 //Match matches a string
@@ -22,27 +21,19 @@ func (n *identity) Match(cursor *parsly.Cursor) (matched int) {
 	size := len(input)
 	for i := pos; i < size; i++ {
 		switch input[i] {
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_', '.':
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_':
 			matched++
 			continue
 		case '\n', '\r', ' ':
-			if n.fullMatch {
-				return 0
-			}
 			return matched
-		case '(':
-			return matched
+
 		default:
 			if IsLetter(input[i]) {
 				matched++
 				continue
 			}
 
-			if n.fullMatch {
-				return 0
-			} else {
-				return matched
-			}
+			return matched
 		}
 	}
 
@@ -57,8 +48,6 @@ func IsLetter(b byte) bool {
 }
 
 //NewIdentity creates a string matcher
-func NewIdentity(fullMatch bool) *identity {
-	return &identity{
-		fullMatch: fullMatch,
-	}
+func NewIdentity() *identity {
+	return &identity{}
 }

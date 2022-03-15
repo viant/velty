@@ -29,7 +29,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 
 		return operand, nil
 
-		//		operand.Sel = e.Selector
+		//		operand.Sel = e.selectorExists
 		//		return operand, nil
 	}
 	compute, err := e.New(control)

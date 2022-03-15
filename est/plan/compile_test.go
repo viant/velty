@@ -13,6 +13,14 @@ func TestPlanner_Compile(t *testing.T) {
 		Name string
 	}
 
+	type address struct {
+		Street string
+	}
+
+	type employee struct {
+		Address address
+	}
+
 	var testCases = []struct {
 		description string
 		template    string
@@ -20,86 +28,91 @@ func TestPlanner_Compile(t *testing.T) {
 		expect      string
 	}{
 		{
-			template: `#set($var1 = 123)$var1`,
-			expect:   `123`,
+			description: "assignment",
+			template:    `#set($var1 = 123)$var1`,
+			expect:      `123`,
 		},
 		{
-			template: `#set($var1 = 12400/100)$var1`,
-			expect:   `124`,
+			description: "assign binary expression result",
+			template:    `#set($var1 = 12400/100)$var1`,
+			expect:      `124`,
 		},
 		{
-			template: `#set($var1 = 3 + $num)$var1`,
-			expect:   `13`,
+			description: "assign binary expression result with select at the right side",
+			template:    `#set($var1 = 3 + $num)$var1`,
+			expect:      `13`,
 			vars: map[string]interface{}{
 				"num": 10,
 			},
 		},
 		{
-			template: `#set($var1 = $num +  3)$var1`,
-			expect:   `13`,
+			description: "assign binary expression result with select at the left side #1",
+			template:    `#set($var1 = $num +  3)$var1`,
+			expect:      `13`,
 			vars: map[string]interface{}{
 				"num": 10,
 			},
 		},
 		{
-			template: `#set($var1 = $num - 3)$var1`,
-			expect:   `7`,
+			description: "assign binary expression result with select at the left side #2",
+			template:    `#set($var1 = $num - 3)$var1`,
+			expect:      `7`,
 			vars: map[string]interface{}{
 				"num": 10,
 			},
 		},
 		{
-			description: `assign binary expression #1`,
+			description: `assign binary expression with precedence evaluation #1`,
 			template:    `#set( $var1 = 2 * 2 + 3 )$var1`,
 			expect:      "7",
 		},
 		{
-			description: `assign binary expression #2`,
+			description: `assign binary expression with precedence evaluation #2`,
 			template:    `#set( $var1 = 2 * 2 * 2 + 3 * 2 )$var1`,
 			expect:      "14",
 		},
 		{
-			description: `assign binary expression #3`,
+			description: `assign binary expression with precedence evaluation #3`,
 			template:    `#set( $var1 = 2 * (2 + 8) * 2 + 3 * 2 )$var1`,
 			expect:      "46",
 		},
 		{
-			description: `assign binary expression #4`,
+			description: `assign binary expression, multiplication`,
 			template:    `#set( $var1 = 2.5 * 2.5)$var1`,
 			expect:      "6.25",
 		},
 		{
-			description: `assign binary expression #5`,
+			description: `assign binary expression, concatenation #5`,
 			template:    `#set( $var1 = "abc" + "cdef")$var1`,
 			expect:      "abccdef",
 		},
 		{
-			description: `assign binary expression #6`,
+			description: `assign binary expression, comparison #6`,
 			template:    `#set( $var1 = "abc" == "cdef")$var1`,
 			expect:      "false",
 		},
 		{
-			description: `assign binary expression #7`,
+			description: `assign binary expression, comparison #7`,
 			template:    `#set( $var1 = "abc" == "abc")$var1`,
 			expect:      "true",
 		},
 		{
-			description: `assign binary expression #8`,
+			description: `assign binary expression, comparison #8`,
 			template:    `#set( $var1 = 1.5 !=  1.5)$var1`,
 			expect:      "false",
 		},
 		{
-			description: `assign binary expression #9`,
+			description: `assign binary expression, comparison #9`,
 			template:    `#set( $var1 = 1.5 ==  1.5)$var1`,
 			expect:      "true",
 		},
 		{
-			description: `assign binary expression #10`,
+			description: `assign binary expression, comparison #10`,
 			template:    `#set( $var1 = 1 ==  1)$var1`,
 			expect:      "true",
 		},
 		{
-			description: `assign binary expression #10`,
+			description: `assign binary expression, both side selector #10`,
 			template:    `#set( $var1 = $num1 +  $num2)$var1`,
 			expect:      "25",
 			vars: map[string]interface{}{
@@ -209,10 +222,18 @@ func TestPlanner_Compile(t *testing.T) {
 				"foo": foo{Name: "Foo name"},
 			},
 		},
+		{
+			description: "objects  #2",
+			template:    `${employee.Address.Street}`,
+			expect:      `employee street`,
+			vars: map[string]interface{}{
+				"employee": employee{Address: address{Street: "employee street"}},
+			},
+		},
 	}
 outer:
 	//for i, testCase := range testCases[len(testCases)-1:] {
-	for i, testCase := range testCases[:24] {
+	for i, testCase := range testCases[24:25] {
 		fmt.Printf("Running testcase: %v\n", i)
 		planner := plan.New(8192)
 

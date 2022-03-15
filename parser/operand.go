@@ -34,9 +34,9 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 			return nil, nil, err
 		}
 
-		matcher = ComplexSelector
+		matcher = Selector
 
-	case numberMatcher:
+	case numberToken:
 		value := matched.Text(cursor)
 		matcher = Number
 		expression = expr.NumberExpression(value)
