@@ -6,13 +6,12 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/plan/scope"
+	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
 )
 
 const (
-	currentPkg = "github.com/viant/velty/est/plan"
-
 	fieldSeparator = "___"
 )
 
@@ -97,24 +96,37 @@ func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
 	parentType := sel.Type
 
 	selectorId := selector.ID
+
+	wasPtr := false
 	for call != nil {
+		if parentType.Kind() == reflect.Ptr {
+			wasPtr = true
+			parentType = deref(parentType)
+		}
+
 		switch actual := call.(type) {
 		case *expr.Select:
 			selectorId = selectorId + fieldSeparator + actual.ID
-
-			field, found := parentType.FieldByName(actual.ID)
-			if !found {
+			field := xunsafe.FieldByName(parentType, actual.ID)
+			if field == nil {
 				return nil
 			}
 
 			sel = p.ensureSelector(selectorId, field, sel)
-
+			sel.Indirect = wasPtr
 			parentType = field.Type
 			call = actual.X
 		}
 	}
 
 	return sel
+}
+
+func deref(rType reflect.Type) reflect.Type {
+	if rType.Kind() == reflect.Ptr {
+		return deref(rType.Elem())
+	}
+	return rType
 }
 
 func (p *Planner) selectorID(name string) string {
@@ -137,6 +149,8 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 	}
 	expr.Type = t
 	expr.Selector.Type = t
+
+	expr.Selector.Indirect = t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice
 	return p.addSelector(expr.Selector)
 }
 
@@ -194,12 +208,12 @@ func (p *Planner) compileIndexSelectorExpr() (*op.Expression, error) {
 	}, nil
 }
 
-func (p *Planner) ensureSelector(id string, field reflect.StructField, sel *est.Selector) *est.Selector {
+func (p *Planner) ensureSelector(id string, field *xunsafe.Field, sel *est.Selector) *est.Selector {
 	if selIndex, ok := p.index[id]; ok {
 		return (*p.selectors)[selIndex]
 	}
 
-	selector := est.NewSelector(id, field.Name, field.Type, sel)
+	selector := est.SelectorWithField(id, field, sel)
 	if err := p.addSelector(selector); err != nil {
 		return nil
 	}

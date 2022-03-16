@@ -11,13 +11,27 @@ type ForEach struct {
 	Block est.Compute
 
 	Item *op.Operand
-	X    *est.Selector
+	X    *op.Operand
 
 	*xunsafe.Slice
 }
 
-func (e *ForEach) Compute(state *est.State) unsafe.Pointer {
-	xPtr := state.Pointer(e.X.Offset)
+func (e *ForEach) compute(state *est.State) unsafe.Pointer {
+	xPtr := state.Pointer(e.X.Sel.Offset)
+	l := e.Slice.Len(xPtr)
+
+	var resultPtr unsafe.Pointer
+	for i := 0; i < l; i++ {
+		v := e.Slice.ValueAt(xPtr, i)
+		e.Item.Sel.Set(state.MemPtr, v)
+		resultPtr = e.Block(state)
+	}
+
+	return resultPtr
+}
+
+func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
+	xPtr := e.X.Exec(state)
 	l := e.Slice.Len(xPtr)
 
 	var resultPtr unsafe.Pointer
@@ -44,12 +58,16 @@ func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expressio
 		}
 
 		loop.Slice = xunsafe.NewSlice(aSlice.Type)
-		loop.X = aSlice.Sel
+		loop.X = aSlice
 
 		loop.Item, err = itemExpr.Operand(control)
 		if err != nil {
 			return nil, err
 		}
-		return loop.Compute, nil
+
+		if loop.X.Sel != nil && loop.X.Sel.Indirect {
+			return loop.computeIndirect, nil
+		}
+		return loop.compute, nil
 	}, nil
 }

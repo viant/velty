@@ -19,15 +19,17 @@ func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
 }
 
 func (o *Operand) Exec(state *est.State) unsafe.Pointer {
+	if o.Comp != nil {
+		return o.Comp(state)
+	}
+
 	if o.LiteralPtr != nil {
 		return *o.LiteralPtr
 	}
+
 	if o.Offset != nil {
 		return o.Pointer(state)
 	}
-	if o.Sel != nil {
-		//TODO this is not enought for pointer and accessors check igo
-		return o.Sel.Pointer(state.MemPtr)
-	}
-	return o.Comp(state)
+
+	return o.Sel.Pointer(state.MemPtr)
 }

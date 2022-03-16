@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-func computeString(token ast.Token, binary *directBinary) (est.Compute, error) {
+func computeString(token ast.Token, binary *binaryExpr) (est.Compute, error) {
 	switch token {
 	case ast.ADD:
 		return binary.stringAdd, nil
@@ -18,7 +18,7 @@ func computeString(token ast.Token, binary *directBinary) (est.Compute, error) {
 	return nil, errorUnsupported(token, "string")
 }
 
-func (b *directBinary) stringAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) stringAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -26,7 +26,7 @@ func (b *directBinary) stringAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *directBinary) stringEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) stringEq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
@@ -38,7 +38,7 @@ func (b *directBinary) stringEq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *directBinary) stringNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) stringNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 

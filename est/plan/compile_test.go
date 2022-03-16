@@ -13,12 +13,33 @@ func TestPlanner_Compile(t *testing.T) {
 		Name string
 	}
 
-	type address struct {
-		Street string
+	type Values struct {
+		IntValue     int
+		StringValue  string
+		BooleanValue bool
+		FloatValue   float64
+		Index        int
+		Values       []string
 	}
 
 	type employee struct {
-		Address address
+		Address Values
+	}
+
+	type Department struct {
+		Address *Values
+	}
+
+	values := &Values{
+		StringValue:  "employee street",
+		IntValue:     123456789,
+		BooleanValue: true,
+		FloatValue:   125.43,
+		Index:        10,
+		Values:       []string{"Var1", "Var2", "Var3", "Var4"},
+	}
+	department := &Department{
+		Address: values,
 	}
 
 	var testCases = []struct {
@@ -28,7 +49,7 @@ func TestPlanner_Compile(t *testing.T) {
 		expect      string
 	}{
 		{
-			description: "assignment",
+			description: "assign int",
 			template:    `#set($var1 = 123)$var1`,
 			expect:      `123`,
 		},
@@ -38,7 +59,7 @@ func TestPlanner_Compile(t *testing.T) {
 			expect:      `124`,
 		},
 		{
-			description: "assign binary expression result with select at the right side",
+			description: "assign binary expression result with selector at the right side",
 			template:    `#set($var1 = 3 + $num)$var1`,
 			expect:      `13`,
 			vars: map[string]interface{}{
@@ -46,7 +67,7 @@ func TestPlanner_Compile(t *testing.T) {
 			},
 		},
 		{
-			description: "assign binary expression result with select at the left side #1",
+			description: "assign binary expression result with selector at the left side #1",
 			template:    `#set($var1 = $num +  3)$var1`,
 			expect:      `13`,
 			vars: map[string]interface{}{
@@ -54,7 +75,7 @@ func TestPlanner_Compile(t *testing.T) {
 			},
 		},
 		{
-			description: "assign binary expression result with select at the left side #2",
+			description: "assign binary expression result with selector at the left side #2",
 			template:    `#set($var1 = $num - 3)$var1`,
 			expect:      `7`,
 			vars: map[string]interface{}{
@@ -77,7 +98,7 @@ func TestPlanner_Compile(t *testing.T) {
 			expect:      "46",
 		},
 		{
-			description: `assign binary expression, multiplication`,
+			description: `assign binary expression, multiplication #4`,
 			template:    `#set( $var1 = 2.5 * 2.5)$var1`,
 			expect:      "6.25",
 		},
@@ -200,10 +221,10 @@ func TestPlanner_Compile(t *testing.T) {
 	The value of var: $var
 #end
 `,
-			expect: `The value of var:0The value of var:1The value of var:2The value of var:3The value of var:4The value of var:5The value of var:6The value of var:7The value of var:8The value of var:9`,
+			expect: `The value of var:1The value of var:2The value of var:3The value of var:4The value of var:5The value of var:6The value of var:7The value of var:8The value of var:9`,
 		},
 		{
-			description: "for statement #1",
+			description: "for statement #2",
 			template: `
 #foreach($var in $values)
 	The value of var: $var
@@ -224,16 +245,105 @@ func TestPlanner_Compile(t *testing.T) {
 		},
 		{
 			description: "objects  #2",
-			template:    `${employee.Address.Street}`,
+			template:    `${employee.Address.StringValue}`,
 			expect:      `employee street`,
 			vars: map[string]interface{}{
-				"employee": employee{Address: address{Street: "employee street"}},
+				"employee": employee{Address: *values},
+			},
+		},
+		{
+			description: "objects  #3",
+			template:    `${employee.Address.StringValue}`,
+			expect:      `employee street`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #4",
+			template:    `${employee.Address.IntValue}`,
+			expect:      `123456789`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #5",
+			template:    `${employee.Address.BooleanValue}`,
+			expect:      `true`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #6",
+			template:    `${employee.Address.FloatValue}`,
+			expect:      `125.43`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #7",
+			template: `
+#set($abc = ${employee.Address.StringValue})
+$abc
+`,
+			expect: `employee street`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #8",
+			template: `
+#set($abc = ${employee.Address.FloatValue})
+$abc
+`,
+			expect: `125.43`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #9",
+			template: `
+#set($abc = ${employee.Address.FloatValue} + ${employee.Address.FloatValue})
+$abc
+`,
+			expect: `250.86`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #10",
+			template: `
+#foreach($value in $employee.Address.Values )
+	$value ;
+#end
+`,
+			expect: `Var1;Var2;Var3;Var4;`,
+			vars: map[string]interface{}{
+				"employee": department,
+			},
+		},
+		{
+			description: "objects  #11",
+			template: `
+#for($var = 1; $var <= 4; $var++ )
+	Var${var} ;
+#end
+`,
+			expect: `Var1;Var2;Var3;Var4;`,
+			vars: map[string]interface{}{
+				"employee": department,
 			},
 		},
 	}
 outer:
 	//for i, testCase := range testCases[len(testCases)-1:] {
-	for i, testCase := range testCases[24:25] {
+	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		planner := plan.New(8192)
 
@@ -267,7 +377,6 @@ var benchNewState func() *est.State
 var benchState *est.State
 
 func init() {
-	return
 	template := `
 #if($var1 =!= $var2)
 	variables are not equal
@@ -280,7 +389,7 @@ func init() {
 	#end
 #end
 
-#for($var3 = 0; $var3 < 110; $var3++) 
+#for($var3 = 0; $var3 < 100; $var3++) 
 		varValue: abc
 #end
 `

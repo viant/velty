@@ -10,23 +10,23 @@ import (
 //Binary
 
 func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
-	leftOperand, err := p.compileExpr(actual.X)
+	x, err := p.compileExpr(actual.X)
 	if err != nil {
 		return nil, err
 	}
-	rightOperand, err := p.compileExpr(actual.Y)
+	y, err := p.compileExpr(actual.Y)
 	if err != nil {
 		return nil, err
 	}
 
 	resultType := actual.Type()
 	if resultType == nil {
-		resultType = nonEmptyType(leftOperand.Type, rightOperand.Type)
+		resultType = nonEmptyType(x.Type, y.Type)
 	}
 	acc := p.accumulator(resultType)
 	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
 
-	computeNew, err := cexpr.Binary(actual.Token, leftOperand, rightOperand, resultExpr)
+	computeNew, err := cexpr.Binary(actual.Token, x, y, resultExpr)
 	if err != nil {
 		return nil, err
 	}

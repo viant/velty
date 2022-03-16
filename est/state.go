@@ -15,20 +15,22 @@ type State struct {
 	Buffer    *Buffer
 }
 
-func (s State) Pointer(offset uintptr) unsafe.Pointer {
+func (s *State) Pointer(offset uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(s.MemPtr) + offset)
 }
 
-func (s State) SetValue(k string, v interface{}) error {
+func (s *State) SetValue(k string, v interface{}) error {
 	idx, ok := s.Index[k]
 	if !ok {
 		return fmt.Errorf("undefined: %v", k)
 	}
+
 	sel := s.Selectors[idx]
-	if sel.Primitive {
+	if !sel.Indirect && sel.Kind() != reflect.Struct {
 		sel.Set(s.MemPtr, v)
 		return nil
 	}
+
 	sel.SetValue(s.MemPtr, v)
 	return nil
 }

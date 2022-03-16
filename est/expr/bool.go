@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-func computeBool(token ast.Token, binary *directBinary) (est.Compute, error) {
+func computeBool(token ast.Token, binary *binaryExpr) (est.Compute, error) {
 	switch token {
 	case ast.EQ:
 		return binary.boolEq, nil
@@ -17,7 +17,7 @@ func computeBool(token ast.Token, binary *directBinary) (est.Compute, error) {
 	return nil, errorUnsupported(token, "Bool")
 }
 
-func (b *directBinary) boolEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) boolEq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -28,7 +28,7 @@ func (b *directBinary) boolEq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *directBinary) boolNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) boolNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr

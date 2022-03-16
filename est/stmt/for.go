@@ -16,6 +16,7 @@ type For struct {
 
 func (f *For) compute(state *est.State) unsafe.Pointer {
 	var ptr unsafe.Pointer
+	f.Init(state)
 	for *(*bool)(f.Condition.Exec(state)) {
 		ptr = f.Block(state)
 		f.Post(state)

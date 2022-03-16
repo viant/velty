@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-type directBinary struct {
+type binaryExpr struct {
 	x *op.Operand
 	y *op.Operand
 	z *op.Operand
@@ -20,7 +20,7 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		if err != nil {
 			return nil, err
 		}
-		binary := &directBinary{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
+		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
 		switch exprs[0].Type.Kind() {
 
 		case reflect.Int:

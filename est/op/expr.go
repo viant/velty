@@ -27,10 +27,12 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		operand.Type = e.Selector.Type
 		operand.Sel = e.Selector
 
+		if e.Selector != nil && e.Selector.Indirect {
+			operand.Comp = e.newIndirectSelector()
+		}
+
 		return operand, nil
 
-		//		operand.Sel = e.selectorExists
-		//		return operand, nil
 	}
 	compute, err := e.New(control)
 	if err != nil {
