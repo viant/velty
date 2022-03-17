@@ -11,14 +11,6 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast.Expression, error) {
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
 	switch matched.Code {
-	case negationToken:
-		unary := &expr.Unary{Token: ast.NEG}
-		expression, err := matchEquationExpression(cursor)
-		if err != nil {
-			return nil, err
-		}
-		unary.X = expression
-		return unary, nil
 	case parenthesesToken:
 		expressionValue := matched.Text(cursor)
 
