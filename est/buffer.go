@@ -42,11 +42,22 @@ func (b *Buffer) AppendBool(v bool) {
 	b.AppendString(s)
 }
 
+func (b *Buffer) AppendFloat(v float64) {
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	b.AppendString(s)
+}
+
 func (b *Buffer) AppendString(s string) {
 	sLen := len(s)
 	if sLen == 0 {
 		return
 	}
+	b.growIfNeeded(sLen)
+	copy(b.buf[b.index:], s)
+	b.index += sLen
+}
+
+func (b *Buffer) growIfNeeded(sLen int) {
 	if sLen+b.index >= len(b.buf) {
 		size := len(b.buf) + b.poolSize
 		if size < sLen {
@@ -55,8 +66,6 @@ func (b *Buffer) AppendString(s string) {
 		newBuffer := make([]byte, size)
 		b.buf = append(b.buf, newBuffer...)
 	}
-	copy(b.buf[b.index:], s)
-	b.index += sLen
 }
 
 func (b *Buffer) Reset() {

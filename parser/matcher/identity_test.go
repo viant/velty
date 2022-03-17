@@ -45,7 +45,7 @@ func TestIdentity_Match(t *testing.T) {
 	}
 
 	for _, useCase := range useCases {
-		matcher := NewIdentity(true, false)
+		matcher := NewIdentity(true)
 		matched := matcher.Match(parsly.NewCursor("", useCase.input, 0))
 		assert.Equal(t, useCase.matched, matched > 0, useCase.description)
 	}

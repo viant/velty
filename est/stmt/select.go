@@ -34,6 +34,45 @@ func (a *directAppender) appendBool(state *est.State) unsafe.Pointer {
 	return ptr
 }
 
+func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
+	ptr := state.Pointer(*a.x.Offset)
+	val := *(*float64)(ptr)
+	state.Buffer.AppendFloat(val)
+	return ptr
+}
+
+func (a *directAppender) newAppendStringIndirect() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		ret := a.x.Exec(state)
+		state.Buffer.AppendString(*(*string)(ret))
+		return ret
+	}
+}
+
+func (a *directAppender) newAppendIntIndirect() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		ret := a.x.Exec(state)
+		state.Buffer.AppendInt(*(*int)(ret))
+		return ret
+	}
+}
+
+func (a *directAppender) newAppendBoolIndirect() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		ret := a.x.Exec(state)
+		state.Buffer.AppendBool(*(*bool)(ret))
+		return ret
+	}
+}
+
+func (a *directAppender) newAppendFloatIndirect() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		ret := a.x.Exec(state)
+		state.Buffer.AppendFloat(*(*float64)(ret))
+		return ret
+	}
+}
+
 func Selector(expr *op.Expression) est.New {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
@@ -44,13 +83,29 @@ func Selector(expr *op.Expression) est.New {
 		result := &directAppender{x: x}
 		switch expr.Type.Kind() {
 		case reflect.Int:
-			return result.appendInt, nil
+			if !x.Sel.Indirect {
+				return result.appendInt, nil
+			}
+			return result.newAppendIntIndirect(), nil
+
 		case reflect.String:
-			return result.appendInt, nil
+			if !x.Sel.Indirect {
+				return result.appendString, nil
+			}
+			return result.newAppendStringIndirect(), nil
+
 		case reflect.Bool:
-			return result.appendBool, nil
-		default:
-			return nil, fmt.Errorf("unsupported append selector: %s", expr.Type.String())
+			if !x.Sel.Indirect {
+				return result.appendBool, nil
+			}
+			return result.newAppendBoolIndirect(), nil
+
+		case reflect.Float64:
+			if !x.Sel.Indirect {
+				return result.appendFloat64, nil
+			}
+			return result.newAppendFloatIndirect(), nil
 		}
+		return nil, fmt.Errorf("unsupported append selector: %s", expr.Type.String())
 	}
 }

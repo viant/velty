@@ -9,15 +9,37 @@ import (
 type Selector struct {
 	ID string
 	*xunsafe.Field
-	Primitive bool
-	Ancestors []*Selector
+	Indirect bool
+	Parent   *Selector
 }
 
 //NewSelector create a selector
-func NewSelector(id, name string, sType reflect.Type, ancestors ...*Selector) *Selector {
+func NewSelector(id, name string, sType reflect.Type, parent *Selector) *Selector {
+	xField := newXField(name, sType)
 	return &Selector{
-		ID:        id,
-		Field:     &xunsafe.Field{Name: name, Type: sType},
-		Ancestors: ancestors,
+		ID:       id,
+		Field:    xField,
+		Parent:   parent,
+		Indirect: sType != nil && (sType.Kind() == reflect.Ptr || sType.Kind() == reflect.Slice),
+	}
+}
+
+func newXField(name string, sType reflect.Type) *xunsafe.Field {
+	field := reflect.StructField{Name: name, Type: sType}
+	var xField *xunsafe.Field
+	if field.Type != nil && field.Type.Kind() != reflect.Invalid {
+		xField = xunsafe.NewField(field)
+	} else {
+		xField = &xunsafe.Field{Name: name, Type: sType}
+	}
+	return xField
+}
+
+func SelectorWithField(id string, field *xunsafe.Field, parent *Selector) *Selector {
+	return &Selector{
+		ID:       id,
+		Field:    field,
+		Parent:   parent,
+		Indirect: field.Kind() == reflect.Ptr || field.Kind() == reflect.Slice,
 	}
 }

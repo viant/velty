@@ -26,11 +26,6 @@ func TestService_Parse(t *testing.T) {
 			output:      `{"Stmt": [{"ID": "VARIABLE"}]}`,
 		},
 		{
-			description: "empty selector",
-			input:       "${}",
-			expectError: true,
-		},
-		{
 			description: "if statement",
 			input:       `#if("1"=="1")abc#end`,
 			output:      `{"Stmt": [{"Condition": {"X": {"Value": "1"}, "Token": "==", "Y": {"Value": "1"}}, "Body": {"Stmt": [{"Append": "abc"}]}}]}`,
@@ -103,12 +98,12 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "if statement with brackets ( ) #1",
 			input:       `#if((1==1 && 2==2) && (3 ==3 || 4 == 4))abc#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "X": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Token": "&&", "Y": { "X": { "Value": "2" }, "Token": "==", "Y": { "Value": "2" } } }, "Token": "&&", "Y": { "X": { "X": { "Value": "3" }, "Token": "==", "Y": { "Value": "3" } }, "Token": "||", "Y": { "X": { "Value": "4"  }, "Token": "==", "Y": { "Value": "4" } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "P": { "X": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "&&", "Y": { "X": { "Value": "2" }, "Token": "==", "Y": { "Value": "2" } } } }, "Token": "&&", "Y": { "P": { "X": { "Value": "3" }, "Token": "==", "Y": { "X": { "Value": "3" }, "Token": "||", "Y": { "X": { "Value": "4" }, "Token": "==", "Y": { "Value": "4" } } } } } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement binary without token and right hand",
 			input:       `#if( ${LOGGED_USER} )abc#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "LOGGED_USER" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "ID": "LOGGED_USER" }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
 			description: "if statement && token",
@@ -146,29 +141,19 @@ func TestService_Parse(t *testing.T) {
 			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "/", "Y": { "Value": "1" } } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
-			description: "if statement, different types",
-			input:       `#if( 1 > "1")abc#end`,
-			expectError: true,
-		},
-		{
 			description: "if statement, boolean",
 			input:       `#if( true != true)abc#end`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "!=", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
 		},
 		{
-			description: "if statement, add to boolean",
-			input:       `#if( false + false != true)abc#end`,
-			expectError: true,
-		},
-		{
 			description: "if statement, elseif",
 			input:       `#if(true)abc#elseif("abc"=="abc")cdef#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" }, { "Append": "cdef" } ] }, "Else": { "Condition": { "X": { "Value": "abc" }, "Token": "==", "Y": { "Value": "abc" } } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "Value": "true" }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "abc" }, "Token": "==", "Y": { "Value": "abc" } }, "Body": { "Stmt": [ { "Append": "cdef" } ] } } } ] }`,
 		},
 		{
 			description: "if statement, else",
 			input:       `#if(true)abc#elsecdef#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "abc" }, { "Append": "cdef" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "Value": "true" }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "cdef" } ] } } } ] }`,
 		},
 		{
 			description: "set value",
@@ -198,7 +183,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "different selectors",
 			input:       `#if( $id == ${id3.Name} )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "id3.Name" } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "id3", "X": { "ID": "Name" } } } } ] }`,
 		},
 		{
 			description: "selector without brackets and number",
@@ -208,12 +193,12 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "multiple comparisons",
 			input:       `#if( $id == 1 == true == false )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "X": { "ID": "id" }, "Token": "==", "Y": { "Value": "1" } }, "Token": "==", "Y": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "false" } } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "false" } } } } } ] }`,
 		},
 		{
 			description: "function call",
 			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
-			output:      `{ "Stmt": [ { "ID": "foo.Function", "Call": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } ] }`,
+			output:      `{ "Stmt": [ { "ID": "foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
 		},
 		{
 			description: "comments",
@@ -221,6 +206,21 @@ func TestService_Parse(t *testing.T) {
 #if(1==1)abc#end
 ## THIS IS ALSO COMMENT`,
 			output: `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] } } ] }`,
+		},
+		{
+			description: `assign binary expression`,
+			input:       `#set( $var1 = $foo + 10)abc`,
+			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "+", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
+		},
+		{
+			description: `assign binary expression`,
+			input:       `#set( $var1 = $foo != 10)abc`,
+			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "!=", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
+		},
+		{
+			description: `index`,
+			input:       `${employees[2]}`,
+			output:      `{ "Stmt": [ { "ID": "employees", "X": { "X": { "Value": "2" } } } ] }`,
 		},
 	}
 

@@ -1,6 +1,9 @@
 package stmt
 
-import "github.com/viant/velty/ast"
+import (
+	"github.com/viant/velty/ast"
+	"reflect"
+)
 
 type If struct {
 	Condition ast.Expression
@@ -8,8 +11,20 @@ type If struct {
 	Else      *If
 }
 
+func (i *If) Type() reflect.Type {
+	return reflect.TypeOf(true)
+}
+
+func (i *If) Statements() []ast.Statement {
+	return i.Body.Statements()
+}
+
 func (i *If) AddStatement(statement ast.Statement) {
-	i.Body.AddStatement(statement)
+	temp := i
+	for temp.Else != nil {
+		temp = temp.Else
+	}
+	temp.Body.AddStatement(statement)
 }
 
 func (i *If) AddCondition(next *If) {
@@ -21,6 +36,6 @@ func (i *If) AddCondition(next *If) {
 	temp.Else = next
 }
 
-type Condition interface {
+type ConditionContainer interface {
 	AddCondition(condition *If)
 }

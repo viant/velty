@@ -32,12 +32,29 @@ func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
 
 	switch actual := statement.(type) {
 	case ast.StatementContainer:
+		if last := s.Last(); last != nil {
+			last.AddStatement(actual)
+		}
 		s.buffer = append(s.buffer, actual)
 	default:
 		s.appendStatement(actual)
 	}
 
 	return nil
+}
+
+func addIfExpression(node ast.Node, expression ast.Node) error {
+	switch nodeType := node.(type) {
+	case stmt.ConditionContainer:
+		switch exprType := expression.(type) {
+		case *stmt.If:
+			nodeType.AddCondition(exprType)
+			return nil
+		default:
+			return fmt.Errorf("expected stmt.If but got %T", expression)
+		}
+	}
+	return fmt.Errorf("expected stmt.Condition but got %T", node)
 }
 
 func (s *Builder) terminateStatement() error {
@@ -48,7 +65,10 @@ func (s *Builder) terminateStatement() error {
 	node := s.buffer[len(s.buffer)-1]
 	s.buffer = s.buffer[:len(s.buffer)-1]
 
-	s.block.AddStatement(node)
+	if len(s.buffer) == 0 {
+		s.block.AddStatement(node)
+	}
+
 	return nil
 }
 

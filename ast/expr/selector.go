@@ -1,12 +1,13 @@
 package expr
 
 import (
+	"github.com/viant/velty/ast"
 	"reflect"
 )
 
 type Select struct {
-	ID   string
-	Call *Call
+	ID string
+	X  ast.Expression
 }
 
 func (s Select) Type() reflect.Type {

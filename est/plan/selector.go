@@ -9,10 +9,11 @@ import (
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
 	expr := &op.Expression{}
-	expr.Selector = p.Selector(selector.ID)
+	expr.Selector = p.SelectorExpr(selector)
+
 	if expr.Selector == nil {
 		id := p.selectorID(selector.ID)
-		expr.Selector = est.NewSelector(id, selector.ID, nil)
+		expr.Selector = est.NewSelector(id, selector.ID, nil, nil)
 	}
 	expr.Type = expr.Selector.Type
 	return expr, nil

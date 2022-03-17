@@ -12,6 +12,11 @@ type Binary struct {
 }
 
 func (b *Binary) Type() reflect.Type {
+	switch b.Token {
+	case ast.LEQ, ast.LSS, ast.GTR, ast.GTE, ast.NEQ, ast.EQ:
+		return reflect.TypeOf(true)
+	}
+
 	if xType := b.X.Type(); xType != nil {
 		return xType
 	}
