@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/plan"
+	"strconv"
 	"testing"
 )
 
@@ -43,10 +44,11 @@ func TestPlanner_Compile(t *testing.T) {
 	}
 
 	var testCases = []struct {
-		description string
-		template    string
-		vars        map[string]interface{}
-		expect      string
+		description     string
+		template        string
+		vars            map[string]interface{}
+		expect          string
+		isBenchTemplate bool
 	}{
 		{
 			description: "assign int",
@@ -340,6 +342,12 @@ $abc
 				"employee": department,
 			},
 		},
+		{
+			description:     "indirect bench data template",
+			template:        indirectBenchData.template,
+			vars:            indirectBenchData.variables,
+			isBenchTemplate: true,
+		},
 	}
 outer:
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -365,6 +373,9 @@ outer:
 			}
 		}
 		exec.Exec(state)
+		if testCase.isBenchTemplate {
+			continue
+		}
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
 	}
@@ -372,13 +383,25 @@ outer:
 }
 
 // Benchmarks
-var benchExec *est.Execution
-var benchNewState func() *est.State
-var benchState *est.State
+type benchData struct {
+	execution  *est.Execution
+	newState   func() *est.State
+	benchState *est.State
+	template   string
+	variables  map[string]interface{}
+}
+
+var directBenchData *benchData
+var indirectBenchData *benchData
 
 func init() {
+	initDirectBench()
+	initIndirectBench()
+}
+
+func initDirectBench() {
 	template := `
-#if($var1 =!= $var2)
+#if($var1 =! $var2)
 	variables are not equal
 #if($var1 > $var2)
 		var1 is bigger than var2
@@ -408,19 +431,103 @@ func init() {
 	}
 
 	var err error
-	benchExec, benchNewState, err = planner.Compile([]byte(template))
+	benchExec, benchNewState, err := planner.Compile([]byte(template))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	benchState = benchNewState()
+	directBenchData = &benchData{
+		execution:  benchExec,
+		newState:   benchNewState,
+		benchState: benchNewState(),
+	}
 }
 
-func BenchmarkExec(b *testing.B) {
+func initIndirectBench() {
+	indirectTemplate := `
+#if($foo.Values.Var1 =! $foo.Values.Var2)
+	variables are not equal
+#if($foo.Values.Var1 > $foo.Values.Var2)
+		var1 is bigger than var2
+	#elseif($foo.Values.Var2 > $foo.Values.Var1)
+		var2 is bigger than var1
+	#else
+		never happen
+	#end
+#end
 
+#foreach($var3 in $foo.Values.Data) 
+		variable: $var3
+#end
+`
+	type Values struct {
+		Var1 int
+		Var2 int
+
+		Data []string
+	}
+
+	type Foo struct {
+		Values *Values
+		id     int
+	}
+
+	values := make([]string, 100)
+	for i := 0; i < len(values); i++ {
+		values[i] = "var" + strconv.Itoa(i+1)
+	}
+	foo := &Foo{
+		Values: &Values{
+			Var1: 10,
+			Var2: 5,
+			Data: values,
+		},
+	}
+
+	vars := map[string]interface{}{
+		"foo": foo,
+	}
+
+	planner := plan.New(8192)
+
+	for k, v := range vars {
+		err := planner.DefineVariable(k, v)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}
+
+	var err error
+	benchExec, benchNewState, err := planner.Compile([]byte(indirectTemplate))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	state := benchNewState()
+	_ = state.SetValue("foo", foo)
+	indirectBenchData = &benchData{
+		execution:  benchExec,
+		newState:   benchNewState,
+		benchState: state,
+		template:   indirectTemplate,
+		variables:  vars,
+	}
+}
+
+func BenchmarkExec_Direct(b *testing.B) {
 	b.ReportAllocs()
+
 	for i := 0; i < b.N; i++ {
-		benchExec.Exec(benchState)
-		benchState.Reset()
+		directBenchData.execution.Exec(directBenchData.benchState)
+		directBenchData.benchState.Reset()
+	}
+}
+
+func BenchmarkExec_Indirect(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		indirectBenchData.execution.Exec(indirectBenchData.benchState)
+		indirectBenchData.benchState.Reset()
 	}
 }
