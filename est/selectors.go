@@ -20,3 +20,9 @@ func (s *Selectors) Append(sel *Selector) {
 	s.selectors = append(s.selectors, sel)
 	s.Index[sel.Name] = len(s.selectors) - 1
 }
+
+func (s *Selectors) Merge(other *Selectors) {
+	for i, _ := range other.selectors {
+		s.Append(other.Selector(i))
+	}
+}

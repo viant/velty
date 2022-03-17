@@ -11,25 +11,34 @@ import (
 )
 
 func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
+	var scope *Planner
+	switch statement.(type) {
+	case *stmt.Statement:
+		scope = p
+	default:
+		scope = p.stack.newScope()
+		defer p.stack.statementResolved(statement)
+	}
+
 	switch actual := statement.(type) {
 	case *stmt.Statement:
-		return p.computeDirectAssignment(actual)
+		return scope.computeDirectAssignment(actual)
 	case *stmt.Append:
-		return p.compileAppend(actual)
+		return scope.compileAppend(actual)
 	case *expr.Select:
-		return p.compileStmtSelector(actual)
+		return scope.compileStmtSelector(actual)
 	case *stmt.Block:
-		return p.CompileStmt(actual.Stmt)
+		return scope.CompileStmt(actual.Stmt)
 	case *stmt.If:
-		return p.compileIf(actual)
+		return scope.compileIf(actual)
 	case *stmt.Range:
-		return p.compileForLoop(actual)
+		return scope.compileForLoop(actual)
 	case *stmt.ForEach:
-		return p.compileForEachLoop(actual)
+		return scope.compileForEachLoop(actual)
 	case []ast.Statement:
-		return p.compileBlock(&stmt.Block{Stmt: actual})
+		return scope.compileBlock(&stmt.Block{Stmt: actual})
 	case *stmt.Evaluate:
-		return p.compileEvaluate(actual)
+		return scope.compileEvaluate(actual)
 	}
 
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)

@@ -44,10 +44,11 @@ func TestPlanner_Compile(t *testing.T) {
 	}
 
 	var testCases = []struct {
-		description string
-		template    string
-		vars        map[string]interface{}
-		expect      string
+		description   string
+		template      string
+		vars          map[string]interface{}
+		expect        string
+		errorExpected bool
 	}{
 		{
 			description: "assign int",
@@ -342,13 +343,19 @@ $abc
 			},
 		},
 		{
-			template: `#evaluate(${foo_template})`,
-			expect:   `Var1: 1000, Var2: 13213`,
+			description: "evaluate template in runtime",
+			template:    `#evaluate(${foo_template})`,
+			expect:      `Var1: 1000, Var2: 13213`,
 			vars: map[string]interface{}{
 				"foo_template": `Var1: $var1, Var2: $var2`,
 				"var1":         1000,
 				"var2":         13213,
 			},
+		},
+		{
+			description:   "variable scopes #1",
+			template:      `#if(1==1)#set($var=10)#end$var`,
+			errorExpected: true,
 		},
 	}
 outer:
@@ -363,7 +370,18 @@ outer:
 				continue outer
 			}
 		}
-		exec, newState, err := planner.Compile([]byte(testCase.template))
+
+		var exec *est.Execution
+		var newState func() *est.State
+		var err error
+		if !testCase.errorExpected {
+			exec, newState, err = planner.Compile([]byte(testCase.template))
+		} else {
+			assert.Panics(t, func() {
+				exec, newState, err = planner.Compile([]byte(testCase.template))
+			}, testCase.description)
+			continue
+		}
 		if !assert.Nil(t, err, testCase.description) {
 			continue
 		}

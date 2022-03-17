@@ -18,21 +18,14 @@ const (
 
 type (
 	Planner struct {
-		Scope
 		bufferSize int
-		count      *int
 		transients *int
 		*est.Control
-		Type         scope.Type
-		selectors    *est.Selectors
-		types        map[string]reflect.Type
-		indexCounter int
-		cache        *cache.Cache
-	}
-
-	Scope struct {
-		upstream []string
-		prefix   string
+		Type      *scope.Type
+		selectors *est.Selectors
+		types     map[string]reflect.Type
+		cache     *cache.Cache
+		stack     *Stack
 	}
 )
 
@@ -45,21 +38,15 @@ func (p *Planner) AddType(t reflect.Type) {
 }
 
 func (p *Planner) NewScope() *Planner {
-	*p.count++
 	var types = make(map[string]reflect.Type)
 	for k, v := range p.types {
 		types[k] = v
 	}
 	return &Planner{
-		Control: p.Control,
-		Scope: Scope{
-			upstream: append(p.upstream, p.prefix),
-			prefix:   "p" + strconv.Itoa(*p.count),
-		},
+		Control:    p.Control,
 		selectors:  p.selectors,
 		types:      types,
 		transients: p.transients,
-		count:      p.count,
 	}
 }
 
@@ -132,7 +119,7 @@ func deref(rType reflect.Type) reflect.Type {
 }
 
 func (p *Planner) selectorID(name string) string {
-	return p.prefix + name
+	return name
 }
 
 func (p *Planner) accumulator(t reflect.Type) *est.Selector {
@@ -175,38 +162,10 @@ func (p *Planner) addSelector(sel *est.Selector) error {
 }
 
 func (p *Planner) selectorByName(name string) *est.Selector {
-	if idx, ok := p.selectors.Index[p.prefix+name]; ok {
-		return p.selectors.Selector(idx)
-	}
-
-	//check selector in upstream scopes
-	for i := len(p.upstream) - 1; i >= 0; i-- {
-		if idx, ok := p.selectors.Index[p.upstream[i]+name]; ok {
-			return p.selectors.Selector(idx)
-		}
-	}
-
-	//check global scope
 	if idx, ok := p.selectors.Index[name]; ok {
 		return p.selectors.Selector(idx)
 	}
 	return nil
-}
-
-func (p *Planner) compileIndexSelectorExpr() (*op.Expression, error) {
-	p.indexCounter++
-	fieldName := "_indexP_" + strconv.Itoa(p.indexCounter)
-
-	indexType := reflect.TypeOf(0)
-	selector := est.NewSelector(p.prefix+fieldName, fieldName, indexType, nil)
-	if err := p.addSelector(selector); err != nil {
-		return nil, err
-	}
-
-	return &op.Expression{
-		Type:     indexType,
-		Selector: selector,
-	}, nil
 }
 
 func (p *Planner) ensureSelector(id string, field *xunsafe.Field, sel *est.Selector) *est.Selector {
@@ -223,18 +182,19 @@ func (p *Planner) ensureSelector(id string, field *xunsafe.Field, sel *est.Selec
 }
 
 func New(bufferSize int) *Planner {
-	count := 0
 	transients := 0
 	ctl := est.Control(0)
-	return &Planner{
+	result := &Planner{
 		bufferSize: bufferSize,
-		count:      &count,
 		transients: &transients,
 		Control:    &ctl,
-		Type:       scope.Type{},
-		Scope:      Scope{},
+		Type:       &scope.Type{},
 		selectors:  est.NewSelectors(),
 		types:      map[string]reflect.Type{},
 		cache:      cache.NewCache(),
 	}
+
+	result.stack = NewStack(result)
+
+	return result
 }
