@@ -31,8 +31,7 @@ func (p *Planner) stateProvider() func() *est.State {
 			Mem:       mem,
 			MemPtr:    xunsafe.AsPointer(mem),
 			Buffer:    est.NewBuffer(p.bufferSize),
-			Selectors: *p.selectors,
-			Index:     p.index,
+			Selectors: p.selectors,
 		}
 		return state
 	}

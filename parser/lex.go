@@ -21,6 +21,7 @@ const (
 	forEachToken
 	forToken
 	appendToken
+	evaluateToken
 	endToken
 
 	inToken
@@ -83,6 +84,7 @@ var Set = parsly.NewToken(setToken, "Set", matcher.NewFragment("set"))
 var ForEach = parsly.NewToken(forEachToken, "ForEach", matcher.NewFragment("foreach"))
 var For = parsly.NewToken(forToken, "For", matcher.NewFragment("for"))
 var In = parsly.NewToken(inToken, "In", matcher.NewFragment("in"))
+var Evaluate = parsly.NewToken(evaluateToken, "Evaluate", matcher.NewFragment("evaluate"))
 var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
 
 var Parentheses = parsly.NewToken(parenthesesToken, "Parentheses", matcher.NewBlock('(', ')', '\\'))

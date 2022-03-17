@@ -341,6 +341,15 @@ $abc
 				"employee": department,
 			},
 		},
+		{
+			template: `#evaluate(${foo_template})`,
+			expect:   `Var1: 1000, Var2: 13213`,
+			vars: map[string]interface{}{
+				"foo_template": `Var1: $var1, Var2: $var2`,
+				"var1":         1000,
+				"var2":         13213,
+			},
+		},
 	}
 outer:
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -478,8 +487,6 @@ func initIndirectBench() {
 		"foo": foo,
 	}
 
-	benchFoo = foo
-
 	planner := plan.New(8192)
 
 	for k, v := range vars {
@@ -505,8 +512,6 @@ func initIndirectBench() {
 		variables:  vars,
 	}
 }
-
-var benchFoo interface{}
 
 func BenchmarkExec_Direct(b *testing.B) {
 	b.ReportAllocs()

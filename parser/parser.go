@@ -77,7 +77,7 @@ func appendStatementIfNeeded(text string, stack *Builder) error {
 }
 
 func matchStatement(cursor *parsly.Cursor) (ast.Statement, int, error) {
-	candidates := []*parsly.Token{If, ElseIf, Else, Set, ForEach, For, End}
+	candidates := []*parsly.Token{If, ElseIf, Else, Set, ForEach, For, Evaluate, End}
 	expressionMatch := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	expressionCode := expressionMatch.Code
 
@@ -143,6 +143,18 @@ func matchStatement(cursor *parsly.Cursor) (ast.Statement, int, error) {
 
 		return forStmt, expressionCode, nil
 
+	case evaluateToken:
+		evaluateCursor, err := matchExpressionBlock(cursor)
+		if err != nil {
+			return nil, 0, err
+		}
+		_, operand, err := matchOperand(evaluateCursor, String)
+
+		if err != nil {
+			return nil, 0, err
+		}
+
+		return &stmt.Evaluate{X: operand}, expressionCode, nil
 	case endToken:
 		return nil, expressionCode, nil
 	}
