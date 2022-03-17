@@ -22,18 +22,17 @@ func (e *evaluator) compute(state *est.State) unsafe.Pointer {
 	}
 
 	block, err := parser.Parse([]byte(varName))
-	//TODO: Handler error
 	if err != nil {
-		panic(err)
+		return est.EmptyStringPtr
 	}
 	newCompute, err := e.compiler.CompileStmt(block)
 	if err != nil {
-		panic(err)
+		return est.EmptyStringPtr
 	}
 
 	compute, err := newCompute(e.control)
 	if err != nil {
-		panic(err)
+		return est.EmptyStringPtr
 	}
 
 	e.cache.Put(varName, compute)
