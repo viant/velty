@@ -10,6 +10,7 @@ import (
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -42,6 +43,7 @@ func (p *Planner) NewScope() *Planner {
 	for k, v := range p.types {
 		types[k] = v
 	}
+
 	return &Planner{
 		Control:    p.Control,
 		selectors:  p.selectors,
@@ -71,14 +73,14 @@ func (p *Planner) defineVariable(name string, id string, v interface{}) error {
 	return nil
 }
 
-func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
+func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
 	sel := p.selectorByName(selector.ID)
 	if sel == nil {
-		return nil
+		return nil, nil
 	}
 
 	if selector.X == nil {
-		return sel
+		return sel, nil
 	}
 
 	call := selector.X
@@ -98,7 +100,7 @@ func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
 			selectorId = selectorId + fieldSeparator + actual.ID
 			field := xunsafe.FieldByName(parentType, actual.ID)
 			if field == nil {
-				return nil
+				return nil, fmt.Errorf("not found field %v at %v", strings.ReplaceAll(selectorId, fieldSeparator, "."), parentType.String())
 			}
 
 			sel = p.ensureSelector(selectorId, field, sel)
@@ -108,7 +110,7 @@ func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
 		}
 	}
 
-	return sel
+	return sel, nil
 }
 
 func deref(rType reflect.Type) reflect.Type {

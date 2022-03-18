@@ -7,6 +7,7 @@ import (
 	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	estmt "github.com/viant/velty/est/stmt"
+	"github.com/viant/velty/est/stmt/assign"
 	"unsafe"
 )
 
@@ -22,7 +23,7 @@ func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
 
 	switch actual := statement.(type) {
 	case *stmt.Statement:
-		return scope.computeDirectAssignment(actual)
+		return scope.computeAssignment(actual)
 	case *stmt.Append:
 		return scope.compileAppend(actual)
 	case *expr.Select:
@@ -44,7 +45,7 @@ func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)
 }
 
-func (p *Planner) computeDirectAssignment(actual *stmt.Statement) (est.New, error) {
+func (p *Planner) computeAssignment(actual *stmt.Statement) (est.New, error) {
 	x, err := p.compileExpr(actual.X)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func (p *Planner) computeDirectAssignment(actual *stmt.Statement) (est.New, erro
 	if err = p.adjustSelector(x, y.Type); err != nil {
 		return nil, err
 	}
-	return estmt.Assign(x, y)
+	return assign.Assign(x, y)
 }
 
 func (p *Planner) compileIf(actual *stmt.If) (est.New, error) {
@@ -107,7 +108,6 @@ func (p *Planner) compileForLoop(actual *stmt.Range) (est.New, error) {
 }
 
 func (p *Planner) compileForEachLoop(actual *stmt.ForEach) (est.New, error) {
-
 	sliceSelector, err := p.compileExpr(actual.Set)
 	if err != nil {
 		return nil, err

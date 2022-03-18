@@ -83,6 +83,7 @@ func (b *binaryExpr) intNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
+
 	if *(*int)(x) != *(*int)(y) {
 		z = est.TrueValuePtr
 	}

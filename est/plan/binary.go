@@ -7,8 +7,6 @@ import (
 	"reflect"
 )
 
-//Binary
-
 func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 	x, err := p.compileExpr(actual.X)
 	if err != nil {

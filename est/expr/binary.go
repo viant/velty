@@ -21,8 +21,8 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 			return nil, err
 		}
 		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
-		switch exprs[0].Type.Kind() {
 
+		switch exprs[0].Type.Kind() {
 		case reflect.Int:
 			return computeInt(token, binary)
 		case reflect.Float64:

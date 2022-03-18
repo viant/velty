@@ -6,14 +6,9 @@ import (
 )
 
 func (e *Expression) newIndirectSelector() est.Compute {
-	upstream, upstreamLen := est.Upstream(e.Selector)
+	upstream := est.Upstream(e.Selector)
 	return func(state *est.State) unsafe.Pointer {
-		ret := state.MemPtr
-		for i := 0; i < upstreamLen; i++ {
-			ret = upstream(i, ret)
-		}
-
-		ret = e.Selector.Pointer(ret)
+		ret := upstream(state.MemPtr)
 		return ret
 	}
 }

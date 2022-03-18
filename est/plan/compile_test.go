@@ -29,6 +29,7 @@ func TestPlanner_Compile(t *testing.T) {
 
 	type Department struct {
 		Address *Values
+		ID      int
 	}
 
 	values := &Values{
@@ -197,7 +198,7 @@ func TestPlanner_Compile(t *testing.T) {
 			},
 		},
 		{
-			description: "if statement #5",
+			description: "if statement #6",
 			template: `
 #if($var1 =! $var2)
 	variables are not equal
@@ -357,6 +358,22 @@ $abc
 			template:      `#if(1==1)#set($var=10)#end$var`,
 			errorExpected: true,
 		},
+		{
+			description: "nil #1",
+			expect:      "",
+			template:    `${Var.Address.StringValue}`,
+			vars: map[string]interface{}{
+				"Var": &Department{},
+			},
+		},
+		{
+			description: "nil #2",
+			expect:      "0",
+			template:    `${Var.Address.IntValue}`,
+			vars: map[string]interface{}{
+				"Var": &Department{},
+			},
+		},
 	}
 outer:
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -418,24 +435,31 @@ func init() {
 
 func initDirectBench() {
 	template := `
-#if($var1 =! $var2)
+#if($Var1 != $Var2)
 	variables are not equal
-#if($var1 > $var2)
+#if($Var1 > $Var2)
 		var1 is bigger than var2
-	#elseif($var2 > $var1)
+	#elseif($Var2 > $Var1)
 		var2 is bigger than var1
 	#else
 		never happen
 	#end
 #end
 
-#for($var3 = 0; $var3 < 100; $var3++) 
-		varValue: abc
+#foreach($Var3 in $Values) 
+		varValue: $Var3
 #end
 `
+
+	variables := make([]string, 100)
+	for i := 0; i < len(variables); i++ {
+		variables[i] = "var" + strconv.Itoa(i)
+	}
+
 	vars := map[string]interface{}{
-		"var1": 10,
-		"var2": 5,
+		"Var1":   10,
+		"Var2":   5,
+		"Values": variables,
 	}
 
 	planner := plan.New(8192)
@@ -453,28 +477,34 @@ func initDirectBench() {
 		fmt.Println(err.Error())
 	}
 
+	state := benchNewState()
+	for key, value := range vars {
+		if err := state.SetValue(key, value); err != nil {
+			fmt.Println(err)
+		}
+	}
 	directBenchData = &benchData{
 		execution:  benchExec,
 		newState:   benchNewState,
-		benchState: benchNewState(),
+		benchState: state,
 	}
 }
 
 func initIndirectBench() {
 	indirectTemplate := `
-#if($foo.Values.Var1 != $foo.Values.Var2)
+#if($Foo.Values.Var1 != $Foo.Values.Var2)
 	variables are not equal
-#if($foo.Values.Var1 > $foo.Values.Var2)
+#if($Foo.Values.Var1 > $Foo.Values.Var2)
 		var1 is bigger than var2
-	#elseif($foo.Values.Var2 > $foo.Values.Var1)
+	#elseif($Foo.Values.Var2 > $Foo.Values.Var1)
 		var2 is bigger than var1
 	#else
 		never happen
 	#end
 #end
 
-#foreach($var3 in $foo.Values.Data) 
-		variable: $var3
+#foreach($Var3 in $Foo.Values.Data) 
+		variable: $Var3
 #end
 `
 	type Values struct {
@@ -502,7 +532,7 @@ func initIndirectBench() {
 	}
 
 	vars := map[string]interface{}{
-		"foo": foo,
+		"Foo": foo,
 	}
 
 	planner := plan.New(8192)
@@ -521,7 +551,12 @@ func initIndirectBench() {
 	}
 
 	state := benchNewState()
-	_ = state.SetValue("foo", foo)
+	for key, value := range vars {
+		if err := state.SetValue(key, value); err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	indirectBenchData = &benchData{
 		execution:  benchExec,
 		newState:   benchNewState,
