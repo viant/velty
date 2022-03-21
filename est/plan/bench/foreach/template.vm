@@ -1,0 +1,3 @@
+#foreach($var in $Foo.Values.Ints)
+    $var
+#end

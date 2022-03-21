@@ -6,18 +6,25 @@ import (
 	"unsafe"
 )
 
-func computeBool(token ast.Token, binary *binaryExpr) (est.Compute, error) {
+func computeBool(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
 	switch token {
 	case ast.EQ:
-		return binary.boolEq, nil
+		if indirect {
+			return binary.indirectBoolEq, nil
+		}
+		return binary.directBoolEq, nil
 	case ast.NEQ:
-		return binary.boolNeq, nil
+		if indirect {
+			return binary.indirectBoolNeq, nil
+		}
+		return binary.directBoolNeq, nil
+
 	}
 
 	return nil, errorUnsupported(token, "Bool")
 }
 
-func (b *binaryExpr) boolEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectBoolEq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -28,9 +35,30 @@ func (b *binaryExpr) boolEq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) boolNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directBoolEq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+
+	if *(*bool)(x) == *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectBoolNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
+	z := est.FalseValuePtr
+	if *(*bool)(x) != *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) directBoolNeq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
 	z := est.FalseValuePtr
 	if *(*bool)(x) != *(*bool)(y) {
 		z = est.TrueValuePtr

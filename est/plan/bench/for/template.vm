@@ -1,0 +1,3 @@
+#for($var = 0; $var < ${Foo.Values.Ints.Size}; $var++)
+    $var
+#end

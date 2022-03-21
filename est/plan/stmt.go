@@ -12,34 +12,25 @@ import (
 )
 
 func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
-	var scope *Planner
-	switch statement.(type) {
-	case *stmt.Statement:
-		scope = p
-	default:
-		scope = p.stack.newScope()
-		defer p.stack.statementResolved(statement)
-	}
-
 	switch actual := statement.(type) {
 	case *stmt.Statement:
-		return scope.computeAssignment(actual)
+		return p.computeAssignment(actual)
 	case *stmt.Append:
-		return scope.compileAppend(actual)
+		return p.compileAppend(actual)
 	case *expr.Select:
-		return scope.compileStmtSelector(actual)
+		return p.compileStmtSelector(actual)
 	case *stmt.Block:
-		return scope.CompileStmt(actual.Stmt)
+		return p.CompileStmt(actual.Stmt)
 	case *stmt.If:
-		return scope.compileIf(actual)
+		return p.compileIf(actual)
 	case *stmt.Range:
-		return scope.compileForLoop(actual)
+		return p.compileForLoop(actual)
 	case *stmt.ForEach:
-		return scope.compileForEachLoop(actual)
+		return p.compileForEachLoop(actual)
 	case []ast.Statement:
-		return scope.compileBlock(&stmt.Block{Stmt: actual})
+		return p.compileBlock(&stmt.Block{Stmt: actual})
 	case *stmt.Evaluate:
-		return scope.compileEvaluate(actual)
+		return p.compileEvaluate(actual)
 	}
 
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)
@@ -134,8 +125,8 @@ func (p *Planner) compileForEachLoop(actual *stmt.ForEach) (est.New, error) {
 func (p *Planner) compileAppend(actual *stmt.Append) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		ptr := unsafe.Pointer(&actual.Append)
-		return func(mem *est.State) unsafe.Pointer {
-			mem.Buffer.AppendString(actual.Append)
+		return func(state *est.State) unsafe.Pointer {
+			state.Buffer.AppendBytes([]byte(actual.Append))
 			return ptr
 		}, nil
 	}, nil
@@ -147,5 +138,5 @@ func (p *Planner) compileEvaluate(actual *stmt.Evaluate) (est.New, error) {
 		return nil, err
 	}
 
-	return estmt.Evaluate(selector, p.cache, p)
+	return Evaluate(selector, p.cache, p)
 }

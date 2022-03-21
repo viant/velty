@@ -26,7 +26,6 @@ type (
 		selectors *est.Selectors
 		types     map[string]reflect.Type
 		cache     *cache.Cache
-		stack     *Stack
 	}
 )
 
@@ -195,8 +194,6 @@ func New(bufferSize int) *Planner {
 		types:      map[string]reflect.Type{},
 		cache:      cache.NewCache(),
 	}
-
-	result.stack = NewStack(result)
 
 	return result
 }

@@ -6,19 +6,28 @@ import (
 	"unsafe"
 )
 
-func computeString(token ast.Token, binary *binaryExpr) (est.Compute, error) {
+func computeString(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
 	switch token {
 	case ast.ADD:
-		return binary.stringAdd, nil
+		if indirect {
+			return binary.indirectStringAdd, nil
+		}
+		return binary.directStringAdd, nil
 	case ast.EQ:
-		return binary.stringEq, nil
+		if indirect {
+			return binary.indirectStringEq, nil
+		}
+		return binary.directStringEq, nil
 	case ast.NEQ:
-		return binary.stringNeq, nil
+		if indirect {
+			return binary.indirectStringNeq, nil
+		}
+		return binary.directStringNeq, nil
 	}
 	return nil, errorUnsupported(token, "string")
 }
 
-func (b *binaryExpr) stringAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectStringAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -26,7 +35,15 @@ func (b *binaryExpr) stringAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) stringEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directStringAdd(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*string)(z) = *(*string)(x) + *(*string)(y)
+	return z
+}
+
+func (b *binaryExpr) indirectStringEq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
@@ -38,9 +55,33 @@ func (b *binaryExpr) stringEq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) stringNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directStringEq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+
+	z := est.FalseValuePtr
+	if *(*string)(x) == *(*string)(y) {
+		z = est.TrueValuePtr
+	}
+
+	return z
+}
+
+func (b *binaryExpr) indirectStringNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
+
+	z := est.FalseValuePtr
+	if *(*string)(x) != *(*string)(y) {
+		z = est.TrueValuePtr
+	}
+
+	return z
+}
+
+func (b *binaryExpr) directStringNeq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
 
 	z := est.FalseValuePtr
 	if *(*string)(x) != *(*string)(y) {

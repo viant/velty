@@ -19,9 +19,9 @@ func (t *Type) AddField(name string, fType reflect.Type) *xunsafe.Field {
 		pkg = defaultPkg
 	}
 
-	if fType.Kind() == reflect.Ptr {
-		fType = fType.Elem()
-	}
+	//if fType.Kind() == reflect.Ptr {
+	//	fType = fType.Elem()
+	//}
 
 	idx := len(t.fields)
 	t.fields = append(t.fields, reflect.StructField{Name: name, Type: fType, PkgPath: pkg})

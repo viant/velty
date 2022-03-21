@@ -42,7 +42,7 @@ func (a *directAppender) newAppendStringIndirect() est.Compute {
 
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state.MemPtr)
-		state.Buffer.AppendString(*(*string)(ret))
+		state.Buffer.AppendBytes(*(*[]byte)(ret))
 		return ret
 	}
 }

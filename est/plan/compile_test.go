@@ -354,11 +354,6 @@ $abc
 			},
 		},
 		{
-			description:   "variable scopes #1",
-			template:      `#if(1==1)#set($var=10)#end$var`,
-			errorExpected: true,
-		},
-		{
 			description: "nil #1",
 			expect:      "",
 			template:    `${Var.Address.StringValue}`,
@@ -451,7 +446,7 @@ func initDirectBench() {
 #end
 `
 
-	variables := make([]string, 100)
+	variables := make([]string, 2)
 	for i := 0; i < len(variables); i++ {
 		variables[i] = "var" + strconv.Itoa(i)
 	}
@@ -519,7 +514,7 @@ func initIndirectBench() {
 		id     int
 	}
 
-	values := make([]string, 100)
+	values := make([]string, 2)
 	for i := 0; i < len(values); i++ {
 		values[i] = "var" + strconv.Itoa(i+1)
 	}

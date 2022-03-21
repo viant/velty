@@ -1,0 +1,10 @@
+#set($abc = 5)
+#if($abc > ${Foo.Values.Ints.Size})
+abc > Size
+#else
+Size > abc
+#end
+
+#for($var = 0; $var < ${Foo.Values.Ints.Size}; $var++)
+$var
+#end
