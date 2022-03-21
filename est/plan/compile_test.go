@@ -29,6 +29,7 @@ func TestPlanner_Compile(t *testing.T) {
 
 	type Department struct {
 		Address *Values
+		ID      int
 	}
 
 	values := &Values{
@@ -44,11 +45,11 @@ func TestPlanner_Compile(t *testing.T) {
 	}
 
 	var testCases = []struct {
-		description     string
-		template        string
-		vars            map[string]interface{}
-		expect          string
-		isBenchTemplate bool
+		description   string
+		template      string
+		vars          map[string]interface{}
+		expect        string
+		errorExpected bool
 	}{
 		{
 			description: "assign int",
@@ -146,17 +147,17 @@ func TestPlanner_Compile(t *testing.T) {
 		{
 			description: "if statement #1",
 			template:    `#if(1==2) abc #else def#end`,
-			expect:      `def`,
+			expect:      ` def`,
 		},
 		{
 			description: "if statement #2",
 			template:    `#if(1==1) abc #else def#end`,
-			expect:      `abc`,
+			expect:      ` abc `,
 		},
 		{
 			description: "if statement #3",
 			template:    `#if($var1==$var2) abc #else def#end`,
-			expect:      `def`,
+			expect:      ` def`,
 			vars: map[string]interface{}{
 				"var1": 1,
 				"var2": 2,
@@ -170,7 +171,7 @@ func TestPlanner_Compile(t *testing.T) {
 #else 
 	def
 #end`,
-			expect: `abc`,
+			expect: "\n \n\tabc \n",
 			vars: map[string]interface{}{
 				"var1": 1,
 				"var2": 1,
@@ -190,14 +191,14 @@ func TestPlanner_Compile(t *testing.T) {
 	#end
 #end
 `,
-			expect: `variables are not equalvar1 is bigger than var2`,
+			expect: "\n\n\tvariables are not equal\n\t\n\t\tvar1 is bigger than var2\n\t\n\n",
 			vars: map[string]interface{}{
 				"var1": 10,
 				"var2": 5,
 			},
 		},
 		{
-			description: "if statement #5",
+			description: "if statement #6",
 			template: `
 #if($var1 =! $var2)
 	variables are not equal
@@ -210,7 +211,7 @@ func TestPlanner_Compile(t *testing.T) {
 	#end
 #end
 `,
-			expect: `variables are not equalvar2 is bigger than var1`,
+			expect: "\n\n\tvariables are not equal\n\t\n\t\tvar2 is bigger than var1\n\t\n\n",
 			vars: map[string]interface{}{
 				"var1": 1,
 				"var2": 5,
@@ -223,7 +224,7 @@ func TestPlanner_Compile(t *testing.T) {
 	The value of var: $var
 #end
 `,
-			expect: `The value of var:1The value of var:2The value of var:3The value of var:4The value of var:5The value of var:6The value of var:7The value of var:8The value of var:9`,
+			expect: "\n\n\tThe value of var: 1\n\n\tThe value of var: 2\n\n\tThe value of var: 3\n\n\tThe value of var: 4\n\n\tThe value of var: 5\n\n\tThe value of var: 6\n\n\tThe value of var: 7\n\n\tThe value of var: 8\n\n\tThe value of var: 9\n\n",
 		},
 		{
 			description: "for statement #2",
@@ -232,7 +233,7 @@ func TestPlanner_Compile(t *testing.T) {
 	The value of var: $var
 #end
 `,
-			expect: `The value of var:1The value of var:2The value of var:3The value of var:4The value of var:5The value of var:6The value of var:7The value of var:8The value of var:9`,
+			expect: "\n\n\tThe value of var: 1\n\n\tThe value of var: 2\n\n\tThe value of var: 3\n\n\tThe value of var: 4\n\n\tThe value of var: 5\n\n\tThe value of var: 6\n\n\tThe value of var: 7\n\n\tThe value of var: 8\n\n\tThe value of var: 9\n\n",
 			vars: map[string]interface{}{
 				"values": []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 			},
@@ -291,7 +292,7 @@ func TestPlanner_Compile(t *testing.T) {
 #set($abc = ${employee.Address.StringValue})
 $abc
 `,
-			expect: `employee street`,
+			expect: "\n\nemployee street\n",
 			vars: map[string]interface{}{
 				"employee": department,
 			},
@@ -302,7 +303,7 @@ $abc
 #set($abc = ${employee.Address.FloatValue})
 $abc
 `,
-			expect: `125.43`,
+			expect: "\n\n125.43\n",
 			vars: map[string]interface{}{
 				"employee": department,
 			},
@@ -313,7 +314,7 @@ $abc
 #set($abc = ${employee.Address.FloatValue} + ${employee.Address.FloatValue})
 $abc
 `,
-			expect: `250.86`,
+			expect: "\n\n250.86\n",
 			vars: map[string]interface{}{
 				"employee": department,
 			},
@@ -325,7 +326,7 @@ $abc
 	$value ;
 #end
 `,
-			expect: `Var1;Var2;Var3;Var4;`,
+			expect: "\n\n\tVar1 ;\n\n\tVar2 ;\n\n\tVar3 ;\n\n\tVar4 ;\n\n",
 			vars: map[string]interface{}{
 				"employee": department,
 			},
@@ -337,16 +338,36 @@ $abc
 	Var${var} ;
 #end
 `,
-			expect: `Var1;Var2;Var3;Var4;`,
+			expect: "\n\n\tVar1 ;\n\n\tVar2 ;\n\n\tVar3 ;\n\n\tVar4 ;\n\n",
 			vars: map[string]interface{}{
 				"employee": department,
 			},
 		},
 		{
-			description:     "indirect bench data template",
-			template:        indirectBenchData.template,
-			vars:            indirectBenchData.variables,
-			isBenchTemplate: true,
+			description: "evaluate template in runtime",
+			template:    `#evaluate(${foo_template})`,
+			expect:      `Var1: 1000, Var2: 13213`,
+			vars: map[string]interface{}{
+				"foo_template": `Var1: $var1, Var2: $var2`,
+				"var1":         1000,
+				"var2":         13213,
+			},
+		},
+		{
+			description: "nil #1",
+			expect:      "",
+			template:    `${Var.Address.StringValue}`,
+			vars: map[string]interface{}{
+				"Var": &Department{},
+			},
+		},
+		{
+			description: "nil #2",
+			expect:      "0",
+			template:    `${Var.Address.IntValue}`,
+			vars: map[string]interface{}{
+				"Var": &Department{},
+			},
 		},
 	}
 outer:
@@ -361,7 +382,18 @@ outer:
 				continue outer
 			}
 		}
-		exec, newState, err := planner.Compile([]byte(testCase.template))
+
+		var exec *est.Execution
+		var newState func() *est.State
+		var err error
+		if !testCase.errorExpected {
+			exec, newState, err = planner.Compile([]byte(testCase.template))
+		} else {
+			assert.Panics(t, func() {
+				exec, newState, err = planner.Compile([]byte(testCase.template))
+			}, testCase.description)
+			continue
+		}
 		if !assert.Nil(t, err, testCase.description) {
 			continue
 		}
@@ -373,9 +405,6 @@ outer:
 			}
 		}
 		exec.Exec(state)
-		if testCase.isBenchTemplate {
-			continue
-		}
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
 	}
@@ -401,24 +430,31 @@ func init() {
 
 func initDirectBench() {
 	template := `
-#if($var1 =! $var2)
+#if($Var1 != $Var2)
 	variables are not equal
-#if($var1 > $var2)
+#if($Var1 > $Var2)
 		var1 is bigger than var2
-	#elseif($var2 > $var1)
+	#elseif($Var2 > $Var1)
 		var2 is bigger than var1
 	#else
 		never happen
 	#end
 #end
 
-#for($var3 = 0; $var3 < 100; $var3++) 
-		varValue: abc
+#foreach($Var3 in $Values) 
+		varValue: $Var3
 #end
 `
+
+	variables := make([]string, 2)
+	for i := 0; i < len(variables); i++ {
+		variables[i] = "var" + strconv.Itoa(i)
+	}
+
 	vars := map[string]interface{}{
-		"var1": 10,
-		"var2": 5,
+		"Var1":   10,
+		"Var2":   5,
+		"Values": variables,
 	}
 
 	planner := plan.New(8192)
@@ -436,28 +472,34 @@ func initDirectBench() {
 		fmt.Println(err.Error())
 	}
 
+	state := benchNewState()
+	for key, value := range vars {
+		if err := state.SetValue(key, value); err != nil {
+			fmt.Println(err)
+		}
+	}
 	directBenchData = &benchData{
 		execution:  benchExec,
 		newState:   benchNewState,
-		benchState: benchNewState(),
+		benchState: state,
 	}
 }
 
 func initIndirectBench() {
 	indirectTemplate := `
-#if($foo.Values.Var1 =! $foo.Values.Var2)
+#if($Foo.Values.Var1 != $Foo.Values.Var2)
 	variables are not equal
-#if($foo.Values.Var1 > $foo.Values.Var2)
+#if($Foo.Values.Var1 > $Foo.Values.Var2)
 		var1 is bigger than var2
-	#elseif($foo.Values.Var2 > $foo.Values.Var1)
+	#elseif($Foo.Values.Var2 > $Foo.Values.Var1)
 		var2 is bigger than var1
 	#else
 		never happen
 	#end
 #end
 
-#foreach($var3 in $foo.Values.Data) 
-		variable: $var3
+#foreach($Var3 in $Foo.Values.Data) 
+		variable: $Var3
 #end
 `
 	type Values struct {
@@ -472,7 +514,7 @@ func initIndirectBench() {
 		id     int
 	}
 
-	values := make([]string, 100)
+	values := make([]string, 2)
 	for i := 0; i < len(values); i++ {
 		values[i] = "var" + strconv.Itoa(i+1)
 	}
@@ -485,7 +527,7 @@ func initIndirectBench() {
 	}
 
 	vars := map[string]interface{}{
-		"foo": foo,
+		"Foo": foo,
 	}
 
 	planner := plan.New(8192)
@@ -504,7 +546,12 @@ func initIndirectBench() {
 	}
 
 	state := benchNewState()
-	_ = state.SetValue("foo", foo)
+	for key, value := range vars {
+		if err := state.SetValue(key, value); err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	indirectBenchData = &benchData{
 		execution:  benchExec,
 		newState:   benchNewState,

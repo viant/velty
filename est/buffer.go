@@ -1,6 +1,9 @@
 package est
 
-import "strconv"
+import (
+	vstrconv "github.com/viant/velty/strconv"
+	"strconv"
+)
 
 type Buffer struct {
 	buf      []byte
@@ -13,13 +16,8 @@ func (b *Buffer) AppendBytes(bs []byte) {
 	if bsLen == 0 {
 		return
 	}
-	if bsLen+b.index >= len(b.buf) {
-		size := b.poolSize
-		if size < bsLen {
-			size = bsLen
-		}
-		b.buf = append(b.buf, make([]byte, size)...)
-	}
+
+	b.growIfNeeded(bsLen)
 	copy(b.buf[b.index:], bs)
 	b.index += bsLen
 }
@@ -33,8 +31,8 @@ func (b *Buffer) AppendByte(bs byte) {
 }
 
 func (b *Buffer) AppendInt(v int) {
-	s := strconv.Itoa(v)
-	b.AppendString(s)
+	b.growIfNeeded(65) // 64 int size and sign if < 0
+	b.index += vstrconv.AppendInt(b.buf[b.index:], int64(v), 10)
 }
 
 func (b *Buffer) AppendBool(v bool) {
@@ -74,6 +72,10 @@ func (b *Buffer) Reset() {
 
 func (b *Buffer) Bytes() []byte {
 	return b.buf[:b.index]
+}
+
+func (b *Buffer) String() string {
+	return string(b.buf[:b.index])
 }
 
 func NewBuffer(size int) *Buffer {

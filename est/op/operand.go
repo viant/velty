@@ -33,3 +33,7 @@ func (o *Operand) Exec(state *est.State) unsafe.Pointer {
 
 	return o.Sel.Pointer(state.MemPtr)
 }
+
+func (o *Operand) IsIndirect() bool {
+	return (o.Sel != nil && o.Sel.Indirect) || o.Offset == nil
+}

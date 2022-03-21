@@ -20,17 +20,20 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		if err != nil {
 			return nil, err
 		}
-		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
-		switch exprs[0].Type.Kind() {
 
+		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
+		indirect := binary.x.IsIndirect() || binary.y.IsIndirect()
+		//indirect := false
+
+		switch exprs[0].Type.Kind() {
 		case reflect.Int:
-			return computeInt(token, binary)
+			return computeInt(token, binary, indirect)
 		case reflect.Float64:
-			return computeFloat(token, binary)
+			return computeFloat(token, binary, indirect)
 		case reflect.String:
-			return computeString(token, binary)
+			return computeString(token, binary, indirect)
 		case reflect.Bool:
-			return computeBool(token, binary)
+			return computeBool(token, binary, indirect)
 		}
 		return nil, fmt.Errorf("unsupported %v", exprs[0].Type.String())
 	}, nil

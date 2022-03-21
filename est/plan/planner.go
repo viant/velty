@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/cache"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/plan/scope"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -18,19 +20,12 @@ const (
 type (
 	Planner struct {
 		bufferSize int
-		count      *int
 		transients *int
 		*est.Control
-		Type scope.Type
-		Scope
-		selectors    *[]*est.Selector
-		index        map[string]int
-		types        map[string]reflect.Type
-		indexCounter int
-	}
-	Scope struct {
-		upstream []string
-		prefix   string
+		Type      *scope.Type
+		selectors *est.Selectors
+		types     map[string]reflect.Type
+		cache     *cache.Cache
 	}
 )
 
@@ -43,21 +38,16 @@ func (p *Planner) AddType(t reflect.Type) {
 }
 
 func (p *Planner) NewScope() *Planner {
-	*p.count++
 	var types = make(map[string]reflect.Type)
 	for k, v := range p.types {
 		types[k] = v
 	}
+
 	return &Planner{
-		Control: p.Control,
-		Scope: Scope{
-			upstream: append(p.upstream, p.prefix),
-			prefix:   "p" + strconv.Itoa(*p.count),
-		},
+		Control:    p.Control,
 		selectors:  p.selectors,
 		types:      types,
 		transients: p.transients,
-		count:      p.count,
 	}
 }
 
@@ -82,14 +72,14 @@ func (p *Planner) defineVariable(name string, id string, v interface{}) error {
 	return nil
 }
 
-func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
+func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
 	sel := p.selectorByName(selector.ID)
 	if sel == nil {
-		return nil
+		return nil, nil
 	}
 
 	if selector.X == nil {
-		return sel
+		return sel, nil
 	}
 
 	call := selector.X
@@ -109,7 +99,7 @@ func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
 			selectorId = selectorId + fieldSeparator + actual.ID
 			field := xunsafe.FieldByName(parentType, actual.ID)
 			if field == nil {
-				return nil
+				return nil, fmt.Errorf("not found field %v at %v", strings.ReplaceAll(selectorId, fieldSeparator, "."), parentType.String())
 			}
 
 			sel = p.ensureSelector(selectorId, field, sel)
@@ -119,7 +109,7 @@ func (p *Planner) SelectorExpr(selector *expr.Select) *est.Selector {
 		}
 	}
 
-	return sel
+	return sel, nil
 }
 
 func deref(rType reflect.Type) reflect.Type {
@@ -130,7 +120,7 @@ func deref(rType reflect.Type) reflect.Type {
 }
 
 func (p *Planner) selectorID(name string) string {
-	return p.prefix + name
+	return name
 }
 
 func (p *Planner) accumulator(t reflect.Type) *est.Selector {
@@ -155,7 +145,6 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 }
 
 func (p *Planner) addSelector(sel *est.Selector) error {
-	index := len(*p.selectors)
 	if sel.ID == "" {
 		return fmt.Errorf("selector ID was empty")
 	}
@@ -165,52 +154,24 @@ func (p *Planner) addSelector(sel *est.Selector) error {
 	if p.selectorByName(sel.ID) != nil {
 		return fmt.Errorf("variable %v already defined", sel.Name)
 	}
-	p.index[sel.ID] = index
+
+	p.selectors.Append(sel)
 	if sel.Parent == nil {
 		sel.Field = p.Type.AddField(sel.Name, sel.Type)
 	}
-	*p.selectors = append(*p.selectors, sel)
 	return nil
 }
 
 func (p *Planner) selectorByName(name string) *est.Selector {
-	if idx, ok := p.index[p.prefix+name]; ok {
-		return (*p.selectors)[idx]
-	}
-
-	//check selector in upstream scopes
-	for i := len(p.upstream) - 1; i >= 0; i-- {
-		if idx, ok := p.index[p.upstream[i]+name]; ok {
-			return (*p.selectors)[idx]
-		}
-	}
-
-	//check global scope
-	if idx, ok := p.index[name]; ok {
-		return (*p.selectors)[idx]
+	if idx, ok := p.selectors.Index[name]; ok {
+		return p.selectors.Selector(idx)
 	}
 	return nil
 }
 
-func (p *Planner) compileIndexSelectorExpr() (*op.Expression, error) {
-	p.indexCounter++
-	fieldName := "_indexP_" + strconv.Itoa(p.indexCounter)
-
-	indexType := reflect.TypeOf(0)
-	selector := est.NewSelector(p.prefix+fieldName, fieldName, indexType, nil)
-	if err := p.addSelector(selector); err != nil {
-		return nil, err
-	}
-
-	return &op.Expression{
-		Type:     indexType,
-		Selector: selector,
-	}, nil
-}
-
 func (p *Planner) ensureSelector(id string, field *xunsafe.Field, sel *est.Selector) *est.Selector {
-	if selIndex, ok := p.index[id]; ok {
-		return (*p.selectors)[selIndex]
+	if selIndex, ok := p.selectors.Index[id]; ok {
+		return p.selectors.Selector(selIndex)
 	}
 
 	selector := est.SelectorWithField(id, field, sel)
@@ -222,19 +183,17 @@ func (p *Planner) ensureSelector(id string, field *xunsafe.Field, sel *est.Selec
 }
 
 func New(bufferSize int) *Planner {
-	count := 0
 	transients := 0
 	ctl := est.Control(0)
-	var selectors []*est.Selector
-	return &Planner{
+	result := &Planner{
 		bufferSize: bufferSize,
-		count:      &count,
 		transients: &transients,
 		Control:    &ctl,
-		Type:       scope.Type{},
-		Scope:      Scope{},
-		selectors:  &selectors,
-		index:      map[string]int{},
+		Type:       &scope.Type{},
+		selectors:  est.NewSelectors(),
 		types:      map[string]reflect.Type{},
+		cache:      cache.NewCache(),
 	}
+
+	return result
 }

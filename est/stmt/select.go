@@ -14,37 +14,35 @@ type directAppender struct {
 
 func (a *directAppender) appendString(state *est.State) unsafe.Pointer {
 	ptr := state.Pointer(*a.x.Offset)
-	val := *(*string)(ptr)
-	state.Buffer.AppendString(val)
+	state.Buffer.AppendBytes(*(*[]byte)(ptr))
 	return ptr
 }
 
 func (a *directAppender) appendInt(state *est.State) unsafe.Pointer {
 	ptr := state.Pointer(*a.x.Offset)
-	val := *(*int)(ptr)
-	state.Buffer.AppendInt(val)
+	state.Buffer.AppendInt(*(*int)(ptr))
 	return ptr
 
 }
 
 func (a *directAppender) appendBool(state *est.State) unsafe.Pointer {
 	ptr := state.Pointer(*a.x.Offset)
-	val := *(*bool)(ptr)
-	state.Buffer.AppendBool(val)
+	state.Buffer.AppendBool(*(*bool)(ptr))
 	return ptr
 }
 
 func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
 	ptr := state.Pointer(*a.x.Offset)
-	val := *(*float64)(ptr)
-	state.Buffer.AppendFloat(val)
+	state.Buffer.AppendFloat(*(*float64)(ptr))
 	return ptr
 }
 
 func (a *directAppender) newAppendStringIndirect() est.Compute {
+	upstream := est.Upstream(a.x.Sel)
+
 	return func(state *est.State) unsafe.Pointer {
-		ret := a.x.Exec(state)
-		state.Buffer.AppendString(*(*string)(ret))
+		ret := upstream(state.MemPtr)
+		state.Buffer.AppendBytes(*(*[]byte)(ret))
 		return ret
 	}
 }
@@ -79,7 +77,7 @@ func Selector(expr *op.Expression) est.New {
 		if err != nil {
 			return nil, err
 		}
-		//TODO check if you can use direct appnder
+
 		result := &directAppender{x: x}
 		switch expr.Type.Kind() {
 		case reflect.Int:

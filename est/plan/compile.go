@@ -26,13 +26,11 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 func (p *Planner) stateProvider() func() *est.State {
 	return func() *est.State {
 		mem := reflect.New(p.Type.Type).Interface()
-
 		state := &est.State{
 			Mem:       mem,
 			MemPtr:    xunsafe.AsPointer(mem),
 			Buffer:    est.NewBuffer(p.bufferSize),
-			Selectors: *p.selectors,
-			Index:     p.index,
+			Selectors: p.selectors,
 		}
 		return state
 	}

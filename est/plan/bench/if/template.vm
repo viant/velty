@@ -1,0 +1,8 @@
+#if($Foo.Values.Ints.Var1 != $Foo.Values.Ints.Var2)
+var1 is not equal var2
+    #if($Foo.Values.Ints.Var1 > $Foo.Values.Ints.Var2)
+    and var1 is greater than var2
+    #else
+    and var2 is greater than var1
+    #end
+#end

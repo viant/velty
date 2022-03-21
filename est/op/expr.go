@@ -22,7 +22,6 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		return operand, nil
 	}
 	if e.Selector != nil {
-		//TODO check direct (no ptr, slice etc ...)
 		operand.Offset = &e.Selector.Offset
 		operand.Type = e.Selector.Type
 		operand.Sel = e.Selector

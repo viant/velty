@@ -2,7 +2,7 @@ package est
 
 import "unsafe"
 
-type Compute func(mem *State) unsafe.Pointer
+type Compute func(state *State) unsafe.Pointer
 
 type New func(control Control) (Compute, error)
 

@@ -52,16 +52,18 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 }
 
 func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) {
-	var candidates []*parsly.Token
-	candidates = []*parsly.Token{Selector}
+	candidates := []*parsly.Token{Selector}
+	candidates = []*parsly.Token{Selector, SelectorBlock}
 	matched := cursor.MatchAny(candidates...)
-
 	selectorId := matched.Text(cursor)
 	switch matched.Code {
 	case parsly.Invalid:
 		return nil, cursor.NewError(candidates...)
 	case parsly.EOF:
 		return &expr.Select{ID: selectorId}, nil
+	case selectorBlockToken:
+		newCursor := parsly.NewCursor("", []byte(selectorId[1:len(selectorId)-1]), 0)
+		return parseIdentity(newCursor, true)
 	}
 
 	candidates = []*parsly.Token{Dot, Parentheses, SquareBrackets}

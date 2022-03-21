@@ -1,0 +1,4 @@
+#set($Var = 1321321) $Var
+#set($Var2 = "abc") $Var2
+#set($Var3 = false) $Var3
+#set($Var4 = 10000.321) $Var4

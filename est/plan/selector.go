@@ -8,8 +8,12 @@ import (
 )
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
+	var err error
 	expr := &op.Expression{}
-	expr.Selector = p.SelectorExpr(selector)
+	expr.Selector, err = p.SelectorExpr(selector)
+	if err != nil {
+		return nil, err
+	}
 
 	if expr.Selector == nil {
 		id := p.selectorID(selector.ID)

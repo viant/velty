@@ -222,6 +222,11 @@ func TestService_Parse(t *testing.T) {
 			input:       `${employees[2]}`,
 			output:      `{ "Stmt": [ { "ID": "employees", "X": { "X": { "Value": "2" } } } ] }`,
 		},
+		{
+			description: `evaluate`,
+			input:       `#evaluate(${FOO_TEMPLATE})`,
+			output:      `{ "Stmt": [ { "X": { "ID": "FOO_TEMPLATE" } } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

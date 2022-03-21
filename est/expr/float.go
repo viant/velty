@@ -6,33 +6,68 @@ import (
 	"unsafe"
 )
 
-func computeFloat(token ast.Token, binary *binaryExpr) (est.Compute, error) {
+func computeFloat(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
 	switch token {
 	case ast.QUO:
-		return binary.floatQuo, nil
+		if indirect {
+			return binary.indirectFloatQuo, nil
+		}
+		return binary.directFloatQuo, nil
+
 	case ast.ADD:
-		return binary.floatAdd, nil
+		if indirect {
+			return binary.indirectFloatAdd, nil
+		}
+
+		return binary.directFloatAdd, nil
 	case ast.SUB:
-		return binary.floatSub, nil
+		if indirect {
+			return binary.indirectFloatSub, nil
+		}
+
+		return binary.directFloatSub, nil
 	case ast.MUL:
-		return binary.floatMul, nil
+		if indirect {
+			return binary.indirectFloatMul, nil
+		}
+		return binary.directFloatMul, nil
 	case ast.EQ:
-		return binary.floatEq, nil
+		if indirect {
+			return binary.indirectFloatEq, nil
+		}
+
+		return binary.directFloatEq, nil
 	case ast.NEQ:
-		return binary.floatNeq, nil
+		if indirect {
+			return binary.indirectFloatNeq, nil
+		}
+
+		return binary.directFloatNeq, nil
 	case ast.GTR:
-		return binary.floatGtr, nil
+		if indirect {
+			return binary.indirectFloatGtr, nil
+		}
+
+		return binary.directFloatGtr, nil
 	case ast.GTE:
-		return binary.floatGte, nil
+		if indirect {
+			return binary.indirectFloatGte, nil
+		}
+
+		return binary.directFloatGte, nil
 	case ast.LSS:
-		return binary.floatLss, nil
+		if indirect {
+			return binary.indirectFloatLss, nil
+		}
+		return binary.directFloatLss, nil
 	case ast.LEQ:
-		return binary.floatLeq, nil
+
+		return binary.indirectFloatLeq, nil
 	}
 	return nil, errorUnsupported(token, "Float64")
 }
 
-func (b *binaryExpr) floatQuo(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectFloatQuo(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -40,7 +75,15 @@ func (b *binaryExpr) floatQuo(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatQuo(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*float64)(z) = *(*float64)(x) / *(*float64)(y)
+	return z
+}
+
+func (b *binaryExpr) indirectFloatAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -49,7 +92,16 @@ func (b *binaryExpr) floatAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatSub(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatAdd(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*float64)(z) = *(*float64)(x) + *(*float64)(y)
+
+	return z
+}
+
+func (b *binaryExpr) indirectFloatSub(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -58,7 +110,16 @@ func (b *binaryExpr) floatSub(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatMul(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatSub(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*float64)(z) = *(*float64)(x) - *(*float64)(y)
+
+	return z
+}
+
+func (b *binaryExpr) indirectFloatMul(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -67,7 +128,16 @@ func (b *binaryExpr) floatMul(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatMul(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := state.Pointer(*b.z.Offset)
+	*(*float64)(z) = *(*float64)(x) * *(*float64)(y)
+
+	return z
+}
+
+func (b *binaryExpr) indirectFloatEq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -79,7 +149,19 @@ func (b *binaryExpr) floatEq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatEq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+
+	if *(*float64)(x) == *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+
+	return z
+}
+
+func (b *binaryExpr) indirectFloatNeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
@@ -91,7 +173,19 @@ func (b *binaryExpr) floatNeq(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatGtr(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatNeq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+
+	z := est.FalseValuePtr
+	if *(*float64)(x) != *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+
+	return z
+}
+
+func (b *binaryExpr) indirectFloatGtr(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -101,7 +195,17 @@ func (b *binaryExpr) floatGtr(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatGte(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatGtr(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+	if *(*float64)(x) > *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectFloatGte(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -111,7 +215,17 @@ func (b *binaryExpr) floatGte(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatLss(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatGte(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+	if *(*float64)(x) >= *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectFloatLss(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
@@ -121,9 +235,29 @@ func (b *binaryExpr) floatLss(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) floatLeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directFloatLss(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+	if *(*float64)(x) < *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectFloatLeq(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
+	z := est.FalseValuePtr
+	if *(*float64)(x) <= *(*float64)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) directFloatLeq(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
 	z := est.FalseValuePtr
 	if *(*float64)(x) <= *(*float64)(y) {
 		z = est.TrueValuePtr
