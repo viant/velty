@@ -5,7 +5,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/plan"
+	"github.com/viant/xunsafe"
+	"reflect"
+	"strings"
 	"testing"
+	"unsafe"
 )
 
 func TestPlanner_Compile(t *testing.T) {
@@ -374,10 +378,54 @@ $abc
 				"Vars": ValuesHolder{Values{IntValue: 123456789}},
 			},
 		},
+		{
+			description: "func #1",
+			expect:      "FOO",
+			template:    `${Name.toUpperCase()}`,
+			definedVars: map[string]interface{}{
+				"Name": "foo",
+			},
+			ptrFunctions: map[string]*est.Func{
+				"toUpperCase": {
+					Function: func(vars ...unsafe.Pointer) (unsafe.Pointer, interface{}) {
+						if len(vars) < 1 {
+							return nil, nil
+						}
+
+						result := *(*string)(vars[0])
+						return xunsafe.AsPointer(strings.ToUpper(result)), result
+					},
+					ResultType: reflect.TypeOf(""),
+				},
+			},
+		},
+		{
+			description: "func #2",
+			expect:      "FOO",
+			template:    `${Name.toUpperCase()}`,
+			definedVars: map[string]interface{}{
+				"Name": "foo",
+			},
+			functions: map[string]interface{}{
+				"toUpperCase": strings.ToUpper,
+			},
+		},
+		{
+			description: "func #3",
+			expect:      "FOO",
+			template:    `${Name.toUpperCase().trim()}`,
+			definedVars: map[string]interface{}{
+				"Name": "     foo        ",
+			},
+			functions: map[string]interface{}{
+				"toUpperCase": strings.ToUpper,
+				"trim":        strings.TrimSpace,
+			},
+		},
 	}
 
-	//for i, testCase := range testCases[len(testCases)-1:] {
-	for i, testCase := range testCases {
+	for i, testCase := range testCases[len(testCases)-1:] {
+		//for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
 		if !assert.Nil(t, err, testCase.description) {
@@ -396,11 +444,27 @@ type testdata struct {
 	template     string
 	definedVars  map[string]interface{}
 	embeddedVars map[string]interface{}
+	ptrFunctions map[string]*est.Func
+	functions    map[string]interface{}
 	expect       string
 }
 
 func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	planner := plan.New(8192)
+
+	for k, v := range d.ptrFunctions {
+		err := planner.Functions.RegisterFunc(k, v)
+		if !assert.Nil(t, err, d.description) {
+			return nil, nil, err
+		}
+	}
+
+	for k, v := range d.functions {
+		err := planner.Functions.Register(k, v)
+		if !assert.Nil(t, err, d.description) {
+			return nil, nil, err
+		}
+	}
 
 	for k, v := range d.definedVars {
 		err := planner.DefineVariable(k, v)
@@ -443,5 +507,6 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 			return err
 		}
 	}
+
 	return nil
 }

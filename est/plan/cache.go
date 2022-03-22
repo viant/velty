@@ -8,7 +8,8 @@ import (
 type (
 	Cache struct {
 		cacheSize int
-		cache     map[string]*Value
+		cache     map[string]int
+		values    []*Value
 		locker    sync.Locker
 	}
 
@@ -20,7 +21,7 @@ type (
 
 func NewCache(cacheSize int) *Cache {
 	return &Cache{
-		cache:     map[string]*Value{},
+		cache:     map[string]int{},
 		locker:    &sync.Mutex{},
 		cacheSize: cacheSize,
 	}
@@ -28,7 +29,11 @@ func NewCache(cacheSize int) *Cache {
 
 func (c *Cache) Expression(name string) (*Value, bool) {
 	val, ok := c.cache[name]
-	return val, ok
+	if !ok {
+		return nil, false
+	}
+
+	return c.values[val], ok
 }
 
 func (c *Cache) Put(name string, planner *Planner, compute est.Compute) {
@@ -40,14 +45,16 @@ func (c *Cache) Put(name string, planner *Planner, compute est.Compute) {
 	defer c.locker.Unlock()
 	c.cleanCacheIfNeeded()
 
-	c.cache[name] = &Value{
+	c.values = append(c.values, &Value{
 		Planner: planner,
 		Compute: compute,
-	}
+	})
+	c.cache[name] = len(c.values) - 1
 }
 
 func (c *Cache) cleanCacheIfNeeded() {
 	if len(c.cache) > c.cacheSize {
-		c.cache = map[string]*Value{}
+		c.cache = map[string]int{}
+		c.values = c.values[:0]
 	}
 }

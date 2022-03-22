@@ -24,7 +24,8 @@ type (
 		*est.Control
 		Type      *scope.Type
 		selectors *est.Selectors
-		cache     *Cache
+		*est.Functions
+		cache *Cache
 	}
 )
 
@@ -116,17 +117,17 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 }
 
 func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
-	sel := p.selectorByName(selector.ID)
-	if sel == nil {
+	resultSelector := p.selectorByName(selector.ID)
+	if resultSelector == nil {
 		return nil, nil
 	}
 
 	if selector.X == nil {
-		return sel, nil
+		return resultSelector, nil
 	}
 
 	call := selector.X
-	parentType := sel.Type
+	parentType := resultSelector.Type()
 
 	selectorId := selector.ID
 
@@ -140,23 +141,40 @@ func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
 		switch actual := call.(type) {
 		case *expr.Select:
 			selectorId = selectorId + fieldSeparator + actual.ID
+
+			if actual.X != nil {
+				switch next := actual.X.(type) {
+				case *expr.Call:
+					var err error
+					resultSelector, err = p.newFuncSelector(selectorId, actual, next, resultSelector)
+					if err != nil {
+						return nil, err
+					}
+
+					parentType = resultSelector.Func.ResultType
+					call = next.X
+					continue
+				}
+			}
+
 			field, err := p.fieldByName(parentType, actual, selectorId)
 			if err != nil {
 				return nil, err
 			}
 
 			var found bool
-			sel, found = p.selectors.ById(selectorId)
+			resultSelector, found = p.selectors.ById(selectorId)
 			if !found {
 				return nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
 			}
-			sel.Indirect = wasPtr
+
+			resultSelector.Indirect = wasPtr
 			parentType = field.Type
 			call = actual.X
 		}
 	}
 
-	return sel, nil
+	return resultSelector, nil
 }
 
 func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
@@ -194,12 +212,12 @@ func (p *Planner) accumulator(t reflect.Type) *est.Selector {
 }
 
 func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
-	if expr.Selector.Type != nil {
+	if expr.Selector.Type() != nil {
 		return nil
 	}
 
 	expr.Type = t
-	expr.Selector.Type = t
+	expr.Selector.SetType(t)
 
 	expr.Selector.Indirect = t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice
 
@@ -217,7 +235,7 @@ func (p *Planner) validateSelector(sel *est.Selector) error {
 		return fmt.Errorf("selector ID was empty")
 	}
 
-	if sel.Type == nil {
+	if sel.Type() == nil {
 		return fmt.Errorf("selector %v type was empty", sel.Name)
 	}
 
@@ -233,6 +251,16 @@ func (p *Planner) selectorByName(name string) *est.Selector {
 		return p.selectors.Selector(idx)
 	}
 	return nil
+}
+
+func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *expr.Call, prev *est.Selector) (*est.Selector, error) {
+	aFunc, ok := p.Functions.ByName(field.ID)
+	if !ok {
+		return nil, fmt.Errorf("not found function: %v", field.ID)
+	}
+
+	newSelector := est.FunctionSelector(selectorId, aFunc, call.Args, prev)
+	return newSelector, nil
 }
 
 func New(sizes ...int) *Planner {
@@ -255,6 +283,7 @@ func New(sizes ...int) *Planner {
 		Type:       scope.NewType(),
 		selectors:  est.NewSelectors(),
 		cache:      NewCache(cacheSize),
+		Functions:  est.NewFunctions(),
 	}
 
 	return result

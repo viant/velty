@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-func Upstream(selector *Selector) func(ptr unsafe.Pointer) unsafe.Pointer {
+func Upstream(selector *Selector) func(state *State) unsafe.Pointer {
 	sel := selector.Parent
 	counter := -1
 	for sel != nil {
@@ -28,7 +28,7 @@ func Upstream(selector *Selector) func(ptr unsafe.Pointer) unsafe.Pointer {
 	var zeroValuePtr unsafe.Pointer
 	var value interface{}
 
-	switch selector.Kind() {
+	switch selector.Type().Kind() {
 	case reflect.Bool:
 		zeroValuePtr = FalseValuePtr
 	case reflect.String:
@@ -38,18 +38,31 @@ func Upstream(selector *Selector) func(ptr unsafe.Pointer) unsafe.Pointer {
 	case reflect.Float64:
 		zeroValuePtr = ZeroFloatPtr
 	default:
-		value = reflect.New(selector.Type).Interface()
+		value = reflect.New(selector.Type()).Interface()
 		zeroValuePtr = xunsafe.AsPointer(value)
 	}
 
-	return func(ptr unsafe.Pointer) unsafe.Pointer {
+	callers := make([]func(...unsafe.Pointer) (unsafe.Pointer, interface{}), parentLen)
+	for i := 0; i < parentLen; i++ {
+		if parents[i].Func == nil {
+			continue
+		}
+		callers[i] = parents[i].Func.Function
+	}
+
+	return func(state *State) unsafe.Pointer {
+		ptr := state.MemPtr
 		if ptr == nil {
 			return zeroValuePtr
 		}
 
 		ret := ptr
 		for i := 0; i < parentLen; i++ {
-			ret = parents[i].ValuePointer(ret)
+			if parents[i].Func == nil {
+				ret = parents[i].ValuePointer(ret)
+			} else {
+				ret, _ = callers[i](Args(parents[i].Args).ToPtrs(ret, state)...)
+			}
 			if ret == nil {
 				return zeroValuePtr
 			}

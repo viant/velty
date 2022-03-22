@@ -19,7 +19,7 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 
 	resultType := nonEmptyType(actual.Type(), x.Type, y.Type)
 	acc := p.accumulator(resultType)
-	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
+	resultExpr := &op.Expression{Selector: acc, Type: acc.Type()}
 
 	computeNew, err := cexpr.Binary(actual.Token, x, y, resultExpr)
 	if err != nil {

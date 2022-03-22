@@ -21,9 +21,17 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		operand.Type = e.Type
 		return operand, nil
 	}
+
+	if e.Selector != nil && e.Func != nil {
+		operand.Type = e.Selector.Type()
+		operand.Sel = e.Selector
+		operand.Comp = e.funcCall()
+		return operand, nil
+	}
+
 	if e.Selector != nil {
 		operand.Offset = &e.Selector.Offset
-		operand.Type = e.Selector.Type
+		operand.Type = e.Selector.Type()
 		operand.Sel = e.Selector
 
 		if e.Selector != nil && e.Selector.Indirect {
@@ -39,6 +47,13 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	}
 	operand.Comp = compute
 	return operand, nil
+}
+
+func (e *Expression) funcCall() est.Compute {
+	upstream := est.Upstream(e.Selector)
+	return func(state *est.State) unsafe.Pointer {
+		return upstream(state)
+	}
 }
 
 type Expressions []*Expression
