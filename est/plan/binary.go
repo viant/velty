@@ -17,10 +17,7 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 		return nil, err
 	}
 
-	resultType := actual.Type()
-	if resultType == nil {
-		resultType = nonEmptyType(x.Type, y.Type)
-	}
+	resultType := nonEmptyType(actual.Type(), x.Type, y.Type)
 	acc := p.accumulator(resultType)
 	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
 

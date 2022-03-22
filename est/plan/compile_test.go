@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/plan"
-	"strconv"
 	"testing"
 )
 
@@ -15,7 +14,7 @@ func TestPlanner_Compile(t *testing.T) {
 	}
 
 	type Values struct {
-		IntValue     int
+		IntValue     int `velty:"name=Int"`
 		StringValue  string
 		BooleanValue bool
 		FloatValue   float64
@@ -32,6 +31,10 @@ func TestPlanner_Compile(t *testing.T) {
 		ID      int
 	}
 
+	type ValuesHolder struct {
+		Values `velty:"prefix=VARIABLES_"`
+	}
+
 	values := &Values{
 		StringValue:  "employee street",
 		IntValue:     123456789,
@@ -44,13 +47,7 @@ func TestPlanner_Compile(t *testing.T) {
 		Address: values,
 	}
 
-	var testCases = []struct {
-		description   string
-		template      string
-		vars          map[string]interface{}
-		expect        string
-		errorExpected bool
-	}{
+	var testCases = []testdata{
 		{
 			description: "assign int",
 			template:    `#set($var1 = 123)$var1`,
@@ -65,7 +62,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "assign binary expression result with selector at the right side",
 			template:    `#set($var1 = 3 + $num)$var1`,
 			expect:      `13`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"num": 10,
 			},
 		},
@@ -73,7 +70,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "assign binary expression result with selector at the left side #1",
 			template:    `#set($var1 = $num +  3)$var1`,
 			expect:      `13`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"num": 10,
 			},
 		},
@@ -81,7 +78,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "assign binary expression result with selector at the left side #2",
 			template:    `#set($var1 = $num - 3)$var1`,
 			expect:      `7`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"num": 10,
 			},
 		},
@@ -139,7 +136,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: `assign binary expression, both side selector #10`,
 			template:    `#set( $var1 = $num1 +  $num2)$var1`,
 			expect:      "25",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"num1": 10,
 				"num2": 15,
 			},
@@ -158,7 +155,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "if statement #3",
 			template:    `#if($var1==$var2) abc #else def#end`,
 			expect:      ` def`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"var1": 1,
 				"var2": 2,
 			},
@@ -172,7 +169,7 @@ func TestPlanner_Compile(t *testing.T) {
 	def
 #end`,
 			expect: "\n \n\tabc \n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"var1": 1,
 				"var2": 1,
 			},
@@ -192,7 +189,7 @@ func TestPlanner_Compile(t *testing.T) {
 #end
 `,
 			expect: "\n\n\tvariables are not equal\n\t\n\t\tvar1 is bigger than var2\n\t\n\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"var1": 10,
 				"var2": 5,
 			},
@@ -212,7 +209,7 @@ func TestPlanner_Compile(t *testing.T) {
 #end
 `,
 			expect: "\n\n\tvariables are not equal\n\t\n\t\tvar2 is bigger than var1\n\t\n\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"var1": 1,
 				"var2": 5,
 			},
@@ -234,7 +231,7 @@ func TestPlanner_Compile(t *testing.T) {
 #end
 `,
 			expect: "\n\n\tThe value of var: 1\n\n\tThe value of var: 2\n\n\tThe value of var: 3\n\n\tThe value of var: 4\n\n\tThe value of var: 5\n\n\tThe value of var: 6\n\n\tThe value of var: 7\n\n\tThe value of var: 8\n\n\tThe value of var: 9\n\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"values": []int{1, 2, 3, 4, 5, 6, 7, 8, 9},
 			},
 		},
@@ -242,7 +239,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "objects  #1",
 			template:    `${foo.Name}`,
 			expect:      `Foo name`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"foo": foo{Name: "Foo name"},
 			},
 		},
@@ -250,7 +247,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "objects  #2",
 			template:    `${employee.Address.StringValue}`,
 			expect:      `employee street`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": employee{Address: *values},
 			},
 		},
@@ -258,15 +255,15 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "objects  #3",
 			template:    `${employee.Address.StringValue}`,
 			expect:      `employee street`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
 		{
 			description: "objects  #4",
-			template:    `${employee.Address.IntValue}`,
+			template:    `${employee.Address.Int}`,
 			expect:      `123456789`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -274,7 +271,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "objects  #5",
 			template:    `${employee.Address.BooleanValue}`,
 			expect:      `true`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -282,7 +279,7 @@ func TestPlanner_Compile(t *testing.T) {
 			description: "objects  #6",
 			template:    `${employee.Address.FloatValue}`,
 			expect:      `125.43`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -293,7 +290,7 @@ func TestPlanner_Compile(t *testing.T) {
 $abc
 `,
 			expect: "\n\nemployee street\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -304,7 +301,7 @@ $abc
 $abc
 `,
 			expect: "\n\n125.43\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -315,7 +312,7 @@ $abc
 $abc
 `,
 			expect: "\n\n250.86\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -327,7 +324,7 @@ $abc
 #end
 `,
 			expect: "\n\n\tVar1 ;\n\n\tVar2 ;\n\n\tVar3 ;\n\n\tVar4 ;\n\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -339,7 +336,7 @@ $abc
 #end
 `,
 			expect: "\n\n\tVar1 ;\n\n\tVar2 ;\n\n\tVar3 ;\n\n\tVar4 ;\n\n",
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"employee": department,
 			},
 		},
@@ -347,7 +344,7 @@ $abc
 			description: "evaluate template in runtime",
 			template:    `#evaluate(${foo_template})`,
 			expect:      `Var1: 1000, Var2: 13213`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"foo_template": `Var1: $var1, Var2: $var2`,
 				"var1":         1000,
 				"var2":         13213,
@@ -357,53 +354,36 @@ $abc
 			description: "nil #1",
 			expect:      "",
 			template:    `${Var.Address.StringValue}`,
-			vars: map[string]interface{}{
+			definedVars: map[string]interface{}{
 				"Var": &Department{},
 			},
 		},
 		{
 			description: "nil #2",
 			expect:      "0",
-			template:    `${Var.Address.IntValue}`,
-			vars: map[string]interface{}{
+			template:    `${Var.Address.Int}`,
+			definedVars: map[string]interface{}{
 				"Var": &Department{},
 			},
 		},
+		{
+			description: "tags #1",
+			expect:      "123456789",
+			template:    `${VARIABLES_Int}`,
+			embeddedVars: map[string]interface{}{
+				"Vars": ValuesHolder{Values{IntValue: 123456789}},
+			},
+		},
 	}
-outer:
+
 	//for i, testCase := range testCases[len(testCases)-1:] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
-		planner := plan.New(8192)
-
-		for k, v := range testCase.vars {
-			err := planner.DefineVariable(k, v)
-			if !assert.Nil(t, err, testCase.description) {
-				continue outer
-			}
-		}
-
-		var exec *est.Execution
-		var newState func() *est.State
-		var err error
-		if !testCase.errorExpected {
-			exec, newState, err = planner.Compile([]byte(testCase.template))
-		} else {
-			assert.Panics(t, func() {
-				exec, newState, err = planner.Compile([]byte(testCase.template))
-			}, testCase.description)
-			continue
-		}
+		exec, state, err := testCase.init(t)
 		if !assert.Nil(t, err, testCase.description) {
 			continue
 		}
-		state := newState()
-		for k, v := range testCase.vars {
-			err = state.SetValue(k, v)
-			if !assert.Nil(t, err, testCase.description+" var "+k) {
-				continue outer
-			}
-		}
+
 		exec.Exec(state)
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
@@ -411,170 +391,57 @@ outer:
 
 }
 
-// Benchmarks
-type benchData struct {
-	execution  *est.Execution
-	newState   func() *est.State
-	benchState *est.State
-	template   string
-	variables  map[string]interface{}
+type testdata struct {
+	description  string
+	template     string
+	definedVars  map[string]interface{}
+	embeddedVars map[string]interface{}
+	expect       string
 }
 
-var directBenchData *benchData
-var indirectBenchData *benchData
-
-func init() {
-	initDirectBench()
-	initIndirectBench()
-}
-
-func initDirectBench() {
-	template := `
-#if($Var1 != $Var2)
-	variables are not equal
-#if($Var1 > $Var2)
-		var1 is bigger than var2
-	#elseif($Var2 > $Var1)
-		var2 is bigger than var1
-	#else
-		never happen
-	#end
-#end
-
-#foreach($Var3 in $Values) 
-		varValue: $Var3
-#end
-`
-
-	variables := make([]string, 2)
-	for i := 0; i < len(variables); i++ {
-		variables[i] = "var" + strconv.Itoa(i)
-	}
-
-	vars := map[string]interface{}{
-		"Var1":   10,
-		"Var2":   5,
-		"Values": variables,
-	}
-
+func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	planner := plan.New(8192)
 
-	for k, v := range vars {
+	for k, v := range d.definedVars {
 		err := planner.DefineVariable(k, v)
-		if err != nil {
-			fmt.Println(err.Error())
+		if !assert.Nil(t, err, d.description) {
+			return nil, nil, err
 		}
 	}
 
-	var err error
-	benchExec, benchNewState, err := planner.Compile([]byte(template))
+	for k, v := range d.embeddedVars {
+		err := planner.EmbedType(k, v)
+		if !assert.Nil(t, err, d.description) {
+			return nil, nil, err
+		}
+	}
+
+	exec, newState, err := planner.Compile([]byte(d.template))
 	if err != nil {
-		fmt.Println(err.Error())
+		return nil, nil, err
 	}
 
-	state := benchNewState()
-	for key, value := range vars {
-		if err := state.SetValue(key, value); err != nil {
-			fmt.Println(err)
-		}
+	state := newState()
+	if err := d.populateState(t, state); err != nil {
+		return nil, nil, err
 	}
-	directBenchData = &benchData{
-		execution:  benchExec,
-		newState:   benchNewState,
-		benchState: state,
-	}
+
+	return exec, state, nil
 }
 
-func initIndirectBench() {
-	indirectTemplate := `
-#if($Foo.Values.Var1 != $Foo.Values.Var2)
-	variables are not equal
-#if($Foo.Values.Var1 > $Foo.Values.Var2)
-		var1 is bigger than var2
-	#elseif($Foo.Values.Var2 > $Foo.Values.Var1)
-		var2 is bigger than var1
-	#else
-		never happen
-	#end
-#end
-
-#foreach($Var3 in $Foo.Values.Data) 
-		variable: $Var3
-#end
-`
-	type Values struct {
-		Var1 int
-		Var2 int
-
-		Data []string
-	}
-
-	type Foo struct {
-		Values *Values
-		id     int
-	}
-
-	values := make([]string, 2)
-	for i := 0; i < len(values); i++ {
-		values[i] = "var" + strconv.Itoa(i+1)
-	}
-	foo := &Foo{
-		Values: &Values{
-			Var1: 10,
-			Var2: 5,
-			Data: values,
-		},
-	}
-
-	vars := map[string]interface{}{
-		"Foo": foo,
-	}
-
-	planner := plan.New(8192)
-
-	for k, v := range vars {
-		err := planner.DefineVariable(k, v)
-		if err != nil {
-			fmt.Println(err.Error())
+func (d *testdata) populateState(t *testing.T, state *est.State) error {
+	for k, v := range d.definedVars {
+		err := state.SetValue(k, v)
+		if !assert.Nil(t, err, d.description+" var "+k) {
+			return err
 		}
 	}
 
-	var err error
-	benchExec, benchNewState, err := planner.Compile([]byte(indirectTemplate))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	state := benchNewState()
-	for key, value := range vars {
-		if err := state.SetValue(key, value); err != nil {
-			fmt.Println(err)
+	for k, v := range d.embeddedVars {
+		err := state.SetValue(k, v)
+		if !assert.Nil(t, err, d.description+" var "+k) {
+			return err
 		}
 	}
-
-	indirectBenchData = &benchData{
-		execution:  benchExec,
-		newState:   benchNewState,
-		benchState: state,
-		template:   indirectTemplate,
-		variables:  vars,
-	}
-}
-
-func BenchmarkExec_Direct(b *testing.B) {
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		directBenchData.execution.Exec(directBenchData.benchState)
-		directBenchData.benchState.Reset()
-	}
-}
-
-func BenchmarkExec_Indirect(b *testing.B) {
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		indirectBenchData.execution.Exec(indirectBenchData.benchState)
-		indirectBenchData.benchState.Reset()
-	}
+	return nil
 }

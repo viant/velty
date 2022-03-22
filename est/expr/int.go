@@ -91,6 +91,7 @@ func (b *binaryExpr) directIntQuo(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectIntAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
+
 	z := state.Pointer(*b.z.Offset)
 	*(*int)(z) = *(*int)(x) + *(*int)(y)
 
@@ -128,8 +129,8 @@ func (b *binaryExpr) indirectIntMul(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
-	*(*int)(z) = *(*int)(x) * *(*int)(y)
 
+	*(*int)(z) = *(*int)(x) * *(*int)(y)
 	return z
 }
 

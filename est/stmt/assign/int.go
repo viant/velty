@@ -24,6 +24,7 @@ func (a *assign) assignAsInt() est.Compute {
 func (a *assign) assignIntLiteral(state *est.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*int)(ret) = *(*int)(*a.y.LiteralPtr)
+
 	return ret
 }
 
