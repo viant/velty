@@ -2,7 +2,6 @@ package plan
 
 import (
 	"github.com/viant/velty/est"
-	"github.com/viant/velty/est/cache"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/plan/scope"
 	"github.com/viant/velty/parser"
@@ -11,19 +10,23 @@ import (
 
 type evaluator struct {
 	x       *op.Operand
-	cache   *cache.Cache
+	cache   *Cache
 	control est.Control
 
 	parent *Planner
 }
 
 func (e *evaluator) compute(state *est.State) unsafe.Pointer {
-	varName := *(*string)(e.x.Exec(state))
-	if expr, ok := e.cache.Expression(varName); ok {
-		return expr(state)
+	varValue := *(*string)(e.x.Exec(state))
+	if cacheValue, ok := e.cache.Expression(varValue); ok {
+		newState, err := e.newState(cacheValue.Planner, state)
+		if err != nil {
+			return est.EmptyStringPtr
+		}
+		return cacheValue.Compute(newState)
 	}
 
-	block, err := parser.Parse([]byte(varName))
+	block, err := parser.Parse([]byte(varValue))
 	if err != nil {
 		return est.EmptyStringPtr
 	}
@@ -34,7 +37,7 @@ func (e *evaluator) compute(state *est.State) unsafe.Pointer {
 		return est.EmptyStringPtr
 	}
 
-	compute, err := evaluatorPlanner.newCompute(block)
+	exec, err := evaluatorPlanner.newCompute(block)
 	if err != nil {
 		return est.EmptyStringPtr
 	}
@@ -44,9 +47,9 @@ func (e *evaluator) compute(state *est.State) unsafe.Pointer {
 		return est.EmptyStringPtr
 	}
 
-	e.cache.Put(varName, compute)
+	e.cache.Put(varValue, evaluatorPlanner, exec)
 
-	return compute(newState)
+	return exec(newState)
 }
 
 func (e *evaluator) evaluatorPlanner(state *est.State) (*Planner, error) {
@@ -86,7 +89,7 @@ func (e *evaluator) newState(planner *Planner, state *est.State) (*est.State, er
 	return newState, nil
 }
 
-func Evaluate(expr *op.Expression, cache *cache.Cache, parent *Planner) (est.New, error) {
+func Evaluate(expr *op.Expression, cache *Cache, parent *Planner) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
 		if err != nil {

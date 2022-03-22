@@ -16,7 +16,7 @@ func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
 	}
 
 	if expr.Selector == nil {
-		id := p.selectorID(selector.ID)
+		id := selector.ID
 		expr.Selector = est.NewSelector(id, selector.ID, nil, nil)
 	}
 	expr.Type = expr.Selector.Type

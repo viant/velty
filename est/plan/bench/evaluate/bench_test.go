@@ -23,7 +23,8 @@ var indirectState *est.State
 var benchStruct = Foo{
 	Values: Values{
 		Ints: Ints{
-			Size: 10,
+			Values: make([]int, 10),
+			Size:   10,
 		},
 	},
 }
@@ -34,8 +35,9 @@ type Values struct {
 }
 
 type Ints struct {
-	ID   int
-	Size int
+	ID     int
+	Values []int
+	Size   int
 }
 
 type Foo struct {
@@ -44,6 +46,10 @@ type Foo struct {
 }
 
 func init() {
+	for i := 0; i < len(benchStruct.Values.Ints.Values); i++ {
+		benchStruct.Values.Ints.Values[i] = i
+	}
+
 	initDirect()
 	initIndirect()
 }
@@ -54,7 +60,7 @@ func initDirect() {
 		"Foo":      &benchStruct,
 	}
 
-	planner := plan.New(1024)
+	planner := plan.New(1024, 1)
 
 	for k, v := range vars {
 		err := planner.DefineVariable(k, v)
@@ -92,7 +98,7 @@ func initIndirect() {
 		},
 	}
 
-	planner := plan.New(1024)
+	planner := plan.New(1024, 1)
 
 	for k, v := range vars {
 		err := planner.DefineVariable(k, v)

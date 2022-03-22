@@ -14,7 +14,7 @@ type directAppender struct {
 
 func (a *directAppender) appendString(state *est.State) unsafe.Pointer {
 	ptr := state.Pointer(*a.x.Offset)
-	state.Buffer.AppendBytes(*(*[]byte)(ptr))
+	state.Buffer.AppendString(*(*string)(ptr))
 	return ptr
 }
 
@@ -42,7 +42,7 @@ func (a *directAppender) newAppendStringIndirect() est.Compute {
 
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state.MemPtr)
-		state.Buffer.AppendBytes(*(*[]byte)(ret))
+		state.Buffer.AppendString(*(*string)(ret))
 		return ret
 	}
 }

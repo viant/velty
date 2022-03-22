@@ -23,7 +23,6 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 
 		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
 		indirect := binary.x.IsIndirect() || binary.y.IsIndirect()
-		//indirect := false
 
 		switch exprs[0].Type.Kind() {
 		case reflect.Int:

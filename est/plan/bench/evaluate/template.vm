@@ -5,6 +5,6 @@ abc > Size
 Size > abc
 #end
 
-#for($var = 0; $var < ${Foo.Values.Ints.Size}; $var++)
+#foreach($var in  ${Foo.Values.Ints.Values})
 $var
 #end

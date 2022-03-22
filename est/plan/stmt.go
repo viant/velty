@@ -126,7 +126,7 @@ func (p *Planner) compileAppend(actual *stmt.Append) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		ptr := unsafe.Pointer(&actual.Append)
 		return func(state *est.State) unsafe.Pointer {
-			state.Buffer.AppendBytes([]byte(actual.Append))
+			state.Buffer.AppendString(actual.Append)
 			return ptr
 		}, nil
 	}, nil

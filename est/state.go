@@ -2,6 +2,7 @@ package est
 
 import (
 	"fmt"
+	"github.com/viant/velty/est/plan/scope"
 	"reflect"
 	"unsafe"
 )
@@ -10,7 +11,7 @@ import (
 type State struct {
 	Mem       interface{}
 	MemPtr    unsafe.Pointer
-	Selectors *Selectors
+	StateType *scope.Type
 	Buffer    *Buffer
 }
 
@@ -19,18 +20,19 @@ func (s *State) Pointer(offset uintptr) unsafe.Pointer {
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
-	idx, ok := s.Selectors.Index[k]
+	xField, ok := s.StateType.Mutator(k)
 	if !ok {
 		return fmt.Errorf("undefined: %v", k)
 	}
 
-	sel := s.Selectors.Selector(idx)
-	if !sel.Indirect && sel.Kind() != reflect.Struct {
-		sel.Set(s.MemPtr, v)
-		return nil
+	switch xField.Kind() {
+	case reflect.Ptr, reflect.Struct, reflect.Slice:
+		xField.SetValue(s.MemPtr, v)
+	default:
+		xField.Set(s.MemPtr, v)
+
 	}
 
-	sel.SetValue(s.MemPtr, v)
 	return nil
 }
 
