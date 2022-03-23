@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/plan"
+	"strings"
 	"testing"
 )
 
@@ -374,6 +375,29 @@ $abc
 				"Vars": ValuesHolder{Values{IntValue: 123456789}},
 			},
 		},
+		{
+			description: "func #2",
+			expect:      "FOO",
+			template:    `${Name.toUpperCase()}`,
+			definedVars: map[string]interface{}{
+				"Name": "foo",
+			},
+			functions: map[string]interface{}{
+				"toUpperCase": strings.ToUpper,
+			},
+		},
+		{
+			description: "func #3",
+			expect:      "FOO",
+			template:    `${Name.toUpperCase().trim()}`,
+			definedVars: map[string]interface{}{
+				"Name": "     foo        ",
+			},
+			functions: map[string]interface{}{
+				"toUpperCase": strings.ToUpper,
+				"trim":        strings.TrimSpace,
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -388,7 +412,6 @@ $abc
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
 	}
-
 }
 
 type testdata struct {
@@ -396,11 +419,19 @@ type testdata struct {
 	template     string
 	definedVars  map[string]interface{}
 	embeddedVars map[string]interface{}
+	functions    map[string]interface{}
 	expect       string
 }
 
 func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	planner := plan.New(8192)
+
+	for k, v := range d.functions {
+		err := planner.Functions.Register(k, v)
+		if !assert.Nil(t, err, d.description) {
+			return nil, nil, err
+		}
+	}
 
 	for k, v := range d.definedVars {
 		err := planner.DefineVariable(k, v)
@@ -443,5 +474,6 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 			return err
 		}
 	}
+
 	return nil
 }

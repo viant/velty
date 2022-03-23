@@ -129,6 +129,7 @@ func Benchmark_Exec_Direct(b *testing.B) {
 		directState.Reset()
 		directExec.Exec(directState)
 	}
+
 	assert.Equal(b, "\n\nSize > abc\n\n\n\n0\n\n1\n\n2\n\n3\n\n4\n\n5\n\n6\n\n7\n\n8\n\n9\n\n", directState.Buffer.String())
 }
 

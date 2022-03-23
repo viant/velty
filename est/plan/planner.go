@@ -23,8 +23,9 @@ type (
 		transients *int
 		*est.Control
 		Type      *scope.Type
-		selectors *est.Selectors
-		cache     *Cache
+		selectors *op.Selectors
+		*op.Functions
+		cache *Cache
 	}
 )
 
@@ -43,7 +44,7 @@ func (p *Planner) EmbedType(name string, val interface{}) error {
 	return p.createSelectors(vTag.Prefix, field, nil)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *est.Selector) error {
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector) error {
 	var err error
 
 	vTag := tag.Parse(field.Tag.Get(tag.Velty))
@@ -55,7 +56,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		}
 
 		for _, name := range fieldNames {
-			fieldSelector := est.SelectorWithField(prefix+name, xunsafe.NewField(field), parent)
+			fieldSelector := op.SelectorWithField(prefix+name, xunsafe.NewField(field), parent)
 			parent = fieldSelector
 			if err = p.selectors.Append(fieldSelector); err != nil {
 				return fmt.Errorf("%w, you have to specify prefix, if parent field is an Anonymous, and any other parent field has the same name", err)
@@ -97,7 +98,7 @@ func dereference(field reflect.StructField) (reflect.Type, bool) {
 	return rType, wasPtr
 }
 
-func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *est.Selector {
+func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op.Selector {
 	sel, _ := p.selectors.ById(prefix + field.Name)
 	return sel
 }
@@ -115,18 +116,18 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	return p.createSelectors("", field, nil)
 }
 
-func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
-	sel := p.selectorByName(selector.ID)
-	if sel == nil {
+func (p *Planner) SelectorExpr(selector *expr.Select) (*op.Selector, error) {
+	resultSelector := p.selectorByName(selector.ID)
+	if resultSelector == nil {
 		return nil, nil
 	}
 
 	if selector.X == nil {
-		return sel, nil
+		return resultSelector, nil
 	}
 
 	call := selector.X
-	parentType := sel.Type
+	parentType := resultSelector.Type
 
 	selectorId := selector.ID
 
@@ -140,23 +141,40 @@ func (p *Planner) SelectorExpr(selector *expr.Select) (*est.Selector, error) {
 		switch actual := call.(type) {
 		case *expr.Select:
 			selectorId = selectorId + fieldSeparator + actual.ID
+
+			if actual.X != nil {
+				switch next := actual.X.(type) {
+				case *expr.Call:
+					var err error
+					resultSelector, err = p.newFuncSelector(selectorId, actual, next, resultSelector)
+					if err != nil {
+						return nil, err
+					}
+
+					parentType = resultSelector.Func.ResultType
+					call = next.X
+					continue
+				}
+			}
+
 			field, err := p.fieldByName(parentType, actual, selectorId)
 			if err != nil {
 				return nil, err
 			}
 
 			var found bool
-			sel, found = p.selectors.ById(selectorId)
+			resultSelector, found = p.selectors.ById(selectorId)
 			if !found {
 				return nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
 			}
-			sel.Indirect = wasPtr
+
+			resultSelector.Indirect = wasPtr
 			parentType = field.Type
 			call = actual.X
 		}
 	}
 
-	return sel, nil
+	return resultSelector, nil
 }
 
 func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
@@ -182,10 +200,10 @@ func deref(rType reflect.Type) reflect.Type {
 	return rType
 }
 
-func (p *Planner) accumulator(t reflect.Type) *est.Selector {
+func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	name := "_T" + strconv.Itoa(*p.transients)
 	*p.transients++
-	sel := est.NewSelector(name, name, t, nil)
+	sel := op.NewSelector(name, name, t, nil)
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
@@ -199,7 +217,9 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 	}
 
 	expr.Type = t
-	expr.Selector.Type = t
+	field := p.Type.AddField(expr.Selector.ID, expr.Selector.Name, t)
+
+	expr.Field = xunsafe.NewField(field)
 
 	expr.Selector.Indirect = t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice
 
@@ -207,12 +227,11 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 		return err
 	}
 
-	field := p.Type.AddField(expr.ID, strings.Title(expr.Name), t)
-	expr.Field = xunsafe.NewField(field)
+	expr.Field = xunsafe.NewField(p.Type.AddField(expr.ID, strings.Title(expr.Name), t))
 	return p.selectors.Append(expr.Selector)
 }
 
-func (p *Planner) validateSelector(sel *est.Selector) error {
+func (p *Planner) validateSelector(sel *op.Selector) error {
 	if sel.ID == "" {
 		return fmt.Errorf("selector ID was empty")
 	}
@@ -228,11 +247,56 @@ func (p *Planner) validateSelector(sel *est.Selector) error {
 	return nil
 }
 
-func (p *Planner) selectorByName(name string) *est.Selector {
+func (p *Planner) selectorByName(name string) *op.Selector {
 	if idx, ok := p.selectors.Index[name]; ok {
 		return p.selectors.Selector(idx)
 	}
 	return nil
+}
+
+func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
+	var err error
+	aFunc, ok := p.Functions.ByName(field.ID)
+	if !ok {
+		return nil, fmt.Errorf("not found function: %v", field.ID)
+	}
+
+	name := "_T" + strconv.Itoa(*p.transients)
+	*p.transients++
+	strField := p.Type.AddField(name, name, aFunc.ResultType)
+
+	operands, err := p.selectorOperands(call, prev)
+	if err != nil {
+		return nil, err
+	}
+
+	newSelector := op.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
+	newSelector.Args = operands
+	return newSelector, nil
+}
+
+func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Operand, error) {
+	var err error
+	operands := make([]*op.Operand, len(call.Args)+1)
+	operands[0], err = op.NewExpression(prev).Operand(*p.Control)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 1; i < len(operands); i++ {
+		expression, err := p.compileExpr(call.Args[i])
+		if err != nil {
+			return nil, err
+		}
+
+		operand, err := expression.Operand(*p.Control)
+		if err != nil {
+			return nil, err
+		}
+		operands[i] = operand
+	}
+	return operands, nil
 }
 
 func New(sizes ...int) *Planner {
@@ -253,8 +317,9 @@ func New(sizes ...int) *Planner {
 		transients: &transients,
 		Control:    &ctl,
 		Type:       scope.NewType(),
-		selectors:  est.NewSelectors(),
+		selectors:  op.NewSelectors(),
 		cache:      NewCache(cacheSize),
+		Functions:  op.NewFunctions(),
 	}
 
 	return result

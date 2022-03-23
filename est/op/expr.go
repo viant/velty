@@ -9,7 +9,7 @@ import (
 type Expression struct {
 	LiteralPtr *unsafe.Pointer
 	Type       reflect.Type
-	*est.Selector
+	*Selector
 	est.New
 }
 
@@ -21,6 +21,14 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		operand.Type = e.Type
 		return operand, nil
 	}
+
+	if e.Selector != nil && e.Selector.Func != nil {
+		operand.Type = e.Selector.Type
+		operand.Sel = e.Selector
+		operand.Comp = e.funcCall()
+		return operand, nil
+	}
+
 	if e.Selector != nil {
 		operand.Offset = &e.Selector.Offset
 		operand.Type = e.Selector.Type
@@ -41,6 +49,13 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	return operand, nil
 }
 
+func (e *Expression) funcCall() est.Compute {
+	upstream := Upstream(e.Selector)
+	return func(state *est.State) unsafe.Pointer {
+		return upstream(state)
+	}
+}
+
 type Expressions []*Expression
 
 func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
@@ -52,4 +67,10 @@ func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
 		}
 	}
 	return result, nil
+}
+
+func NewExpression(selector *Selector) *Expression {
+	return &Expression{
+		Selector: selector,
+	}
 }

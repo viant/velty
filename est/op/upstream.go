@@ -1,12 +1,13 @@
-package est
+package op
 
 import (
+	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
 )
 
-func Upstream(selector *Selector) func(ptr unsafe.Pointer) unsafe.Pointer {
+func Upstream(selector *Selector) func(state *est.State) unsafe.Pointer {
 	sel := selector.Parent
 	counter := -1
 	for sel != nil {
@@ -28,28 +29,41 @@ func Upstream(selector *Selector) func(ptr unsafe.Pointer) unsafe.Pointer {
 	var zeroValuePtr unsafe.Pointer
 	var value interface{}
 
-	switch selector.Kind() {
+	switch selector.Type.Kind() {
 	case reflect.Bool:
-		zeroValuePtr = FalseValuePtr
+		zeroValuePtr = est.FalseValuePtr
 	case reflect.String:
-		zeroValuePtr = EmptyStringPtr
+		zeroValuePtr = est.EmptyStringPtr
 	case reflect.Int:
-		zeroValuePtr = ZeroIntPtr
+		zeroValuePtr = est.ZeroIntPtr
 	case reflect.Float64:
-		zeroValuePtr = ZeroFloatPtr
+		zeroValuePtr = est.ZeroFloatPtr
 	default:
 		value = reflect.New(selector.Type).Interface()
 		zeroValuePtr = xunsafe.AsPointer(value)
 	}
 
-	return func(ptr unsafe.Pointer) unsafe.Pointer {
+	callers := make([]func(accumulator *Selector, selectors []*Operand, state *est.State) unsafe.Pointer, parentLen)
+	for i := 0; i < parentLen; i++ {
+		if parents[i].Func == nil {
+			continue
+		}
+		callers[i] = parents[i].Func.Function
+	}
+
+	return func(state *est.State) unsafe.Pointer {
+		ptr := state.MemPtr
 		if ptr == nil {
 			return zeroValuePtr
 		}
 
 		ret := ptr
 		for i := 0; i < parentLen; i++ {
-			ret = parents[i].ValuePointer(ret)
+			if parents[i].Func == nil {
+				ret = parents[i].ValuePointer(ret)
+			} else {
+				ret = callers[i](parents[i], parents[i].Args, state)
+			}
 			if ret == nil {
 				return zeroValuePtr
 			}

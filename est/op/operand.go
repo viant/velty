@@ -9,7 +9,7 @@ import (
 type Operand struct {
 	LiteralPtr *unsafe.Pointer
 	Offset     *uintptr
-	Sel        *est.Selector
+	Sel        *Selector
 	Comp       est.Compute
 	Type       reflect.Type
 }
