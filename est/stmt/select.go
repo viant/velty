@@ -38,7 +38,7 @@ func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
 }
 
 func (a *directAppender) newAppendStringIndirect() est.Compute {
-	upstream := est.Upstream(a.x.Sel)
+	upstream := op.Upstream(a.x.Sel)
 
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state)
