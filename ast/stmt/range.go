@@ -5,6 +5,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 )
 
+//Range represents regular for loop
 type Range struct {
 	Init ast.Statement
 	Cond ast.Expression
@@ -20,6 +21,7 @@ func (r *Range) AddStatement(statement ast.Statement) {
 	r.Body.AddStatement(statement)
 }
 
+//ForEach represents for each loop
 type ForEach struct {
 	Index *expr.Select
 	Item  *expr.Select

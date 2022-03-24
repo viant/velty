@@ -2,6 +2,7 @@ package stmt
 
 import "github.com/viant/velty/ast"
 
+//Block represents block of statements
 type Block struct {
 	Stmt []ast.Statement
 }

@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+//Parentheses used to add precedence to the expression over other expression
 type Parentheses struct {
 	P ast.Expression
 }

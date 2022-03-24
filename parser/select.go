@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/viant/parsly"
 	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
@@ -13,63 +14,49 @@ func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
 		return nil, cursor.NewError(candidates...)
 	}
 
-	variable, err := parseIdentity(cursor, false)
+	variable, err := parseIdentity(cursor)
 	if err != nil {
 		return nil, err
 	}
 	return variable, nil
 }
 
-//TODO: Refactor
 func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
+	matched := cursor.MatchOne(SelectorBlock)
+	if matched.Code == selectorBlockToken {
+		ID := matched.Text(cursor)
+		selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)
+		result, err := matchSelector(selectorCursor)
+		if err != nil {
+			return nil, err
+		}
+
+		if selectorCursor.Pos < selectorCursor.InputSize {
+			return nil, fmt.Errorf("expected to match all data, but couldn't match %v", string(cursor.Input[cursor.Pos:]))
+		}
+
+		return result, err
+
+	}
+
 	candidates := []*parsly.Token{SelectorBlock, Selector}
-	matched := cursor.MatchAny(candidates...)
+	matched = cursor.MatchAny(candidates...)
 	if matched.Code == parsly.EOF {
 		return nil, cursor.NewError(candidates...)
 	}
 
 	switch matched.Code {
-	case selectorBlockToken:
-		ID := matched.Text(cursor)
-
-		selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)
-		selector, err := parseIdentity(selectorCursor, true)
-		if err != nil {
-			return nil, err
-		}
-		return selector, nil
-
 	case selectorToken:
 		selectorValue := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(selectorValue), 0)
-		selector, err := parseIdentity(selectorCursor, false)
+		selector, err := parseIdentity(selectorCursor)
 		if err != nil {
 			return nil, err
 		}
 
-		var call *expr.Call
-		blockCursor, err := matchExpressionBlock(cursor)
-		if err == nil {
-			call, _ = matchFunctionCall(blockCursor)
-			if call != nil {
-				selector.X = call
-			}
-		}
-
-		matched = cursor.MatchOne(Dot)
-
-		if matched.Code == dotToken {
-			if call != nil {
-				call.X, err = matchSelector(cursor)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				selector.X, err = matchSelector(cursor)
-				if err != nil {
-					return nil, err
-				}
-			}
+		selector.X, err = matchCall(cursor)
+		if err != nil {
+			return nil, err
 		}
 		return selector, nil
 	}
@@ -77,8 +64,32 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 	return nil, cursor.NewError(candidates...)
 }
 
-//TODO: Refactor
-func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) {
+func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
+	candidates := []*parsly.Token{Parentheses, Dot, SquareBrackets}
+
+	matched := cursor.MatchAny(candidates...)
+	switch matched.Code {
+	case dotToken:
+		return matchSelector(cursor)
+	case parenthesesToken:
+		id := matched.Text(cursor)
+		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
+		call, err := matchFunctionCall(newCursor)
+		if err != nil {
+			return nil, err
+		}
+
+		call.X, err = matchCall(cursor)
+		if err != nil {
+			return nil, err
+		}
+		return call, nil
+	}
+
+	return nil, nil
+}
+
+func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
 	candidates := []*parsly.Token{Selector, SelectorBlock}
 	matched := cursor.MatchAny(candidates...)
 	selectorId := matched.Text(cursor)
@@ -89,67 +100,17 @@ func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) 
 		return &expr.Select{ID: selectorId}, nil
 	case selectorBlockToken:
 		newCursor := parsly.NewCursor("", []byte(selectorId[1:len(selectorId)-1]), 0)
-		return parseIdentity(newCursor, true)
-	}
-
-	candidates = []*parsly.Token{Dot, Parentheses, SquareBrackets}
-	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
-	selector := &expr.Select{ID: selectorId}
-	switch matched.Code {
-	case parsly.EOF, parsly.Invalid:
-		return selector, nil
-	case dotToken:
-		call, err := parseIdentity(cursor, fullMatch)
+		return parseIdentity(newCursor)
+	case selectorToken:
+		selector := &expr.Select{ID: selectorId}
+		var err error
+		selector.X, err = matchCall(cursor)
 		if err != nil {
 			return nil, err
 		}
-		selector.X = call
-
-	case parenthesesToken:
-		text := matched.Text(cursor)
-		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
-		call, err := matchFunctionCall(newCursor)
-		if err != nil {
-			return nil, err
-		}
-		selector.X = call
-		if matchNextIdentity(cursor) {
-			call.X, err = parseIdentity(cursor, fullMatch)
-			if err != nil {
-				return nil, err
-			}
-		}
-	case squareBracketsToken:
-		text := matched.Text(cursor)
-		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
-		_, operandExpr, err := matchOperand(newCursor, dataTypeMatchers...)
-		if err != nil {
-			return nil, err
-		}
-
-		call := &expr.SliceIndex{X: operandExpr}
-		if matchNextIdentity(cursor) {
-			call.Y, err = parseIdentity(cursor, fullMatch)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		selector.X = call
 		return selector, nil
 	}
-
-	if fullMatch {
-		cursor.MatchOne(WhiteSpace)
-		if cursor.Pos != cursor.InputSize {
-			return nil, cursor.NewError(WhiteSpace)
-		}
-	}
-	return selector, nil
-}
-
-func matchNextIdentity(cursor *parsly.Cursor) bool {
-	return cursor.MatchAfterOptional(WhiteSpace, Dot).Code == dotToken
+	return nil, cursor.NewError(candidates...)
 }
 
 func matchFunctionCall(cursor *parsly.Cursor) (*expr.Call, error) {

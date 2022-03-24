@@ -218,11 +218,6 @@ func TestService_Parse(t *testing.T) {
 			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "!=", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
 		},
 		{
-			description: `index`,
-			input:       `${employees[2]}`,
-			output:      `{ "Stmt": [ { "ID": "employees", "X": { "X": { "Value": "2" } } } ] }`,
-		},
-		{
 			description: `evaluate`,
 			input:       `#evaluate(${FOO_TEMPLATE})`,
 			output:      `{ "Stmt": [ { "X": { "ID": "FOO_TEMPLATE" } } ] }`,

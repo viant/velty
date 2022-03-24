@@ -193,8 +193,15 @@ Supported attributes:
   template := `${FOO_NAME}`
 ```
 
-## Performance
+* `-` - tells Velty to don't create selector:
+```go
+ type Foo struct {
+      Name string `velty:"-"`
+  }
 
+  planner.EmbedVariable("foo", Foo{})
+  template := `${foo.Name}` // throws an error during compile time
+```
 ## Bugs
 
 This project does not implement full java velocity spec, but just a subset. It supports:

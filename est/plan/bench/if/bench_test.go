@@ -130,8 +130,8 @@ func Benchmark_Exec_Direct(b *testing.B) {
 func Benchmark_Exec_Indirect(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		directState.Reset()
-		directExec.Exec(directState)
+		indirectState.Reset()
+		indirectExec.Exec(indirectState)
 	}
-	assert.Equal(b, "\nvar1 is not equal var2\n    \n    and var1 is greater than var2\n    \n", directState.Buffer.String())
+	assert.Equal(b, "\nvar1 is not equal var2\n    \n    and var1 is greater than var2\n    \n", indirectState.Buffer.String())
 }

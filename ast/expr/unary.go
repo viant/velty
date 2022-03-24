@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+//Unary represents unary expression
 type Unary struct {
 	Token ast.Token
 	X     ast.Expression

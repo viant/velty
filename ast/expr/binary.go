@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+//Binary represents binary expressions
 type Binary struct {
 	X     ast.Expression //left operand
 	Token ast.Token
@@ -23,6 +24,7 @@ func (b *Binary) Type() reflect.Type {
 	return b.Y.Type()
 }
 
+//BinaryExpression creates new *Binary
 func BinaryExpression(left ast.Expression, token ast.Token, right ast.Expression) *Binary {
 	return &Binary{
 		X:     left,

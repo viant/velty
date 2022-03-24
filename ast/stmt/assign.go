@@ -4,6 +4,7 @@ import (
 	"github.com/viant/velty/ast"
 )
 
+//Statement represents assign statement i.e. $var = 10
 type Statement struct {
 	X  ast.Expression //left operand
 	Op ast.Operand    // =
