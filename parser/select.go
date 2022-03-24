@@ -22,7 +22,9 @@ func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
 }
 
 func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
-	matched := cursor.MatchOne(SelectorBlock)
+	matched := cursor.MatchOne(Negation) // Java velocity supports `$!`. If String is null, then it will be replaced with Empty String. In Go - we don't need that
+	matched = cursor.MatchOne(SelectorBlock)
+
 	if matched.Code == selectorBlockToken {
 		ID := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)

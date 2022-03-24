@@ -137,7 +137,7 @@ The simple implementation:
 				return nil
 			}
 			
-			accumulator.SetString(state.MemPtr, strings.HasPrefix(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
+			accumulator.SetBool(state.MemPtr, strings.HasPrefix(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
 			return accumulator.Pointer(state.MemPtr)
 		},
 	}

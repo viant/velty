@@ -223,8 +223,13 @@ func TestService_Parse(t *testing.T) {
 			output:      `{ "Stmt": [ { "X": { "ID": "FOO_TEMPLATE" } } ] }`,
 		},
 		{
-			description: `evaluate`,
+			description: `selector without brackets`,
 			input:       `$FOO.VALUES.NAME<h3>`,
+			output:      `{ "Stmt": [ { "ID": "FOO", "X": { "ID": "VALUES", "X": { "ID": "NAME" } } }, { "Append": "<h3>" } ] }`,
+		},
+		{
+			description: `evaluate`,
+			input:       `$!FOO.VALUES.NAME<h3>`,
 			output:      `{ "Stmt": [ { "ID": "FOO", "X": { "ID": "VALUES", "X": { "ID": "NAME" } } }, { "Append": "<h3>" } ] }`,
 		},
 	}
