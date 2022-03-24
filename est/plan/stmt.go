@@ -11,7 +11,7 @@ import (
 	"unsafe"
 )
 
-func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
+func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 	switch actual := statement.(type) {
 	case *stmt.Statement:
 		return p.computeAssignment(actual)
@@ -20,7 +20,7 @@ func (p *Planner) CompileStmt(statement ast.Statement) (est.New, error) {
 	case *expr.Select:
 		return p.compileStmtSelector(actual)
 	case *stmt.Block:
-		return p.CompileStmt(actual.Stmt)
+		return p.compileStmt(actual.Stmt)
 	case *stmt.If:
 		return p.compileIf(actual)
 	case *stmt.Range:
@@ -57,14 +57,14 @@ func (p *Planner) compileIf(actual *stmt.If) (est.New, error) {
 		return nil, err
 	}
 
-	body, err := p.CompileStmt(&actual.Body)
+	body, err := p.compileStmt(&actual.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	var elseIf est.New
 	if actual.Else != nil {
-		elseIf, err = p.CompileStmt(actual.Else)
+		elseIf, err = p.compileStmt(actual.Else)
 		if err != nil {
 			return nil, err
 		}
@@ -74,13 +74,13 @@ func (p *Planner) compileIf(actual *stmt.If) (est.New, error) {
 }
 
 func (p *Planner) compileForLoop(actual *stmt.Range) (est.New, error) {
-	init, err := p.CompileStmt(actual.Init)
+	init, err := p.compileStmt(actual.Init)
 
 	if err != nil {
 		return nil, err
 	}
 
-	post, err := p.CompileStmt(actual.Post)
+	post, err := p.compileStmt(actual.Post)
 	if err != nil {
 		return nil, err
 	}

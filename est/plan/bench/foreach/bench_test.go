@@ -14,6 +14,7 @@ var template string
 
 var directExec *est.Execution
 var directState *est.State
+var directNewState func() *est.State
 
 var indirectExec *est.Execution
 var indirectState *est.State
@@ -53,13 +54,12 @@ func initDirect() {
 	}
 
 	var err error
-	var benchNewState func() *est.State
-	directExec, benchNewState, err = planner.Compile([]byte(template))
+	directExec, directNewState, err = planner.Compile([]byte(template))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	directState = benchNewState()
+	directState = directNewState()
 	for key, value := range vars {
 		if err := directState.SetValue(key, value); err != nil {
 			fmt.Println(err)
@@ -109,7 +109,7 @@ func Benchmark_Exec_Direct(b *testing.B) {
 		directState.Reset()
 		directExec.Exec(directState)
 	}
-	assert.Equal(b, "\n    1000\n\n    2500\n\n    43245\n\n    2145532\n\n    12321\n\n    543124214325\n\n    23241321\n\n    534214\n\n    3251\n\n    343531423\n\n    54\n\n    432\n\n", directState.Buffer.String())
+	assert.Equal(b, "\n    1000\n    2500\n    43245\n    2145532\n    12321\n    543124214325\n    23241321\n    534214\n    3251\n    343531423\n    54\n    432\n", directState.Buffer.String())
 }
 
 func Benchmark_Exec_Indirect(b *testing.B) {
@@ -118,5 +118,13 @@ func Benchmark_Exec_Indirect(b *testing.B) {
 		directState.Reset()
 		directExec.Exec(directState)
 	}
-	assert.Equal(b, "\n    1000\n\n    2500\n\n    43245\n\n    2145532\n\n    12321\n\n    543124214325\n\n    23241321\n\n    534214\n\n    3251\n\n    343531423\n\n    54\n\n    432\n\n", directState.Buffer.String())
+	assert.Equal(b, "\n    1000\n    2500\n    43245\n    2145532\n    12321\n    543124214325\n    23241321\n    534214\n    3251\n    343531423\n    54\n    432\n", directState.Buffer.String())
+}
+
+func Benchmark_NewState_Direct(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		directNewState()
+
+	}
 }

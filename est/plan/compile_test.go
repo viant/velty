@@ -427,7 +427,7 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	planner := plan.New(8192)
 
 	for k, v := range d.functions {
-		err := planner.Functions.Register(k, v)
+		err := planner.RegisterFunction(k, v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
 		}
@@ -441,7 +441,7 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	}
 
 	for k, v := range d.embeddedVars {
-		err := planner.EmbedType(k, v)
+		err := planner.EmbedVariable(k, v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
 		}

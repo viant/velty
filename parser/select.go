@@ -20,6 +20,7 @@ func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
 	return variable, nil
 }
 
+//TODO: Refactor
 func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 	candidates := []*parsly.Token{SelectorBlock, Selector}
 	matched := cursor.MatchAny(candidates...)
@@ -41,9 +42,34 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 	case selectorToken:
 		selectorValue := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(selectorValue), 0)
-		selector, err := parseIdentity(selectorCursor, true)
+		selector, err := parseIdentity(selectorCursor, false)
 		if err != nil {
 			return nil, err
+		}
+
+		var call *expr.Call
+		blockCursor, err := matchExpressionBlock(cursor)
+		if err == nil {
+			call, _ = matchFunctionCall(blockCursor)
+			if call != nil {
+				selector.X = call
+			}
+		}
+
+		matched = cursor.MatchOne(Dot)
+
+		if matched.Code == dotToken {
+			if call != nil {
+				call.X, err = matchSelector(cursor)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				selector.X, err = matchSelector(cursor)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 		return selector, nil
 	}
@@ -51,9 +77,9 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 	return nil, cursor.NewError(candidates...)
 }
 
+//TODO: Refactor
 func parseIdentity(cursor *parsly.Cursor, fullMatch bool) (*expr.Select, error) {
-	candidates := []*parsly.Token{Selector}
-	candidates = []*parsly.Token{Selector, SelectorBlock}
+	candidates := []*parsly.Token{Selector, SelectorBlock}
 	matched := cursor.MatchAny(candidates...)
 	selectorId := matched.Text(cursor)
 	switch matched.Code {

@@ -25,10 +25,9 @@ type (
 	}
 
 	Func struct {
-		Caller     reflect.Value
+		caller     reflect.Value
 		ResultType reflect.Type
-
-		Function FuncExpression
+		Function   FuncExpression
 	}
 )
 
@@ -42,7 +41,7 @@ func (f *Func) Call(accumulator *Selector, operands []*Operand, state *est.State
 		values[i] = reflect.ValueOf(operands[i].Exec(state))
 	}
 
-	result := f.Caller.Call(values)
+	result := f.caller.Call(values)
 	accumulator.SetValue(state.MemPtr, result[0].Interface())
 	return accumulator.Pointer(state.MemPtr)
 }
@@ -54,7 +53,7 @@ func NewFunctions() *Functions {
 	}
 }
 
-func (f *Functions) Register(name string, function interface{}) error {
+func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	if discoveredFn, rType, discovered := f.discover(function); discovered {
 		aFunc := &Func{
 			Function:   discoveredFn,
@@ -95,7 +94,7 @@ func (f *Functions) Register(name string, function interface{}) error {
 
 	f.indexes[name] = len(f.funcs)
 	aFunc := &Func{
-		Caller:     caller,
+		caller:     caller,
 		ResultType: outType,
 	}
 

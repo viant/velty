@@ -23,11 +23,11 @@ func init() {
 		panic(err)
 	}
 
-	if err = planner.Register("toUpperCase", strings.ToUpper); err != nil {
+	if err = planner.RegisterFunction("toUpperCase", strings.ToUpper); err != nil {
 		panic(err)
 	}
 
-	if err = planner.Register("trim", strings.TrimSpace); err != nil {
+	if err = planner.RegisterFunction("trim", strings.TrimSpace); err != nil {
 		panic(err)
 	}
 
@@ -38,7 +38,7 @@ func init() {
 	}
 
 	state = benchNewState()
-	if err = state.SetValue("Name", "   FOO    "); err != nil {
+	if err = state.SetValue("Name", "   foo    "); err != nil {
 		panic(err)
 	}
 }

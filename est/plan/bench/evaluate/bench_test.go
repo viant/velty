@@ -130,7 +130,7 @@ func Benchmark_Exec_Direct(b *testing.B) {
 		directExec.Exec(directState)
 	}
 
-	assert.Equal(b, "\n\nSize > abc\n\n\n\n0\n\n1\n\n2\n\n3\n\n4\n\n5\n\n6\n\n7\n\n8\n\n9\n\n", directState.Buffer.String())
+	assert.Equal(b, "\n\nSize > abc\n\n\n\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", directState.Buffer.String())
 }
 
 func Benchmark_Exec_Indirect(b *testing.B) {
@@ -139,5 +139,5 @@ func Benchmark_Exec_Indirect(b *testing.B) {
 		indirectState.Reset()
 		indirectExec.Exec(indirectState)
 	}
-	assert.Equal(b, "\n\nSize > abc\n\n\n\n0\n\n1\n\n2\n\n3\n\n4\n\n5\n\n6\n\n7\n\n8\n\n9\n\n", indirectState.Buffer.String())
+	assert.Equal(b, "\n\nSize > abc\n\n\n\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", indirectState.Buffer.String())
 }
