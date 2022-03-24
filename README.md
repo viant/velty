@@ -10,23 +10,15 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) if you encounter breaking changes
 - [Motivation](#motivation)
 - [Introduction](#introduction)
 - [Usage](#usage)
-- [Performance](#performance)
+- [Performance](#benchmarks)
+- [Tags](#tags)
 - [Bugs](#bugs)
 - [Contribution](#contributing-to-igo)
-- [License](#license)
 
 ## Motivation
 
 The goal of this library is to create and fill templates with data, using reflection and allocate new data as little as
 possible. It implements subset of the java velocity library.
-
-[//]: # (- [GoEval]&#40;https://github.com/xtaci/goeval&#41;)
-
-[//]: # (- [GoVal]&#40;https://github.com/maja42/goval&#41;)
-
-[//]: # (- [Yaegi]&#40;https://github.com/traefik/yaegi&#41; .)
-
-See [performance](#performance) section for details.
 
 ## Introduction
 
@@ -158,7 +150,7 @@ The next step is to create execution plan and new state function:
   exec.Exec(state)
 ```
 
-### Tags
+## Tags
 In order to match template identifiers with the struct fields, you can use the `velty` tag. 
 Supported attributes:
 * `name` - represents template identifier name i.e.:
@@ -193,7 +185,7 @@ Supported attributes:
   template := `${FOO_NAME}`
 ```
 
-* `-` - tells Velty to don't create selector:
+* `-` - tells Velty to don't create a selector for given field. In other words, it won't be possible to use the field in the template:
 ```go
  type Foo struct {
       Name string `velty:"-"`
@@ -202,6 +194,36 @@ Supported attributes:
   planner.EmbedVariable("foo", Foo{})
   template := `${foo.Name}` // throws an error during compile time
 ```
+
+## Benchmarks
+Benchmarks against the `text/template` and `Java velocity`:
+
+
+Bench 1: [The template](./est/plan/bench/template/template.vm).
+
+```
+Benchmark_Exec_Velty-8   	   53346	     22661 ns/op	   10416 B/op	       4 allocs/op
+Benchmark_Exec_Template-8   	    2370	    486511 ns/op	   78402 B/op	    3004 allocs/op
+Benchmark_Exec_Velocity            44089            162599 ns/op
+```
+
+Bench 2: [The template](./est/plan/bench/template/template_no_functions.vm).
+```
+Benchmark_Exec_Velty       	   62277	     18035 ns/op	   10384 B/op	       4 allocs/op
+Benchmark_Exec_Template   	    3103	    372839 ns/op	   66791 B/op	    2543 allocs/op
+Benchmark_Exec_Velocity            62277            125636 ns/op
+```
+Velty is ~20x faster than the `text/template` and 7x faster than `Java Velocity`
+
+
+## Optimizations
+
+
+In each of the Velty benchmarks was created new state and allocated new buffer with size of `10000 bytes`. 
+However It will be possible to create pool of states (see  [Todo](.TODO.MD)) and reuse created states. 
+This will reduce time needed to allocate new state.
+
+
 ## Bugs
 
 This project does not implement full java velocity spec, but just a subset. It supports:
@@ -215,3 +237,5 @@ This project does not implement full java velocity spec, but just a subset. It s
 ## Contributing to Velty
 
 Velty is an open source project and contributors are welcome!
+
+See [Todo](.TODO.MD) list.
