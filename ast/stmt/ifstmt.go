@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+//If represents conditional statement
 type If struct {
 	Condition ast.Expression
 	Body      Block

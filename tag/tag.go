@@ -13,6 +13,7 @@ const (
 type Tag struct {
 	Names  []string
 	Prefix string
+	Omit   bool
 }
 
 //Parse parses tag
@@ -39,6 +40,11 @@ func Parse(tagString string) *Tag {
 			continue
 		}
 
+		if len(nv) == 1 && strings.TrimSpace(nv[0]) == "-" {
+			tag.Omit = true
+			continue
+		}
+
 		if i == 0 {
 			columnName := strings.TrimSpace(element)
 			if len(columnName) > 0 {
@@ -48,6 +54,7 @@ func Parse(tagString string) *Tag {
 	}
 	return tag
 }
+
 func (t *Tag) NameEqual(value string) bool {
 	for _, name := range t.Names {
 		if name == value {

@@ -1,0 +1,14 @@
+#foreach($name in $Foo.Values.Names)
+    #set($nameAssigned = $name)
+
+    #if($nameAssigned == "Foo")
+    Name = Foo
+    #elseif($nameAssigned == "Bar")
+    Name = Bar
+    #else
+    Name != Foo && Name != Bar
+    #end
+Name: $name
+NameAssigned: $nameAssigned
+#end
+

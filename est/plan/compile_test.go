@@ -48,6 +48,12 @@ func TestPlanner_Compile(t *testing.T) {
 		Address: values,
 	}
 
+	type Tagged struct {
+		ID   int `velty:"-"`
+		Name string
+	}
+
+	taggedStruct := &Tagged{ID: 100}
 	var testCases = []testdata{
 		{
 			description: "assign int",
@@ -398,12 +404,25 @@ $abc
 				"trim":        strings.TrimSpace,
 			},
 		},
+		{
+			description: "tags #1",
+			template:    `$Tagged.ID`,
+			expectError: true,
+			definedVars: map[string]interface{}{
+				"Tagged": taggedStruct,
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
+		if testCase.expectError {
+			assert.NotNil(t, err, testCase.description)
+			continue
+		}
+
 		if !assert.Nil(t, err, testCase.description) {
 			continue
 		}
@@ -420,6 +439,7 @@ type testdata struct {
 	definedVars  map[string]interface{}
 	embeddedVars map[string]interface{}
 	functions    map[string]interface{}
+	expectError  bool
 	expect       string
 }
 
@@ -427,7 +447,7 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	planner := plan.New(8192)
 
 	for k, v := range d.functions {
-		err := planner.Functions.Register(k, v)
+		err := planner.RegisterFunction(k, v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
 		}
@@ -441,13 +461,14 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	}
 
 	for k, v := range d.embeddedVars {
-		err := planner.EmbedType(k, v)
+		err := planner.EmbedVariable(k, v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
 		}
 	}
 
 	exec, newState, err := planner.Compile([]byte(d.template))
+
 	if err != nil {
 		return nil, nil, err
 	}

@@ -1,0 +1,15 @@
+#foreach($name in $Foo.Values.Names)
+    #set($nameTrimmed = $name.trim())
+    #set($nameLen = $nameTrimmed.len())
+
+    #if($nameLen > 5)
+    NameLen > 5
+    #elseif($nameLen < 5)
+    NameLen < 5
+    #else
+    NameLen = 5
+    #end
+Name: $name
+NameLower: $nameTrimmed
+#end
+

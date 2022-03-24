@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+//Select represents dynamic variable
 type Select struct {
 	ID string
 	X  ast.Expression

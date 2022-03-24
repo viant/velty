@@ -29,7 +29,7 @@ type (
 	}
 )
 
-func (p *Planner) EmbedType(name string, val interface{}) error {
+func (p *Planner) EmbedVariable(name string, val interface{}) error {
 	var rType reflect.Type
 	switch actual := val.(type) {
 	case reflect.Type:
@@ -180,6 +180,9 @@ func (p *Planner) SelectorExpr(selector *expr.Select) (*op.Selector, error) {
 func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
 	field := xunsafe.FieldByName(parentType, actual.ID)
 	if field != nil {
+		if tag.Parse(field.Tag.Get(tag.Velty)).Omit {
+			return nil, fmt.Errorf("can't create selector for field %v", field.Name)
+		}
 		return field, nil
 	}
 
@@ -227,7 +230,6 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 		return err
 	}
 
-	expr.Field = xunsafe.NewField(p.Type.AddField(expr.ID, strings.Title(expr.Name), t))
 	return p.selectors.Append(expr.Selector)
 }
 
@@ -285,7 +287,7 @@ func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Op
 	}
 
 	for i := 1; i < len(operands); i++ {
-		expression, err := p.compileExpr(call.Args[i])
+		expression, err := p.compileExpr(call.Args[i-1])
 		if err != nil {
 			return nil, err
 		}
