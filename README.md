@@ -17,8 +17,10 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) if you encounter breaking changes
 
 ## Motivation
 
-The goal of this library is to create and fill templates with data, using reflection and allocate new data as little as
-possible. It implements subset of the java velocity library.
+This library was created to facilitated seamless migration of code that uses JDK Velocity template to golang. 
+The goal is to provie the first class template alternative for golang that is both substantially faster than JDK Velocity and
+go standard template [HTML/Template](https://pkg.go.dev/html/template) or [Text/Template](https://pkg.go.dev/html/template)
+See [benchmark](#benchmarks) section for details. 
 
 ## Introduction
 
