@@ -241,3 +241,17 @@ This project does not implement full java velocity spec, but just a subset. It s
 Velty is an open source project and contributors are welcome!
 
 See [Todo](.TODO.MD) list.
+
+
+## License
+
+The source code is made available under the terms of the Apache License, Version 2, as stated in the file `LICENSE`.
+
+Individual files may be made available under their own specific license,
+all compatible with Apache License, Version 2. Please see individual files for details.
+
+## Credits and Acknowledgements
+
+**Library Author:** Kamil Larysz
+
+
