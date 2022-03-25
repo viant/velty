@@ -17,8 +17,10 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) if you encounter breaking changes
 
 ## Motivation
 
-The goal of this library is to create and fill templates with data, using reflection and allocate new data as little as
-possible. It implements subset of the java velocity library.
+This library was created to facilitated seamless migration of code that uses JDK Velocity template to golang. 
+The goal is to provie the first class template alternative for golang that is both substantially faster than JDK Velocity and
+go standard template [HTML/Template](https://pkg.go.dev/html/template) or [Text/Template](https://pkg.go.dev/html/template)
+See [benchmark](#benchmarks) section for details. 
 
 ## Introduction
 
@@ -202,18 +204,30 @@ Benchmarks against the `text/template` and `Java velocity`:
 Bench 1: [The template](./est/plan/bench/template/template.vm).
 
 ```
-Benchmark_Exec_Velty-8   	   53346	     22661 ns/op	   10416 B/op	       4 allocs/op
-Benchmark_Exec_Template-8   	    2370	    486511 ns/op	   78402 B/op	    3004 allocs/op
+Benchmark_Exec_Velty-8   	         54585	         21127 ns/op	       0 B/op	       0 allocs/op	       4 allocs/op
+Benchmark_Exec_Template-8   	    2370	        486511 ns/op	   78402 B/op	    3004 allocs/op
 Benchmark_Exec_Velocity            44089            162599 ns/op
 ```
 
+
 Bench 2: [The template](./est/plan/bench/template/template_no_functions.vm).
 ```
-Benchmark_Exec_Velty       	   62277	     18035 ns/op	   10384 B/op	       4 allocs/op
-Benchmark_Exec_Template   	    3103	    372839 ns/op	   66791 B/op	    2543 allocs/op
-Benchmark_Exec_Velocity            62277            125636 ns/op
+Benchmark_Exec_Velty       	        69561	             16867 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Template   	        3103	            372839 ns/op	   66791 B/op	    2543 allocs/op
+Benchmark_Exec_Velocity            62277                125636 ns/op
 ```
-Velty is ~20x faster than the `text/template` and 7x faster than `Java Velocity`
+
+
+Bench 3: [The template](./est/plan/bench/foreach/template.vm).
+
+```
+Benchmark_Exec_Velty   2077510	       523.2 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Velocity  62277        8183  ns/op
+```
+
+Velty template is substantially faster than JDK Velocity and go Text/Template.
+On average velty is 20x faster than go [Text/template](https://pkg.go.dev/html/template)
+and 8-15x faster than [JDK Apache Velocity](https://velocity.apache.org/)
 
 
 ## Optimizations
@@ -239,3 +253,17 @@ This project does not implement full java velocity spec, but just a subset. It s
 Velty is an open source project and contributors are welcome!
 
 See [Todo](.TODO.MD) list.
+
+
+## License
+
+The source code is made available under the terms of the Apache License, Version 2, as stated in the file `LICENSE`.
+
+Individual files may be made available under their own specific license,
+all compatible with Apache License, Version 2. Please see individual files for details.
+
+## Credits and Acknowledgements
+
+**Library Author:** Kamil Larysz
+
+

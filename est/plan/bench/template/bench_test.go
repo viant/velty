@@ -133,9 +133,9 @@ func Benchmark_Exec_Velty(b *testing.B) {
 	var ns *est.State
 	var err error
 	b.ReportAllocs()
-
+	ns = directNewState()
 	for i := 0; i < b.N; i++ {
-		ns = directNewState()
+		ns.Reset()
 		err = ns.SetValue("Foo", &benchStruct)
 		directExec.Exec(ns)
 	}
@@ -148,8 +148,9 @@ func Benchmark_ExecFuncLess_Velty(b *testing.B) {
 	var err error
 	b.ReportAllocs()
 
+	ns = noFuncNewState()
 	for i := 0; i < b.N; i++ {
-		ns = noFuncNewState()
+		ns.Reset()
 		err = ns.SetValue("Foo", &benchStruct)
 		noFuncExec.Exec(ns)
 	}
