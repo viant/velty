@@ -57,18 +57,18 @@ func Upstream(selector *Selector) func(state *est.State) unsafe.Pointer {
 			return zeroValuePtr
 		}
 
-		ret := ptr
 		for i := 0; i < parentLen; i++ {
 			if parents[i].Func == nil {
-				ret = parents[i].ValuePointer(ret)
+				ptr = parents[i].ValuePointer(ptr)
 			} else {
-				ret = callers[i](parents[i], parents[i].Args, state)
+				ptr = callers[i](parents[i], parents[i].Args, state)
 			}
-			if ret == nil {
+
+			if ptr == nil {
 				return zeroValuePtr
 			}
 		}
 
-		return ret
+		return ptr
 	}
 }

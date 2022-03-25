@@ -7,6 +7,7 @@ import (
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/plan/scope"
 	"github.com/viant/velty/tag"
+	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
@@ -30,6 +31,8 @@ type (
 )
 
 func (p *Planner) EmbedVariable(name string, val interface{}) error {
+	name = utils.UpperCaseFirstLetter(name)
+
 	var rType reflect.Type
 	switch actual := val.(type) {
 	case reflect.Type:
@@ -104,6 +107,8 @@ func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string)
 }
 
 func (p *Planner) DefineVariable(name string, v interface{}) error {
+	name = utils.UpperCaseFirstLetter(name)
+
 	var sType reflect.Type
 	switch t := v.(type) {
 	case reflect.Type:

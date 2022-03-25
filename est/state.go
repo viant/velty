@@ -3,6 +3,7 @@ package est
 import (
 	"fmt"
 	"github.com/viant/velty/est/plan/scope"
+	"github.com/viant/velty/utils"
 	"reflect"
 	"unsafe"
 )
@@ -20,6 +21,8 @@ func (s *State) Pointer(offset uintptr) unsafe.Pointer {
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
+	k = utils.UpperCaseFirstLetter(k)
+
 	xField, ok := s.StateType.Mutator(k)
 	if !ok {
 		return fmt.Errorf("undefined: %v", k)

@@ -4,6 +4,7 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
+	"reflect"
 	"unsafe"
 )
 
@@ -23,7 +24,35 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 	var resultPtr unsafe.Pointer
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
-		e.Item.Sel.Set(state.MemPtr, v)
+		e.Item.Sel.SetValue(state.MemPtr, v)
+		resultPtr = e.Block(state)
+	}
+
+	return resultPtr
+}
+
+func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
+	xPtr := state.Pointer(e.X.Sel.Offset)
+	l := e.Slice.Len(xPtr)
+
+	var resultPtr unsafe.Pointer
+	for i := 0; i < l; i++ {
+		v := e.Slice.ValuePointerAt(xPtr, i)
+		e.Item.Sel.SetValue(state.MemPtr, v)
+		resultPtr = e.Block(state)
+	}
+
+	return resultPtr
+}
+
+func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
+	xPtr := e.X.Exec(state)
+	l := e.Slice.Len(xPtr)
+
+	var resultPtr unsafe.Pointer
+	for i := 0; i < l; i++ {
+		v := e.Slice.ValuePointerAt(xPtr, i)
+		e.Item.Sel.SetValue(state.MemPtr, v)
 		resultPtr = e.Block(state)
 	}
 
@@ -37,7 +66,7 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 	var resultPtr unsafe.Pointer
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
-		e.Item.Sel.Set(state.MemPtr, v)
+		e.Item.Sel.SetValue(state.MemPtr, v)
 		resultPtr = e.Block(state)
 	}
 
@@ -65,9 +94,18 @@ func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expressio
 			return nil, err
 		}
 
-		if loop.X.Sel != nil && loop.X.Sel.Indirect {
-			return loop.computeIndirect, nil
+		switch loop.Slice.Elem().Kind() {
+		case reflect.Ptr:
+			if loop.X.Sel != nil && loop.X.Sel.Indirect {
+				return loop.computeIndirectPtr, nil
+			}
+			return loop.computePtr, nil
+		default:
+			if loop.X.Sel != nil && loop.X.Sel.Indirect {
+				return loop.computeIndirect, nil
+			}
+			return loop.compute, nil
+
 		}
-		return loop.compute, nil
 	}, nil
 }
