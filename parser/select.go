@@ -5,6 +5,7 @@ import (
 	"github.com/viant/parsly"
 	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
+	"github.com/viant/velty/utils"
 )
 
 func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
@@ -104,7 +105,7 @@ func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
 		newCursor := parsly.NewCursor("", []byte(selectorId[1:len(selectorId)-1]), 0)
 		return parseIdentity(newCursor)
 	case selectorToken:
-		selector := &expr.Select{ID: selectorId}
+		selector := &expr.Select{ID: utils.UpperCaseFirstLetter(selectorId)}
 		var err error
 		selector.X, err = matchCall(cursor)
 		if err != nil {

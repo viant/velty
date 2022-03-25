@@ -69,6 +69,14 @@ func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
 	return result, nil
 }
 
+func (e *Expression) newIndirectSelector() est.Compute {
+	upstream := Upstream(e.Selector)
+	return func(state *est.State) unsafe.Pointer {
+		ret := upstream(state)
+		return ret
+	}
+}
+
 func NewExpression(selector *Selector) *Expression {
 	return &Expression{
 		Selector: selector,

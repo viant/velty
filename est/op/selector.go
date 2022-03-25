@@ -2,10 +2,8 @@ package op
 
 import (
 	"github.com/viant/velty/ast"
-	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
 	"reflect"
-	"unsafe"
 )
 
 //Selector represent data selector
@@ -63,13 +61,5 @@ func FunctionSelector(id string, field reflect.StructField, aFunc *Func, args []
 		FuncArguments: args,
 		Func:          aFunc,
 		Field:         xunsafe.NewField(field),
-	}
-}
-
-func (e *Expression) newIndirectSelector() est.Compute {
-	upstream := Upstream(e.Selector)
-	return func(state *est.State) unsafe.Pointer {
-		ret := upstream(state)
-		return ret
 	}
 }

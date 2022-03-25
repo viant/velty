@@ -12,6 +12,7 @@ import (
 func TestPlanner_Compile(t *testing.T) {
 	type foo struct {
 		Name string
+		ID   int
 	}
 
 	type Values struct {
@@ -412,9 +413,46 @@ $abc
 				"Tagged": taggedStruct,
 			},
 		},
+		{
+			description: "range over slice of structs #1",
+			template: `
+#foreach ($foo in $foos) 
+	$foo.Name 
+#end`,
+			definedVars: map[string]interface{}{
+				"foos": []*foo{
+					{
+						Name: "Foo name",
+					},
+					{
+						Name: "Another name",
+					},
+				},
+			},
+			expect: "\n \n\tFoo name \n \n\tAnother name \n",
+		},
+		{
+			description: "range over slice of structs #2",
+			template: `
+#foreach ($foo in $foos) 
+	$foo.Name 
+#end`,
+			definedVars: map[string]interface{}{
+				"foos": []foo{
+					{
+						Name: "Foo name",
+					},
+					{
+						Name: "Another name",
+					},
+				},
+			},
+			expect: "\n \n\tFoo name \n \n\tAnother name \n",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
+	//for i, testCase := range testCases[35:36] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)

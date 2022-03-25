@@ -3,6 +3,7 @@ package op
 import (
 	"fmt"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/utils"
 	"reflect"
 	"unsafe"
 )
@@ -54,6 +55,8 @@ func NewFunctions() *Functions {
 }
 
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
+	name = utils.UpperCaseFirstLetter(name)
+
 	if discoveredFn, rType, discovered := f.discover(function); discovered {
 		aFunc := &Func{
 			Function:   discoveredFn,
@@ -116,6 +119,8 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 }
 
 func (f *Functions) ByName(id string) (*Func, bool) {
+	id = utils.UpperCaseFirstLetter(id)
+
 	index, ok := f.indexes[id]
 	if !ok {
 		return nil, false
