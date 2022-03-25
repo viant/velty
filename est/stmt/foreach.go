@@ -24,7 +24,7 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 	var resultPtr unsafe.Pointer
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
-		e.Item.Sel.SetValue(state.MemPtr, v)
+		e.Item.Sel.Set(state.MemPtr, v)
 		resultPtr = e.Block(state)
 	}
 
