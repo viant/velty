@@ -18,7 +18,7 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) if you encounter breaking changes
 ## Motivation
 
 This library was created to facilitated seamless migration of code that uses JDK Velocity template to golang. 
-The goal is to provie the first class template alternative for golang that is both substantially faster than JDK Velocity and
+The goal is to provide the first class template alternative for golang that is both substantially faster than JDK Velocity and
 go standard template [HTML/Template](https://pkg.go.dev/html/template) or [Text/Template](https://pkg.go.dev/html/template)
 See [benchmark](#benchmarks) section for details. 
 
@@ -29,7 +29,7 @@ execute it. One execution plan can be shared alongside many instances of scoped 
 Variables holds both execution state and variables defined or used in the evaluation code.
 
 ```go
-    planner := plan.New()
+    planner := velty.New()
     exec, newState, err := planner.Compile(code)
    
     state := newState() 
@@ -45,14 +45,16 @@ Variables holds both execution state and variables defined or used in the evalua
 
 In order to create execution plan, you need to create a planner:
 ```go
-    planner := plan.New()
+    planner := velty.New()
 ```
 
-You can also specify the initial buffer and cache size. If you want to do that, you can pass optional arguments in given
-order: `BufferSize` -> `CacheSize`.
+Options that you can pass while creating a Planner:
+* `velty.BufferSize` - initial state buffer size
+* `velty.CacheSize` - cache size for dynamically evaluated templates 
+* `velty.EscapeHTML` - enables global (per Planner) HTML string escape mechanism (i.e. `$Foo`, if foo contains characters like `<>`, they will be encoded)
 
 ```go
-    planner := plan.New(1024, 200)
+    planner := velty.New(velty.BufferSize(1024), valty.CacheSize(200), velty.EscapeHTML(true))
 ```
 
 Once you have the `Planner` you have to define variables that will be used. Velty doesn't use a `map` to store state, but it 
@@ -201,28 +203,28 @@ Supported attributes:
 Benchmarks against the `text/template` and `Java velocity`:
 
 
-Bench 1: [The template](./est/plan/bench/template/template.vm).
+Bench 1: [The template](internal/bench/template/template.vm).
 
 ```
-Benchmark_Exec_Velty-8   	         54585	         21127 ns/op	       0 B/op	       0 allocs/op	       4 allocs/op
+Benchmark_Exec_Velty-8   	   54585	         21127 ns/op	       0 B/op	       0 allocs/op	       4 allocs/op
 Benchmark_Exec_Template-8   	    2370	        486511 ns/op	   78402 B/op	    3004 allocs/op
-Benchmark_Exec_Velocity            44089            162599 ns/op
+Benchmark_Exec_Velocity            44089                162599 ns/op
 ```
 
 
-Bench 2: [The template](./est/plan/bench/template/template_no_functions.vm).
+Bench 2: [The template](internal/bench/template/template_no_functions.vm).
 ```
 Benchmark_Exec_Velty       	        69561	             16867 ns/op	       0 B/op	       0 allocs/op
 Benchmark_Exec_Template   	        3103	            372839 ns/op	   66791 B/op	    2543 allocs/op
-Benchmark_Exec_Velocity            62277                125636 ns/op
+Benchmark_Exec_Velocity                62277                125636 ns/op
 ```
 
 
-Bench 3: [The template](./est/plan/bench/foreach/template.vm).
+Bench 3: [The template](internal/bench/foreach/template.vm).
 
 ```
-Benchmark_Exec_Velty   2077510	       523.2 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Exec_Velocity  62277        8183  ns/op
+Benchmark_Exec_Velty     2077510       523.2 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Velocity  2077510       8183  ns/op
 ```
 
 Velty template is substantially faster than JDK Velocity and go Text/Template.
@@ -232,9 +234,7 @@ and 8-15x faster than [JDK Apache Velocity](https://velocity.apache.org/)
 
 ## Optimizations
 
-
-In each of the Velty benchmarks was created new state and allocated new buffer with size of `10000 bytes`. 
-However It will be possible to create pool of states (see  [Todo](.TODO.MD)) and reuse created states. 
+It will be possible to create pool of states (see  [Todo](.TODO.MD)) and reuse created states. 
 This will reduce time needed to allocate new state.
 
 
@@ -252,7 +252,7 @@ This project does not implement full java velocity spec, but just a subset. It s
 
 Velty is an open source project and contributors are welcome!
 
-See [Todo](.TODO.MD) list.
+See [Todo](TODO.MD) list.
 
 
 ## License
