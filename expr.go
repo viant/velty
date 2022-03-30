@@ -17,6 +17,8 @@ func (p *Planner) compileExpr(e ast.Expression) (*op.Expression, error) {
 		return p.compileBinary(actual)
 	case *aexpr.Parentheses:
 		return p.compileExpr(actual.P)
+	case *aexpr.Range:
+		return p.compileRange(actual)
 	}
 
 	return nil, fmt.Errorf("unsupported expr: %T", e)

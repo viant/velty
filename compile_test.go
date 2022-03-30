@@ -458,6 +458,24 @@ $abc
 			options: []velty.Option{velty.EscapeHTML(true)},
 			expect:  "&lt;script&gt;alert()&lt;/script&gt;",
 		},
+		{
+			description: "asc range",
+			template: `
+#foreach($var in [-10...10]) 
+	$var 
+#end
+`,
+			expect: "\n \n\t-10 \n \n\t-9 \n \n\t-8 \n \n\t-7 \n \n\t-6 \n \n\t-5 \n \n\t-4 \n \n\t-3 \n \n\t-2 \n \n\t-1 \n \n\t0 \n \n\t1 \n \n\t2 \n \n\t3 \n \n\t4 \n \n\t5 \n \n\t6 \n \n\t7 \n \n\t8 \n \n\t9 \n\n",
+		},
+		{
+			description: "dsc range",
+			template: `
+#foreach($var in [10...-10]) 
+	$var 
+#end
+`,
+			expect: "\n \n\t10 \n \n\t9 \n \n\t8 \n \n\t7 \n \n\t6 \n \n\t5 \n \n\t4 \n \n\t3 \n \n\t2 \n \n\t1 \n \n\t0 \n \n\t-1 \n \n\t-2 \n \n\t-3 \n \n\t-4 \n \n\t-5 \n \n\t-6 \n \n\t-7 \n \n\t-8 \n \n\t-9 \n\n",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

@@ -2,6 +2,7 @@ package expr
 
 import (
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -15,16 +16,16 @@ func (l *Literal) Type() reflect.Type {
 	return l.RType
 }
 
-//StringExpression creates string literal
-func StringExpression(value string) *Literal {
+//StringLiteral creates string literal
+func StringLiteral(value string) *Literal {
 	return &Literal{
 		Value: value,
 		RType: reflect.TypeOf(""),
 	}
 }
 
-//NumberExpression creates number literal
-func NumberExpression(value string) *Literal {
+//NumberLiteral creates number literal
+func NumberLiteral(value string) *Literal {
 	numType := reflect.TypeOf(0.0)
 	if !(strings.Contains(value, ".") || strings.Contains(value, "e")) {
 		numType = reflect.TypeOf(0)
@@ -35,8 +36,16 @@ func NumberExpression(value string) *Literal {
 	}
 }
 
-//BoolExpression creates bool literal
-func BoolExpression(value string) *Literal {
+func Number(value int) *Literal {
+	numType := reflect.TypeOf(value)
+	return &Literal{
+		Value: strconv.Itoa(value),
+		RType: numType,
+	}
+}
+
+//BoolLiteral creates bool literal
+func BoolLiteral(value string) *Literal {
 	return &Literal{
 		Value: value,
 		RType: reflect.TypeOf(true),

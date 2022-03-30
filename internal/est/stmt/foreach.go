@@ -73,6 +73,20 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
+func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
+	xPtr := *e.X.LiteralPtr
+	l := e.Slice.Len(xPtr)
+
+	var resultPtr unsafe.Pointer
+	for i := 0; i < l; i++ {
+		v := e.Slice.ValueAt(xPtr, i)
+		e.Item.Sel.SetValue(state.MemPtr, v)
+		resultPtr = e.Block(state)
+	}
+
+	return resultPtr
+}
+
 func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expression) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		aSlice, err := sliceExpr.Operand(control)
@@ -104,7 +118,11 @@ func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expressio
 			if loop.X.Sel != nil && loop.X.Sel.Indirect {
 				return loop.computeIndirect, nil
 			}
-			return loop.compute, nil
+
+			if loop.X.Sel != nil {
+				return loop.compute, nil
+			}
+			return loop.computeLiteral, nil
 
 		}
 	}, nil

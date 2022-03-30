@@ -232,6 +232,11 @@ func TestService_Parse(t *testing.T) {
 			input:       `$!FOO.VALUES.NAME<h3>`,
 			output:      `{ "Stmt": [ { "ID": "FOO", "X": { "ID": "VALUES", "X": { "ID": "NAME" } } }, { "Append": "<h3>" } ] }`,
 		},
+		{
+			description: `range`,
+			input:       `#foreach($int in [-10...10]) abc #end`,
+			output:      `{ "Stmt": [ { "Item": { "ID": "Int" }, "Set": { "X": { "Value": "-10" }, "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": " abc " } ] } } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

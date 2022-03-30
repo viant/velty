@@ -23,7 +23,7 @@ func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 		return p.compileStmt(actual.Stmt)
 	case *astmt.If:
 		return p.compileIf(actual)
-	case *astmt.Range:
+	case *astmt.ForLoop:
 		return p.compileForLoop(actual)
 	case *astmt.ForEach:
 		return p.compileForEachLoop(actual)
@@ -73,7 +73,7 @@ func (p *Planner) compileIf(actual *astmt.If) (est.New, error) {
 	return estmt.NewIf(cond, body, elseIf)
 }
 
-func (p *Planner) compileForLoop(actual *astmt.Range) (est.New, error) {
+func (p *Planner) compileForLoop(actual *astmt.ForLoop) (est.New, error) {
 	init, err := p.compileStmt(actual.Init)
 
 	if err != nil {

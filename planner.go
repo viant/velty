@@ -23,6 +23,7 @@ type (
 		*est.Control
 		Type      *est.Type
 		selectors *op.Selectors
+		constants *constants
 		*op.Functions
 		cache      *cache
 		escapeHTML bool
@@ -319,6 +320,7 @@ func New(options ...Option) *Planner {
 		selectors:  op.NewSelectors(),
 		cache:      newCache(0),
 		Functions:  op.NewFunctions(),
+		constants:  newConstants(),
 	}
 
 	planner.apply(options)
@@ -337,4 +339,8 @@ func (p *Planner) apply(options []Option) {
 			p.escapeHTML = bool(actual)
 		}
 	}
+}
+
+func (p *Planner) registerConst(cons interface{}) {
+
 }
