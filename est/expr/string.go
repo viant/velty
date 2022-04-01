@@ -1,12 +1,12 @@
 package expr
 
 import (
+	est2 "github.com/viant/velty/est"
 	"github.com/viant/velty/internal/ast"
-	"github.com/viant/velty/internal/est"
 	"unsafe"
 )
 
-func computeString(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
+func computeString(token ast.Token, binary *binaryExpr, indirect bool) (est2.Compute, error) {
 	switch token {
 	case ast.ADD:
 		if indirect {
@@ -27,7 +27,7 @@ func computeString(token ast.Token, binary *binaryExpr, indirect bool) (est.Comp
 	return nil, errorUnsupported(token, "string")
 }
 
-func (b *binaryExpr) indirectStringAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectStringAdd(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -35,7 +35,7 @@ func (b *binaryExpr) indirectStringAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) directStringAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directStringAdd(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 	z := state.Pointer(*b.z.Offset)
@@ -43,49 +43,49 @@ func (b *binaryExpr) directStringAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) indirectStringEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectStringEq(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*string)(x) == *(*string)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z
 }
 
-func (b *binaryExpr) directStringEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directStringEq(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*string)(x) == *(*string)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z
 }
 
-func (b *binaryExpr) indirectStringNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectStringNeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*string)(x) != *(*string)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z
 }
 
-func (b *binaryExpr) directStringNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directStringNeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*string)(x) != *(*string)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z

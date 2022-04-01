@@ -1,9 +1,9 @@
 package velty
 
 import (
+	eexpr "github.com/viant/velty/est/expr"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/internal/ast/expr"
-	eexpr "github.com/viant/velty/internal/est/expr"
-	"github.com/viant/velty/internal/est/op"
 	"reflect"
 )
 

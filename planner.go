@@ -2,9 +2,9 @@ package velty
 
 import (
 	"fmt"
+	est2 "github.com/viant/velty/est"
+	op2 "github.com/viant/velty/est/op"
 	aexpr "github.com/viant/velty/internal/ast/expr"
-	"github.com/viant/velty/internal/est"
-	"github.com/viant/velty/internal/est/op"
 	"github.com/viant/velty/internal/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
@@ -20,11 +20,11 @@ type (
 	Planner struct {
 		bufferSize int
 		transients *int
-		*est.Control
-		Type      *est.Type
-		selectors *op.Selectors
+		*est2.Control
+		Type      *est2.Type
+		selectors *op2.Selectors
 		constants *constants
-		*op.Functions
+		*op2.Functions
 		cache      *cache
 		escapeHTML bool
 	}
@@ -49,7 +49,7 @@ func (p *Planner) EmbedVariable(name string, val interface{}) error {
 	return p.createSelectors(vTag.Prefix, field, nil)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector) error {
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op2.Selector) error {
 	var err error
 
 	vTag := Parse(field.Tag.Get(velty))
@@ -61,7 +61,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		}
 
 		for _, name := range fieldNames {
-			fieldSelector := op.SelectorWithField(prefix+name, xunsafe.NewField(field), parent)
+			fieldSelector := op2.SelectorWithField(prefix+name, xunsafe.NewField(field), parent)
 			parent = fieldSelector
 			if err = p.selectors.Append(fieldSelector); err != nil {
 				return fmt.Errorf("%w, you have to specify prefix, if parent field is an Anonymous, and any other parent field has the same name", err)
@@ -103,7 +103,7 @@ func dereference(field reflect.StructField) (reflect.Type, bool) {
 	return rType, wasPtr
 }
 
-func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op.Selector {
+func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op2.Selector {
 	sel, _ := p.selectors.ById(prefix + field.Name)
 	return sel
 }
@@ -125,7 +125,7 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	return p.createSelectors("", field, nil)
 }
 
-func (p *Planner) selector(selector *aexpr.Select) (*op.Selector, error) {
+func (p *Planner) selector(selector *aexpr.Select) (*op2.Selector, error) {
 	resultSelector := p.selectorByName(selector.ID)
 	if resultSelector == nil {
 		return nil, nil
@@ -212,10 +212,10 @@ func deref(rType reflect.Type) reflect.Type {
 	return rType
 }
 
-func (p *Planner) accumulator(t reflect.Type) *op.Selector {
+func (p *Planner) accumulator(t reflect.Type) *op2.Selector {
 	name := "_T" + strconv.Itoa(*p.transients)
 	*p.transients++
-	sel := op.NewSelector(name, name, t, nil)
+	sel := op2.NewSelector(name, name, t, nil)
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
@@ -223,7 +223,7 @@ func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	return sel
 }
 
-func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
+func (p *Planner) adjustSelector(expr *op2.Expression, t reflect.Type) error {
 	if expr.Selector.Type != nil {
 		return nil
 	}
@@ -242,7 +242,7 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 	return p.selectors.Append(expr.Selector)
 }
 
-func (p *Planner) validateSelector(sel *op.Selector) error {
+func (p *Planner) validateSelector(sel *op2.Selector) error {
 	if sel.ID == "" {
 		return fmt.Errorf("selector ID was empty")
 	}
@@ -258,16 +258,16 @@ func (p *Planner) validateSelector(sel *op.Selector) error {
 	return nil
 }
 
-func (p *Planner) selectorByName(name string) *op.Selector {
+func (p *Planner) selectorByName(name string) *op2.Selector {
 	if idx, ok := p.selectors.Index[name]; ok {
 		return p.selectors.Selector(idx)
 	}
 	return nil
 }
 
-func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *aexpr.Call, prev *op.Selector) (*op.Selector, error) {
+func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *aexpr.Call, prev *op2.Selector) (*op2.Selector, error) {
 	var err error
-	aFunc, ok := p.Functions.ByName(field.ID)
+	aFunc, ok := p.Functions.Method(prev.Type, field.ID)
 	if !ok {
 		return nil, fmt.Errorf("not found function: %v", field.ID)
 	}
@@ -281,15 +281,15 @@ func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *
 		return nil, err
 	}
 
-	newSelector := op.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
+	newSelector := op2.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
 	newSelector.Args = operands
 	return newSelector, nil
 }
 
-func (p *Planner) selectorOperands(call *aexpr.Call, prev *op.Selector) ([]*op.Operand, error) {
+func (p *Planner) selectorOperands(call *aexpr.Call, prev *op2.Selector) ([]*op2.Operand, error) {
 	var err error
-	operands := make([]*op.Operand, len(call.Args)+1)
-	operands[0], err = op.NewExpression(prev).Operand(*p.Control)
+	operands := make([]*op2.Operand, len(call.Args)+1)
+	operands[0], err = op2.NewExpression(prev).Operand(*p.Control)
 
 	if err != nil {
 		return nil, err
@@ -312,14 +312,14 @@ func (p *Planner) selectorOperands(call *aexpr.Call, prev *op.Selector) ([]*op.O
 
 func New(options ...Option) *Planner {
 	transients := 0
-	ctl := est.Control(0)
+	ctl := est2.Control(0)
 	planner := &Planner{
 		transients: &transients,
 		Control:    &ctl,
-		Type:       est.NewType(),
-		selectors:  op.NewSelectors(),
+		Type:       est2.NewType(),
+		selectors:  op2.NewSelectors(),
 		cache:      newCache(0),
-		Functions:  op.NewFunctions(),
+		Functions:  op2.NewFunctions(),
 		constants:  newConstants(),
 	}
 

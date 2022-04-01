@@ -2,8 +2,8 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/internal/ast/expr"
-	"github.com/viant/velty/internal/est/op"
 	"reflect"
 	"strconv"
 	"unsafe"

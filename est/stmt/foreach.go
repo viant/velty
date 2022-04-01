@@ -1,23 +1,23 @@
 package stmt
 
 import (
-	"github.com/viant/velty/internal/est"
-	"github.com/viant/velty/internal/est/op"
+	est2 "github.com/viant/velty/est"
+	op2 "github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
 )
 
 type ForEach struct {
-	Block est.Compute
+	Block est2.Compute
 
-	Item *op.Operand
-	X    *op.Operand
+	Item *op2.Operand
+	X    *op2.Operand
 
 	*xunsafe.Slice
 }
 
-func (e *ForEach) compute(state *est.State) unsafe.Pointer {
+func (e *ForEach) compute(state *est2.State) unsafe.Pointer {
 	xPtr := state.Pointer(e.X.Sel.Offset)
 	l := e.Slice.Len(xPtr)
 
@@ -31,7 +31,7 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
-func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
+func (e *ForEach) computePtr(state *est2.State) unsafe.Pointer {
 	xPtr := state.Pointer(e.X.Sel.Offset)
 	l := e.Slice.Len(xPtr)
 
@@ -45,7 +45,7 @@ func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
-func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
+func (e *ForEach) computeIndirectPtr(state *est2.State) unsafe.Pointer {
 	xPtr := e.X.Exec(state)
 	l := e.Slice.Len(xPtr)
 
@@ -59,7 +59,7 @@ func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
-func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
+func (e *ForEach) computeIndirect(state *est2.State) unsafe.Pointer {
 	xPtr := e.X.Exec(state)
 	l := e.Slice.Len(xPtr)
 
@@ -73,7 +73,7 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
-func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
+func (e *ForEach) computeLiteral(state *est2.State) unsafe.Pointer {
 	xPtr := *e.X.LiteralPtr
 	l := e.Slice.Len(xPtr)
 
@@ -87,8 +87,8 @@ func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
 	return resultPtr
 }
 
-func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expression) (est.New, error) {
-	return func(control est.Control) (est.Compute, error) {
+func ForEachLoop(block est2.New, itemExpr *op2.Expression, sliceExpr *op2.Expression) (est2.New, error) {
+	return func(control est2.Control) (est2.Compute, error) {
 		aSlice, err := sliceExpr.Operand(control)
 		if err != nil {
 			return nil, err

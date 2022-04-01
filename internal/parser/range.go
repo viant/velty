@@ -12,7 +12,7 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 	if err != nil {
 		return nil, err
 	}
-	candidates := []*parsly.Token{Coma}
+	candidates := []*parsly.Token{ComaTerminator}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
 	var index *aexpr.Select

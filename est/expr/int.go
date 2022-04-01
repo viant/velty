@@ -1,12 +1,12 @@
 package expr
 
 import (
+	est2 "github.com/viant/velty/est"
 	"github.com/viant/velty/internal/ast"
-	"github.com/viant/velty/internal/est"
 	"unsafe"
 )
 
-func computeInt(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
+func computeInt(token ast.Token, binary *binaryExpr, indirect bool) (est2.Compute, error) {
 	switch token {
 	case ast.QUO:
 		if indirect {
@@ -72,7 +72,7 @@ func computeInt(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute
 	return nil, errorUnsupported(token, "Integer")
 }
 
-func (b *binaryExpr) indirectIntQuo(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntQuo(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -80,7 +80,7 @@ func (b *binaryExpr) indirectIntQuo(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) directIntQuo(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntQuo(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 	z := state.Pointer(*b.z.Offset)
@@ -88,7 +88,7 @@ func (b *binaryExpr) directIntQuo(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) indirectIntAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntAdd(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
@@ -98,7 +98,7 @@ func (b *binaryExpr) indirectIntAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) directIntAdd(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntAdd(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 	z := state.Pointer(*b.z.Offset)
@@ -107,7 +107,7 @@ func (b *binaryExpr) directIntAdd(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) indirectIntSub(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntSub(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -116,7 +116,7 @@ func (b *binaryExpr) indirectIntSub(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) directIntSub(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntSub(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 	z := state.Pointer(*b.z.Offset)
@@ -125,7 +125,7 @@ func (b *binaryExpr) directIntSub(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) indirectIntMul(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntMul(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := state.Pointer(*b.z.Offset)
@@ -134,7 +134,7 @@ func (b *binaryExpr) indirectIntMul(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) directIntMul(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntMul(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
 	z := state.Pointer(*b.z.Offset)
@@ -143,128 +143,128 @@ func (b *binaryExpr) directIntMul(state *est.State) unsafe.Pointer {
 	return z
 }
 
-func (b *binaryExpr) indirectIntEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntEq(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 
 	if *(*int)(x) == *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z
 }
 
-func (b *binaryExpr) directIntEq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntEq(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 
 	if *(*int)(x) == *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 
 	return z
 }
 
-func (b *binaryExpr) indirectIntNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntNeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 
 	if *(*int)(x) != *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) directIntNeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntNeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 
 	if *(*int)(x) != *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) indirectIntGtr(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntGtr(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) > *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) directIntGtr(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntGtr(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) > *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) indirectIntGte(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntGte(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) >= *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) directIntGte(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntGte(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) >= *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) indirectLss(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectLss(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) < *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) directLss(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directLss(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) < *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) indirectIntLeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) indirectIntLeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) <= *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }
 
-func (b *binaryExpr) directIntLeq(state *est.State) unsafe.Pointer {
+func (b *binaryExpr) directIntLeq(state *est2.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := est.FalseValuePtr
+	z := est2.FalseValuePtr
 	if *(*int)(x) <= *(*int)(y) {
-		z = est.TrueValuePtr
+		z = est2.TrueValuePtr
 	}
 	return z
 }

@@ -156,36 +156,24 @@ func matchFunctionCall(cursor *parsly.Cursor) (*aexpr.Call, error) {
 
 	for cursor.Pos < cursor.InputSize-1 {
 		argumentCursor := extractArgument(cursor)
-
-		candidates := []*parsly.Token{Sub, Negation}
-		matched := argumentCursor.MatchAfterOptional(WhiteSpace, candidates...)
-		token := matchToken(matched)
-
 		_, expression, err := matchOperand(argumentCursor, String, Boolean, Number)
 		if err != nil {
 			return nil, err
 		}
 
-		if token == "" {
-			expressions = append(expressions, expression)
-		} else {
-			expressions = append(expressions, &aexpr.Unary{
-				Token: token,
-				X:     expression,
-			})
-		}
-
+		expressions = append(expressions, expression)
 	}
 
 	return &aexpr.Call{Args: expressions}, nil
 }
 
 func extractArgument(cursor *parsly.Cursor) *parsly.Cursor {
-	candidates := []*parsly.Token{Coma}
+	candidates := []*parsly.Token{ComaTerminator}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
 	case comaToken:
-		return parsly.NewCursor("", cursor.Input[:cursor.Pos], 0)
+		text := matched.Text(cursor)
+		return parsly.NewCursor("", []byte(text), 0)
 	}
 
 	return cursor
