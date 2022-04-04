@@ -124,6 +124,6 @@ var QuoEqual = parsly.NewToken(quoEqualToken, "Quo equal", matcher.NewBytes([]by
 var Decrement = parsly.NewToken(decrementToken, "Decrement", matcher.NewBytes([]byte("--")))
 var Increment = parsly.NewToken(incrementToken, "Increment", matcher.NewBytes([]byte("++")))
 
-var Coma = parsly.NewToken(comaToken, "Coma", matcher.NewByte(','))
+var ComaTerminator = parsly.NewToken(comaToken, "Coma", matcher.NewTerminator(',', true))
 var NewLine = parsly.NewToken(newLineToken, "New line", matcher2.NewNewLine())
 var Dot = parsly.NewToken(dotToken, "Dot", matcher.NewByte('.'))

@@ -98,9 +98,9 @@ func matchStatement(cursor *parsly.Cursor) (ast.Statement, int, error) {
 	case elseToken:
 		return &astmt.If{
 			Condition: &aexpr.Binary{
-				X:     aexpr.BoolExpression("true"),
+				X:     aexpr.BoolLiteral("true"),
 				Token: "==",
-				Y:     aexpr.BoolExpression("true"),
+				Y:     aexpr.BoolLiteral("true"),
 			},
 			Body: astmt.Block{},
 		}, expressionCode, nil

@@ -1,49 +1,49 @@
 package velty
 
 import (
-	"github.com/viant/velty/internal/est"
-	"github.com/viant/velty/internal/est/op"
+	est2 "github.com/viant/velty/est"
+	op2 "github.com/viant/velty/est/op"
 	"github.com/viant/velty/internal/parser"
 	"unsafe"
 )
 
 type evaluator struct {
-	x       *op.Operand
+	x       *op2.Operand
 	cache   *cache
-	control est.Control
+	control est2.Control
 
 	parent *Planner
 }
 
-func (e *evaluator) compute(state *est.State) unsafe.Pointer {
+func (e *evaluator) compute(state *est2.State) unsafe.Pointer {
 	varValue := *(*string)(e.x.Exec(state))
 	if cacheValue, ok := e.cache.expression(varValue); ok {
 		newState, err := e.newState(cacheValue.planner, state)
 		if err != nil {
-			return est.EmptyStringPtr
+			return est2.EmptyStringPtr
 		}
 		return cacheValue.compute(newState)
 	}
 
 	block, err := parser.Parse([]byte(varValue))
 	if err != nil {
-		return est.EmptyStringPtr
+		return est2.EmptyStringPtr
 	}
 
 	evaluatorPlanner, err := e.evaluatorPlanner(state)
 
 	if err != nil {
-		return est.EmptyStringPtr
+		return est2.EmptyStringPtr
 	}
 
 	exec, err := evaluatorPlanner.newCompute(block)
 	if err != nil {
-		return est.EmptyStringPtr
+		return est2.EmptyStringPtr
 	}
 
 	newState, err := e.newState(evaluatorPlanner, state)
 	if err != nil {
-		return est.EmptyStringPtr
+		return est2.EmptyStringPtr
 	}
 
 	e.cache.put(varValue, evaluatorPlanner, exec)
@@ -51,9 +51,9 @@ func (e *evaluator) compute(state *est.State) unsafe.Pointer {
 	return exec(newState)
 }
 
-func (e *evaluator) evaluatorPlanner(state *est.State) (*Planner, error) {
+func (e *evaluator) evaluatorPlanner(state *est2.State) (*Planner, error) {
 	evaluatorScope := New()
-	scopeType := est.NewType()
+	scopeType := est2.NewType()
 	evaluatorScope.Type = scopeType
 
 	var err error
@@ -70,7 +70,7 @@ func (e *evaluator) evaluatorPlanner(state *est.State) (*Planner, error) {
 	return evaluatorScope, nil
 }
 
-func (e *evaluator) newState(planner *Planner, state *est.State) (*est.State, error) {
+func (e *evaluator) newState(planner *Planner, state *est2.State) (*est2.State, error) {
 	newState := planner.stateProvider()()
 
 	var err error
@@ -88,8 +88,8 @@ func (e *evaluator) newState(planner *Planner, state *est.State) (*est.State, er
 	return newState, nil
 }
 
-func evaluate(expr *op.Expression, cache *cache, parent *Planner) (est.New, error) {
-	return func(control est.Control) (est.Compute, error) {
+func evaluate(expr *op2.Expression, cache *cache, parent *Planner) (est2.New, error) {
+	return func(control est2.Control) (est2.Compute, error) {
 		x, err := expr.Operand(control)
 		if err != nil {
 			return nil, err

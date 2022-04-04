@@ -1,7 +1,7 @@
 package op
 
 import (
-	"github.com/viant/velty/internal/est"
+	est2 "github.com/viant/velty/est"
 	"reflect"
 	"unsafe"
 )
@@ -10,10 +10,10 @@ type Expression struct {
 	LiteralPtr *unsafe.Pointer
 	Type       reflect.Type
 	*Selector
-	est.New
+	est2.New
 }
 
-func (e *Expression) Operand(control est.Control) (*Operand, error) {
+func (e *Expression) Operand(control est2.Control) (*Operand, error) {
 	operand := &Operand{}
 
 	if e.LiteralPtr != nil {
@@ -49,16 +49,16 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	return operand, nil
 }
 
-func (e *Expression) funcCall() est.Compute {
+func (e *Expression) funcCall() est2.Compute {
 	upstream := Upstream(e.Selector)
-	return func(state *est.State) unsafe.Pointer {
+	return func(state *est2.State) unsafe.Pointer {
 		return upstream(state)
 	}
 }
 
 type Expressions []*Expression
 
-func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
+func (e Expressions) Operands(control est2.Control) ([]*Operand, error) {
 	var result = make([]*Operand, len(e))
 	var err error
 	for i, item := range e {
@@ -69,9 +69,9 @@ func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
 	return result, nil
 }
 
-func (e *Expression) newIndirectSelector() est.Compute {
+func (e *Expression) newIndirectSelector() est2.Compute {
 	upstream := Upstream(e.Selector)
-	return func(state *est.State) unsafe.Pointer {
+	return func(state *est2.State) unsafe.Pointer {
 		ret := upstream(state)
 		return ret
 	}

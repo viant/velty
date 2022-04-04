@@ -2,8 +2,9 @@ package op
 
 import (
 	"fmt"
-	"github.com/viant/velty/internal/est"
+	"github.com/viant/velty/est"
 	"github.com/viant/velty/internal/utils"
+	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
 )
@@ -21,8 +22,19 @@ type Funeexpression = func(accumulator *Selector, operands []*Operand, state *es
 
 type (
 	Functions struct {
-		indexes map[string]int
-		funcs   []*Func
+		index map[string]int
+		funcs []*Func
+
+		receivers map[string]Receiver
+	}
+
+	Receiver struct {
+		index map[string]int
+		funcs []*Func
+	}
+
+	Method struct {
+		ReceiverType reflect.Type
 	}
 
 	Func struct {
@@ -36,10 +48,16 @@ func (f *Func) CallPtrs(accumulator *Selector, operands []*Operand, state *est.S
 	return f.Function(accumulator, operands, state)
 }
 
-func (f *Func) Call(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+func (f *Func) funcCall(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
 	values := make([]reflect.Value, len(operands))
 	for i := 0; i < len(values); i++ {
-		values[i] = reflect.ValueOf(operands[i].Exec(state))
+		ptr := operands[i].Exec(state)
+
+		if operands[i].Sel != nil {
+			values[i] = reflect.ValueOf(operands[i].Sel.Interface(state.MemPtr))
+		} else {
+			values[i] = reflect.ValueOf(asInterface(operands[i].Type, ptr))
+		}
 	}
 
 	result := f.caller.Call(values)
@@ -49,8 +67,9 @@ func (f *Func) Call(accumulator *Selector, operands []*Operand, state *est.State
 
 func NewFunctions() *Functions {
 	return &Functions{
-		indexes: map[string]int{},
-		funcs:   make([]*Func, 0),
+		index:     map[string]int{},
+		funcs:     make([]*Func, 0),
+		receivers: map[string]Receiver{},
 	}
 }
 
@@ -78,6 +97,18 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 		return fmt.Errorf("expected func, got %v", function)
 	}
 
+	aFunc, err := f.reflectFunc(function, fType)
+	if err != nil {
+		return err
+	}
+
+	f.index[name] = len(f.funcs) - 1
+	f.funcs = append(f.funcs, aFunc)
+
+	return nil
+}
+
+func (f *Functions) reflectFunc(function interface{}, fType reflect.Type) (*Func, error) {
 	caller := reflect.ValueOf(function)
 
 	var outType reflect.Type
@@ -86,25 +117,22 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	}
 
 	if fType.NumOut() > 2 || fType.NumOut() == 0 {
-		return fmt.Errorf("function has to return one or two results ")
+		return nil, fmt.Errorf("function has to return one or two results ")
 	}
 
 	if fType.NumOut() == 2 {
 		if _, found := fType.Out(1).MethodByName("Error"); !found {
-			return fmt.Errorf("2nd return has to be an error if specified")
+			return nil, fmt.Errorf("2nd return has to be an error if specified")
 		}
 	}
 
-	f.indexes[name] = len(f.funcs)
 	aFunc := &Func{
 		caller:     caller,
 		ResultType: outType,
 	}
 
-	aFunc.Function = aFunc.Call
-	f.funcs = append(f.funcs, aFunc)
-
-	return nil
+	aFunc.Function = aFunc.funcCall
+	return aFunc, nil
 }
 
 func (f *Functions) RegisterFunc(name string, function *Func) error {
@@ -112,21 +140,55 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 		return fmt.Errorf("function not specified")
 	}
 
-	f.indexes[name] = len(f.funcs)
+	f.index[name] = len(f.funcs)
 	f.funcs = append(f.funcs, function)
 
 	return nil
 }
 
-func (f *Functions) ByName(id string) (*Func, bool) {
+func (f *Functions) Method(rType reflect.Type, id string) (*Func, bool) {
 	id = utils.UpperCaseFirstLetter(id)
+	if method, ok := rType.MethodByName(id); ok {
+		return f.asFunc(rType, id, method)
+	}
 
-	index, ok := f.indexes[id]
+	return f.funcByName(id)
+}
+
+func (f *Functions) funcByName(id string) (*Func, bool) {
+	index, ok := f.index[id]
 	if !ok {
 		return nil, false
 	}
 
 	return f.funcs[index], true
+}
+
+func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.Method) (*Func, bool) {
+	f.ensureReceiver(receiverType)
+	receiver, _ := f.receivers[asMapKey(receiverType)]
+	index, ok := receiver.index[id]
+	if ok {
+		return receiver.funcs[index], true
+	}
+
+	methodSignature := method.Func.Interface()
+	aFunc := &Func{}
+	if funExpr, resultType, ok := f.discover(methodSignature); ok {
+		aFunc.Function = funExpr
+		aFunc.ResultType = resultType
+	} else {
+		fmt.Printf("MethodSignature: %T\n", methodSignature)
+		var err error
+		aFunc, err = f.reflectFunc(methodSignature, method.Type)
+		if err != nil {
+			return nil, false
+		}
+	}
+
+	receiver.index[id] = len(receiver.funcs)
+	receiver.funcs = append(receiver.funcs, aFunc)
+	return aFunc, true
 }
 
 func (f *Functions) discover(function interface{}) (Funeexpression, reflect.Type, bool) {
@@ -552,4 +614,53 @@ func (f *Functions) discover(function interface{}) (Funeexpression, reflect.Type
 	}
 
 	return nil, nil, false
+}
+
+func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) error {
+	receiver := f.ensureReceiver(t)
+	id = utils.UpperCaseFirstLetter(id)
+	_, ok := receiver.index[id]
+	if ok {
+		return fmt.Errorf("function %v and receiver %v is already defined", id, t.String())
+	}
+
+	receiver.index[id] = len(receiver.funcs)
+	receiver.funcs = append(receiver.funcs, function)
+
+	return nil
+}
+
+func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
+	receiver, ok := f.receivers[asMapKey(receiverType)]
+	if ok {
+		return &receiver
+	}
+
+	receiver = Receiver{
+		index: map[string]int{},
+		funcs: make([]*Func, 0),
+	}
+	f.receivers[asMapKey(receiverType)] = receiver
+
+	return &receiver
+}
+
+func asMapKey(receiverType reflect.Type) string {
+	return receiverType.String()
+}
+
+//TODO: Move to the selector
+func asInterface(t reflect.Type, pointer unsafe.Pointer) interface{} {
+	switch t.Kind() {
+	case reflect.Int:
+		return *(*int)(pointer)
+	case reflect.Float64:
+		return *(*float64)(pointer)
+	case reflect.Bool:
+		return *(*bool)(pointer)
+	case reflect.String:
+		return *(*string)(pointer)
+	}
+
+	return xunsafe.AsInterface
 }

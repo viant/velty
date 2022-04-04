@@ -1,15 +1,15 @@
 package velty
 
 import (
+	est2 "github.com/viant/velty/est"
 	"github.com/viant/velty/internal/ast/stmt"
-	"github.com/viant/velty/internal/est"
 	"github.com/viant/velty/internal/parser"
 	"github.com/viant/xunsafe"
 	"reflect"
 )
 
 //Compile create Execution Plan and State provider for the Execution Plan.
-func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, error) {
+func (p *Planner) Compile(template []byte) (*est2.Execution, func() *est2.State, error) {
 	root, err := parser.Parse(template)
 	if err != nil {
 		return nil, nil, err
@@ -24,30 +24,30 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 	return exec, newState, nil
 }
 
-func (p *Planner) stateProvider() func() *est.State {
-	return func() *est.State {
+func (p *Planner) stateProvider() func() *est2.State {
+	return func() *est2.State {
 		mem := reflect.New(p.Type.Type).Interface()
-		state := &est.State{
+		state := &est2.State{
 			Mem:       mem,
 			MemPtr:    xunsafe.AsPointer(mem),
-			Buffer:    est.NewBuffer(p.bufferSize, p.escapeHTML),
+			Buffer:    est2.NewBuffer(p.bufferSize, p.escapeHTML),
 			StateType: p.Type,
 		}
 		return state
 	}
 }
 
-func (p *Planner) newExecution(root *stmt.Block) (*est.Execution, error) {
+func (p *Planner) newExecution(root *stmt.Block) (*est2.Execution, error) {
 	compute, err := p.newCompute(root)
 	if err != nil {
 		return nil, err
 	}
 
-	exec := est.NewExecution(compute)
+	exec := est2.NewExecution(compute)
 	return exec, nil
 }
 
-func (p *Planner) newCompute(root *stmt.Block) (est.Compute, error) {
+func (p *Planner) newCompute(root *stmt.Block) (est2.Compute, error) {
 	computeNew, err := p.compileBlock(root)
 	if err != nil {
 		return nil, err

@@ -12,7 +12,7 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 	if err != nil {
 		return nil, err
 	}
-	candidates := []*parsly.Token{Coma}
+	candidates := []*parsly.Token{ComaTerminator}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
 	var index *aexpr.Select
@@ -29,7 +29,7 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 		return nil, cursor.NewError(candidates...)
 	}
 
-	dataSet, err := matchVariable(cursor)
+	dataSet, err := matchRangeable(cursor)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 	}, nil
 }
 
-func matchFor(cursor *parsly.Cursor) (*astmt.Range, error) {
+func matchFor(cursor *parsly.Cursor) (*astmt.ForLoop, error) {
 	initCursor := extractForSegment(cursor)
 	forInit, err := matchAssign(initCursor)
 	if err != nil {
@@ -61,7 +61,7 @@ func matchFor(cursor *parsly.Cursor) (*astmt.Range, error) {
 		return nil, err
 	}
 
-	return &astmt.Range{
+	return &astmt.ForLoop{
 		Init: forInit,
 		Cond: forCondition,
 		Post: forPost,
@@ -85,14 +85,14 @@ func matchForPost(cursor *parsly.Cursor) (ast.Statement, error) {
 		return &astmt.Statement{
 			X:  variable,
 			Op: ast.ASSIGN,
-			Y:  aexpr.BinaryExpression(variable, ast.SUB, aexpr.NumberExpression("1")),
+			Y:  aexpr.BinaryExpression(variable, ast.SUB, aexpr.NumberLiteral("1")),
 		}, nil
 
 	case incrementToken:
 		return &astmt.Statement{
 			X:  variable,
 			Op: ast.ASSIGN,
-			Y:  aexpr.BinaryExpression(variable, ast.ADD, aexpr.NumberExpression("1")),
+			Y:  aexpr.BinaryExpression(variable, ast.ADD, aexpr.NumberLiteral("1")),
 		}, nil
 	}
 

@@ -26,7 +26,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	case stringToken:
 		value := matched.Text(cursor)
 		matcher = String
-		expression = aexpr.StringExpression(value[1 : len(value)-1])
+		expression = aexpr.StringLiteral(value[1 : len(value)-1])
 
 	case selectorStartToken:
 		expression, err = matchSelector(cursor)
@@ -39,12 +39,12 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	case numberToken:
 		value := matched.Text(cursor)
 		matcher = Number
-		expression = aexpr.NumberExpression(value)
+		expression = aexpr.NumberLiteral(value)
 
 	case booleanToken:
 		value := matched.Text(cursor)
 		matcher = Boolean
-		expression = aexpr.BoolExpression(value)
+		expression = aexpr.BoolLiteral(value)
 	}
 
 	if hasNegation {

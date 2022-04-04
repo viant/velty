@@ -32,7 +32,6 @@ func (s *State) SetValue(k string, v interface{}) error {
 		xField.SetValue(s.MemPtr, v)
 	default:
 		xField.Set(s.MemPtr, v)
-
 	}
 
 	return nil

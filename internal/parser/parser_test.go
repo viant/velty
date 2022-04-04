@@ -198,7 +198,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "function call",
 			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
-			output:      `{ "Stmt": [ { "ID": "Foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "123" }, { "Token": "-", "X": { "Value": "5" } }, { "Value": "123" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "Value": "123" }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Value": "123" }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
+			output:      `{ "Stmt": [ { "ID": "Foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "-5" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
 		},
 		{
 			description: "comments",
@@ -231,6 +231,16 @@ func TestService_Parse(t *testing.T) {
 			description: `evaluate`,
 			input:       `$!FOO.VALUES.NAME<h3>`,
 			output:      `{ "Stmt": [ { "ID": "FOO", "X": { "ID": "VALUES", "X": { "ID": "NAME" } } }, { "Append": "<h3>" } ] }`,
+		},
+		{
+			description: `range`,
+			input:       `#foreach($int in [-10...10]) abc #end`,
+			output:      `{ "Stmt": [ { "Item": { "ID": "Int" }, "Set": { "X": { "Value": "-10" }, "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": " abc " } ] } } ] }`,
+		},
+		{
+			description: `method call`,
+			input:       `$bar.Concat($foo, $var.toUpperCase(), "abcdef")`,
+			output:      `{ "Stmt": [ { "ID": "Bar", "X": { "ID": "Concat", "X": { "Args": [ { "ID": "Foo" }, { "ID": "Var", "X": { "ID": "ToUpperCase", "X": { "Args": [] } } }, { "Value": "abcdef" } ] } } } ] }`,
 		},
 	}
 

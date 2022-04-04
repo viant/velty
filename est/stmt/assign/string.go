@@ -1,11 +1,11 @@
 package assign
 
 import (
-	"github.com/viant/velty/internal/est"
+	est2 "github.com/viant/velty/est"
 	"unsafe"
 )
 
-func (a *assign) assignAsString() est.Compute {
+func (a *assign) assignAsString() est2.Compute {
 	if a.y.Comp != nil {
 		return a.assignStringComp
 	}
@@ -21,25 +21,25 @@ func (a *assign) assignAsString() est.Compute {
 	return a.assignStringLiteral
 }
 
-func (a *assign) assignStringComp(state *est.State) unsafe.Pointer {
+func (a *assign) assignStringComp(state *est2.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*string)(ret) = *(*string)(a.y.Comp(state))
 	return ret
 }
 
-func (a *assign) assignStringOffset(state *est.State) unsafe.Pointer {
+func (a *assign) assignStringOffset(state *est2.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*string)(ret) = *(*string)(state.Pointer(*a.y.Offset))
 	return ret
 }
 
-func (a *assign) assignStringSelPtr(state *est.State) unsafe.Pointer {
+func (a *assign) assignStringSelPtr(state *est2.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*string)(ret) = *(*string)(a.y.Pointer(state))
 	return ret
 }
 
-func (a *assign) assignStringLiteral(state *est.State) unsafe.Pointer {
+func (a *assign) assignStringLiteral(state *est2.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*string)(ret) = *(*string)(*a.y.LiteralPtr)
 	return ret

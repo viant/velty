@@ -5,19 +5,19 @@ import (
 	"github.com/viant/velty/internal/ast/expr"
 )
 
-//Range represents regular for loop
-type Range struct {
+//ForLoop represents regular for loop
+type ForLoop struct {
 	Init ast.Statement
 	Cond ast.Expression
 	Body Block
 	Post ast.Statement
 }
 
-func (r *Range) Statements() []ast.Statement {
+func (r *ForLoop) Statements() []ast.Statement {
 	return r.Body.Statements()
 }
 
-func (r *Range) AddStatement(statement ast.Statement) {
+func (r *ForLoop) AddStatement(statement ast.Statement) {
 	r.Body.AddStatement(statement)
 }
 
@@ -25,7 +25,7 @@ func (r *Range) AddStatement(statement ast.Statement) {
 type ForEach struct {
 	Index *expr.Select
 	Item  *expr.Select
-	Set   *expr.Select
+	Set   ast.Expression
 	Body  Block
 }
 

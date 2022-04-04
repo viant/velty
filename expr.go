@@ -2,9 +2,9 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/internal/ast"
 	aexpr "github.com/viant/velty/internal/ast/expr"
-	"github.com/viant/velty/internal/est/op"
 )
 
 func (p *Planner) compileExpr(e ast.Expression) (*op.Expression, error) {
@@ -17,6 +17,8 @@ func (p *Planner) compileExpr(e ast.Expression) (*op.Expression, error) {
 		return p.compileBinary(actual)
 	case *aexpr.Parentheses:
 		return p.compileExpr(actual.P)
+	case *aexpr.Range:
+		return p.compileRange(actual)
 	}
 
 	return nil, fmt.Errorf("unsupported expr: %T", e)

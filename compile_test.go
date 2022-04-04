@@ -4,10 +4,22 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
-	"github.com/viant/velty/internal/est"
+	est2 "github.com/viant/velty/est"
 	"strings"
 	"testing"
 )
+
+type bar struct {
+	Name string
+}
+
+func (b *bar) UpperCase() string {
+	return strings.ToUpper(b.Name)
+}
+
+func (b *bar) Concat(values ...string) string {
+	return strings.Join(append([]string{b.Name}, values...), " ")
+}
 
 func TestPlanner_Compile(t *testing.T) {
 	type foo struct {
@@ -458,6 +470,49 @@ $abc
 			options: []velty.Option{velty.EscapeHTML(true)},
 			expect:  "&lt;script&gt;alert()&lt;/script&gt;",
 		},
+		{
+			description: "asc range",
+			template: `
+#foreach($var in [-10...10]) 
+	$var 
+#end
+`,
+			expect: "\n \n\t-10 \n \n\t-9 \n \n\t-8 \n \n\t-7 \n \n\t-6 \n \n\t-5 \n \n\t-4 \n \n\t-3 \n \n\t-2 \n \n\t-1 \n \n\t0 \n \n\t1 \n \n\t2 \n \n\t3 \n \n\t4 \n \n\t5 \n \n\t6 \n \n\t7 \n \n\t8 \n \n\t9 \n\n",
+		},
+		{
+			description: "dsc range",
+			template: `
+#foreach($var in [10...-10]) 
+	$var 
+#end
+`,
+			expect: "\n \n\t10 \n \n\t9 \n \n\t8 \n \n\t7 \n \n\t6 \n \n\t5 \n \n\t4 \n \n\t3 \n \n\t2 \n \n\t1 \n \n\t0 \n \n\t-1 \n \n\t-2 \n \n\t-3 \n \n\t-4 \n \n\t-5 \n \n\t-6 \n \n\t-7 \n \n\t-8 \n \n\t-9 \n\n",
+		},
+		{
+			description: "method receiver",
+			template:    `$bar.UpperCase()`,
+			definedVars: map[string]interface{}{
+				"bar": &bar{
+					Name: "bar",
+				},
+			},
+			expect: "BAR",
+		},
+		{
+			description: "method receiver with function calls",
+			template:    `$bar.Concat($foo, $var.toUpperCase(), "abcdef")`,
+			definedVars: map[string]interface{}{
+				"bar": &bar{
+					Name: "bar",
+				},
+				"foo": "fooName",
+				"var": "value",
+			},
+			functions: map[string]interface{}{
+				"toUpperCase": strings.ToUpper,
+			},
+			expect: "bar fooName VALUE abcdef",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -490,7 +545,7 @@ type testdata struct {
 	options      []velty.Option
 }
 
-func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
+func (d *testdata) init(t *testing.T) (*est2.Execution, *est2.State, error) {
 	options := []velty.Option{velty.BufferSize(8192)}
 	if len(d.options) > 0 {
 		options = append(options, d.options...)
@@ -533,7 +588,7 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	return exec, state, nil
 }
 
-func (d *testdata) populateState(t *testing.T, state *est.State) error {
+func (d *testdata) populateState(t *testing.T, state *est2.State) error {
 	for k, v := range d.definedVars {
 		err := state.SetValue(k, v)
 		if !assert.Nil(t, err, d.description+" var "+k) {

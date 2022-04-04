@@ -1,7 +1,7 @@
 package velty
 
 import (
-	"github.com/viant/velty/internal/est"
+	"github.com/viant/velty/est"
 	"sync"
 )
 

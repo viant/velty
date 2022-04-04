@@ -1,7 +1,7 @@
 package op
 
 import (
-	"github.com/viant/velty/internal/est"
+	est2 "github.com/viant/velty/est"
 	"reflect"
 	"unsafe"
 )
@@ -10,15 +10,15 @@ type Operand struct {
 	LiteralPtr *unsafe.Pointer
 	Offset     *uintptr
 	Sel        *Selector
-	Comp       est.Compute
+	Comp       est2.Compute
 	Type       reflect.Type
 }
 
-func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
+func (o *Operand) Pointer(state *est2.State) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(state.MemPtr) + *o.Offset)
 }
 
-func (o *Operand) Exec(state *est.State) unsafe.Pointer {
+func (o *Operand) Exec(state *est2.State) unsafe.Pointer {
 	if o.Comp != nil {
 		return o.Comp(state)
 	}
