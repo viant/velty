@@ -2,8 +2,8 @@ package velty
 
 import (
 	"fmt"
-	est2 "github.com/viant/velty/est"
-	op2 "github.com/viant/velty/est/op"
+	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/op"
 	aexpr "github.com/viant/velty/internal/ast/expr"
 	"github.com/viant/velty/internal/utils"
 	"github.com/viant/xunsafe"
@@ -20,11 +20,11 @@ type (
 	Planner struct {
 		bufferSize int
 		transients *int
-		*est2.Control
-		Type      *est2.Type
-		selectors *op2.Selectors
+		*est.Control
+		Type      *est.Type
+		selectors *op.Selectors
 		constants *constants
-		*op2.Functions
+		*op.Functions
 		cache      *cache
 		escapeHTML bool
 	}
@@ -32,8 +32,7 @@ type (
 
 //EmbedVariable enrich the Type by adding Anonymous field with given name.
 //val can be either of the reflect.Type or regular type (i.e. Foo)
-func (p *Planner) EmbedVariable(name string, val interface{}) error {
-	name = utils.UpperCaseFirstLetter(name)
+func (p *Planner) EmbedVariable(val interface{}) error {
 
 	var rType reflect.Type
 	switch actual := val.(type) {
@@ -43,30 +42,29 @@ func (p *Planner) EmbedVariable(name string, val interface{}) error {
 		rType = reflect.TypeOf(val)
 	}
 
-	field := p.Type.EmbedType(name, name, rType)
+	field := p.Type.EmbedType(rType)
 	vTag := Parse(field.Tag.Get(velty))
+	offset := field.Offset
+	if field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice {
+		offset = 0
+	}
 
-	return p.createSelectors(vTag.Prefix, field, nil)
+	return p.createSelectors(vTag.Prefix, field, nil, offset, false)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op2.Selector) error {
-	var err error
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offset uintptr, indirect bool) error {
+	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 
 	vTag := Parse(field.Tag.Get(velty))
+	err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offset, indirect)
+	if err != nil {
+		return err
+	}
 
 	if !field.Anonymous {
-		fieldNames := []string{field.Name}
-		if len(vTag.Names) != 0 {
-			fieldNames = vTag.Names
-		}
-
-		for _, name := range fieldNames {
-			fieldSelector := op2.SelectorWithField(prefix+name, xunsafe.NewField(field), parent)
-			parent = fieldSelector
-			if err = p.selectors.Append(fieldSelector); err != nil {
-				return fmt.Errorf("%w, you have to specify prefix, if parent field is an Anonymous, and any other parent field has the same name", err)
-			}
-		}
+		offset = 0
+	} else if field.Type.Kind() == reflect.Struct && offset == 0 {
+		offset = field.Offset
 	}
 
 	rType, wasPtr := dereference(field)
@@ -83,10 +81,34 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 				childPrefix = field.Name + fieldSeparator
 			}
 
-			err = p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent)
+			err = p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offset, indirect)
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, vTag *Tag, offset uintptr, indirect bool) error {
+	if field.Anonymous {
+		return nil
+	}
+
+	fieldNames := []string{field.Name}
+	if len(vTag.Names) != 0 {
+		fieldNames = vTag.Names
+	}
+
+	var err error
+	for _, name := range fieldNames {
+		newField := xunsafe.NewField(field)
+		newField.Offset += offset
+		fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect)
+		parent = fieldSelector
+		if err = p.selectors.Append(fieldSelector); err != nil {
+			return fmt.Errorf("%w, prefix is required, if parent field is an Anonymous, and any other parent field has the same name", err)
 		}
 	}
 
@@ -103,7 +125,7 @@ func dereference(field reflect.StructField) (reflect.Type, bool) {
 	return rType, wasPtr
 }
 
-func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op2.Selector {
+func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op.Selector {
 	sel, _ := p.selectors.ById(prefix + field.Name)
 	return sel
 }
@@ -122,10 +144,10 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	}
 
 	field := p.Type.AddField(name, name, sType)
-	return p.createSelectors("", field, nil)
+	return p.createSelectors("", field, nil, 0, false)
 }
 
-func (p *Planner) selector(selector *aexpr.Select) (*op2.Selector, error) {
+func (p *Planner) selector(selector *aexpr.Select) (*op.Selector, error) {
 	resultSelector := p.selectorByName(selector.ID)
 	if resultSelector == nil {
 		return nil, nil
@@ -136,17 +158,12 @@ func (p *Planner) selector(selector *aexpr.Select) (*op2.Selector, error) {
 	}
 
 	call := selector.X
-	parentType := resultSelector.Type
 
+	parentType := resultSelector.Type
 	selectorId := selector.ID
 
-	wasPtr := false
 	for call != nil {
-		if parentType.Kind() == reflect.Ptr {
-			wasPtr = true
-			parentType = deref(parentType)
-		}
-
+		parentType = deref(parentType)
 		switch actual := call.(type) {
 		case *aexpr.Select:
 			selectorId = selectorId + fieldSeparator + actual.ID
@@ -177,7 +194,6 @@ func (p *Planner) selector(selector *aexpr.Select) (*op2.Selector, error) {
 				return nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
 			}
 
-			resultSelector.Indirect = wasPtr
 			parentType = field.Type
 			call = actual.X
 		}
@@ -212,10 +228,10 @@ func deref(rType reflect.Type) reflect.Type {
 	return rType
 }
 
-func (p *Planner) accumulator(t reflect.Type) *op2.Selector {
+func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	name := "_T" + strconv.Itoa(*p.transients)
 	*p.transients++
-	sel := op2.NewSelector(name, name, t, nil)
+	sel := op.NewSelector(name, name, t, nil)
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
@@ -223,7 +239,7 @@ func (p *Planner) accumulator(t reflect.Type) *op2.Selector {
 	return sel
 }
 
-func (p *Planner) adjustSelector(expr *op2.Expression, t reflect.Type) error {
+func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 	if expr.Selector.Type != nil {
 		return nil
 	}
@@ -242,7 +258,7 @@ func (p *Planner) adjustSelector(expr *op2.Expression, t reflect.Type) error {
 	return p.selectors.Append(expr.Selector)
 }
 
-func (p *Planner) validateSelector(sel *op2.Selector) error {
+func (p *Planner) validateSelector(sel *op.Selector) error {
 	if sel.ID == "" {
 		return fmt.Errorf("selector ID was empty")
 	}
@@ -258,14 +274,14 @@ func (p *Planner) validateSelector(sel *op2.Selector) error {
 	return nil
 }
 
-func (p *Planner) selectorByName(name string) *op2.Selector {
+func (p *Planner) selectorByName(name string) *op.Selector {
 	if idx, ok := p.selectors.Index[name]; ok {
 		return p.selectors.Selector(idx)
 	}
 	return nil
 }
 
-func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *aexpr.Call, prev *op2.Selector) (*op2.Selector, error) {
+func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *aexpr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
 	aFunc, ok := p.Functions.Method(prev.Type, field.ID)
 	if !ok {
@@ -281,15 +297,15 @@ func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *
 		return nil, err
 	}
 
-	newSelector := op2.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
+	newSelector := op.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
 	newSelector.Args = operands
 	return newSelector, nil
 }
 
-func (p *Planner) selectorOperands(call *aexpr.Call, prev *op2.Selector) ([]*op2.Operand, error) {
+func (p *Planner) selectorOperands(call *aexpr.Call, prev *op.Selector) ([]*op.Operand, error) {
 	var err error
-	operands := make([]*op2.Operand, len(call.Args)+1)
-	operands[0], err = op2.NewExpression(prev).Operand(*p.Control)
+	operands := make([]*op.Operand, len(call.Args)+1)
+	operands[0], err = op.NewExpression(prev).Operand(*p.Control)
 
 	if err != nil {
 		return nil, err
@@ -312,20 +328,34 @@ func (p *Planner) selectorOperands(call *aexpr.Call, prev *op2.Selector) ([]*op2
 
 func New(options ...Option) *Planner {
 	transients := 0
-	ctl := est2.Control(0)
+	ctl := est.Control(0)
 	planner := &Planner{
 		transients: &transients,
 		Control:    &ctl,
-		Type:       est2.NewType(),
-		selectors:  op2.NewSelectors(),
+		Type:       est.NewType(),
+		selectors:  op.NewSelectors(),
 		cache:      newCache(0),
-		Functions:  op2.NewFunctions(),
+		Functions:  op.NewFunctions(),
 		constants:  newConstants(),
 	}
 
 	planner.apply(options)
 
 	return planner
+}
+
+func (p *Planner) New() *Planner {
+	return &Planner{
+		bufferSize: p.bufferSize,
+		transients: p.transients,
+		Control:    p.Control,
+		Type:       p.Type.Snapshot(),
+		selectors:  p.selectors.Snapshot(),
+		constants:  p.constants,
+		Functions:  p.Functions,
+		cache:      p.cache,
+		escapeHTML: p.escapeHTML,
+	}
 }
 
 func (p *Planner) apply(options []Option) {
@@ -341,6 +371,6 @@ func (p *Planner) apply(options []Option) {
 	}
 }
 
-func (p *Planner) registerConst(cons interface{}) {
-
+func (p *Planner) registerConst(i *[]int) {
+	p.constants.add(i)
 }

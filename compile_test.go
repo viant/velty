@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
-	est2 "github.com/viant/velty/est"
+	"github.com/viant/velty/est"
 	"strings"
 	"testing"
 )
@@ -22,7 +22,7 @@ func (b *bar) Concat(values ...string) string {
 }
 
 func TestPlanner_Compile(t *testing.T) {
-	type foo struct {
+	type Foo struct {
 		Name string
 		ID   int
 	}
@@ -47,6 +47,10 @@ func TestPlanner_Compile(t *testing.T) {
 
 	type ValuesHolder struct {
 		Values `velty:"prefix=VARIABLES_"`
+	}
+
+	type FooWrapper struct {
+		Foo
 	}
 
 	values := &Values{
@@ -260,7 +264,7 @@ func TestPlanner_Compile(t *testing.T) {
 			template:    `${foo.Name}`,
 			expect:      `Foo name`,
 			definedVars: map[string]interface{}{
-				"foo": foo{Name: "Foo name"},
+				"foo": Foo{Name: "Foo name"},
 			},
 		},
 		{
@@ -391,7 +395,7 @@ $abc
 			expect:      "123456789",
 			template:    `${VARIABLES_Int}`,
 			embeddedVars: map[string]interface{}{
-				"Vars": ValuesHolder{Values{IntValue: 123456789}},
+				"ValuesHolder": ValuesHolder{Values{IntValue: 123456789}},
 			},
 		},
 		{
@@ -432,7 +436,7 @@ $abc
 	$foo.Name 
 #end`,
 			definedVars: map[string]interface{}{
-				"foos": []*foo{
+				"foos": []*Foo{
 					{
 						Name: "Foo name",
 					},
@@ -450,7 +454,7 @@ $abc
 	$foo.Name 
 #end`,
 			definedVars: map[string]interface{}{
-				"foos": []foo{
+				"foos": []Foo{
 					{
 						Name: "Foo name",
 					},
@@ -513,9 +517,24 @@ $abc
 			},
 			expect: "bar fooName VALUE abcdef",
 		},
+		{
+			description: "evaluate with non-pointer embed",
+			template:    `#evaluate($template)`,
+			definedVars: map[string]interface{}{
+				"template": "$Name",
+			},
+			embeddedVars: map[string]interface{}{
+				"FooWrapper": FooWrapper{
+					Foo{
+						Name: "abc",
+					},
+				},
+			},
+			expect: "abc",
+		},
 	}
 
-	//for i, testCase := range testCases[len(testCases)-1:] {
+	//for i, testCase := range testCases[:len(testCases)-1] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
@@ -545,7 +564,7 @@ type testdata struct {
 	options      []velty.Option
 }
 
-func (d *testdata) init(t *testing.T) (*est2.Execution, *est2.State, error) {
+func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	options := []velty.Option{velty.BufferSize(8192)}
 	if len(d.options) > 0 {
 		options = append(options, d.options...)
@@ -567,8 +586,8 @@ func (d *testdata) init(t *testing.T) (*est2.Execution, *est2.State, error) {
 		}
 	}
 
-	for k, v := range d.embeddedVars {
-		err := planner.EmbedVariable(k, v)
+	for _, v := range d.embeddedVars {
+		err := planner.EmbedVariable(v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
 		}
@@ -588,7 +607,7 @@ func (d *testdata) init(t *testing.T) (*est2.Execution, *est2.State, error) {
 	return exec, state, nil
 }
 
-func (d *testdata) populateState(t *testing.T, state *est2.State) error {
+func (d *testdata) populateState(t *testing.T, state *est.State) error {
 	for k, v := range d.definedVars {
 		err := state.SetValue(k, v)
 		if !assert.Nil(t, err, d.description+" var "+k) {

@@ -45,3 +45,17 @@ func (s *Selectors) ById(selectorId string) (*Selector, bool) {
 
 	return s.selectors[index], true
 }
+
+func (s *Selectors) Snapshot() *Selectors {
+	newSelectors := make([]*Selector, len(s.selectors))
+	copy(newSelectors, s.selectors)
+	index := map[string]int{}
+	for i, selector := range newSelectors {
+		index[selector.ID] = i
+	}
+
+	return &Selectors{
+		selectors: newSelectors,
+		Index:     index,
+	}
+}
