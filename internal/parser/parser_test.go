@@ -242,6 +242,11 @@ func TestService_Parse(t *testing.T) {
 			input:       `$bar.Concat($foo, $var.toUpperCase(), "abcdef")`,
 			output:      `{ "Stmt": [ { "ID": "Bar", "X": { "ID": "Concat", "X": { "Args": [ { "ID": "Foo" }, { "ID": "Var", "X": { "ID": "ToUpperCase", "X": { "Args": [] } } }, { "Value": "abcdef" } ] } } } ] }`,
 		},
+		{
+			description: `empty input`,
+			input:       ``,
+			output:      `{"Stmt":[]}`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

@@ -40,16 +40,12 @@ func newXField(name string, sType reflect.Type) *xunsafe.Field {
 	return xField
 }
 
-func SelectorWithField(id string, field *xunsafe.Field, parent *Selector) *Selector {
-	isIndirectParent := false
-	if parent != nil {
-		isIndirectParent = parent.Indirect
-	}
+func SelectorWithField(id string, field *xunsafe.Field, parent *Selector, indirect bool) *Selector {
 	return &Selector{
 		ID:       id,
 		Field:    field,
 		Parent:   parent,
-		Indirect: isIndirectParent || field.Kind() == reflect.Ptr || field.Kind() == reflect.Slice,
+		Indirect: indirect,
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 
 func Parse(input []byte) (*astmt.Block, error) {
 	if len(input) == 0 {
-		return nil, nil
+		return &astmt.Block{}, nil
 	}
 
 	builder := NewBuilder()

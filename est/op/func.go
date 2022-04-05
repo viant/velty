@@ -178,7 +178,6 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 		aFunc.Function = funExpr
 		aFunc.ResultType = resultType
 	} else {
-		fmt.Printf("MethodSignature: %T\n", methodSignature)
 		var err error
 		aFunc, err = f.reflectFunc(methodSignature, method.Type)
 		if err != nil {

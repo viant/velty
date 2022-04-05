@@ -3,6 +3,7 @@ package est
 import (
 	"github.com/viant/xunsafe"
 	"reflect"
+	"strings"
 )
 
 const defaultPkg = "github.com/viant/velty/est"
@@ -19,8 +20,15 @@ func (t *Type) AddField(id string, name string, rType reflect.Type) reflect.Stru
 	return t.addField(id, name, rType, false)
 }
 
-func (t *Type) EmbedType(id string, name string, rType reflect.Type) reflect.StructField {
-	field := t.addField(id, name, rType, true)
+func (t *Type) ValueAccessors() []*xunsafe.Field {
+	return t.xFields
+}
+
+func (t *Type) EmbedType(rType reflect.Type) reflect.StructField {
+	idSegments := strings.Split(rType.String(), ".")
+	id := idSegments[len(idSegments)-1]
+
+	field := t.addField(id, id, rType, true)
 	return field
 }
 
@@ -31,30 +39,43 @@ func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bo
 	}
 
 	field := reflect.StructField{Name: name, Type: rType, PkgPath: pkg, Anonymous: anonymous}
-
-	offset := uintptr(0)
-	for _, structField := range t.fields {
-		size := structField.Type.Size()
-		offset += size
-	}
-
 	t.fields = append(t.fields, field)
 	t.Type = reflect.StructOf(t.fields)
-	field.Offset = offset
 
+	field = t.Type.Field(len(t.fields) - 1)
+	t.fields[len(t.fields)-1] = field
 	t.xFields = append(t.xFields, xunsafe.NewField(field))
-
 	t.types[id] = len(t.fields) - 1
 	return field
 }
 
-func (t *Type) Mutator(id string) (*xunsafe.Field, bool) {
+func (t *Type) ValueAccessor(id string) (*xunsafe.Field, bool) {
 	index, found := t.types[id]
 	if !found {
 		return nil, false
 	}
 
 	return t.xFields[index], true
+}
+
+func (t *Type) Snapshot() *Type {
+	xFields := make([]*xunsafe.Field, len(t.xFields))
+	fields := make([]reflect.StructField, len(t.fields))
+	types := map[string]int{}
+	copy(xFields, t.xFields)
+	copy(fields, t.fields)
+	copy(fields, t.fields)
+
+	for i, field := range fields {
+		types[field.Name] = i
+	}
+
+	return &Type{
+		Type:    t.Type,
+		types:   types,
+		fields:  fields,
+		xFields: xFields,
+	}
 }
 
 func NewType() *Type {
