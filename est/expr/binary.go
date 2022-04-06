@@ -2,26 +2,26 @@ package expr
 
 import (
 	"fmt"
-	est2 "github.com/viant/velty/est"
-	op2 "github.com/viant/velty/est/op"
+	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/internal/ast"
 	"reflect"
 )
 
 type binaryExpr struct {
-	x *op2.Operand
-	y *op2.Operand
-	z *op2.Operand
+	x *op.Operand
+	y *op.Operand
+	z *op.Operand
 }
 
-func Binary(token ast.Token, exprs ...*op2.Expression) (est2.New, error) {
-	return func(control est2.Control) (est2.Compute, error) {
-		oprands, err := op2.Expressions(exprs).Operands(control)
+func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
+	return func(control est.Control) (est.Compute, error) {
+		oprands, err := op.Expressions(exprs).Operands(control)
 		if err != nil {
 			return nil, err
 		}
 
-		binary := &binaryExpr{x: oprands[op2.X], y: oprands[op2.Y], z: oprands[op2.Z]}
+		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
 		indirect := binary.x.IsIndirect() || binary.y.IsIndirect()
 
 		switch exprs[0].Type.Kind() {

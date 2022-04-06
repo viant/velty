@@ -234,9 +234,17 @@ and 8-15x faster than [JDK Apache Velocity](https://velocity.apache.org/)
 
 ## Optimizations
 
-It will be possible to create pool of states (see  [Todo](.TODO.MD)) and reuse created states. 
-This will reduce time needed to allocate new state.
+States can be reused and can be shared with state pool. It is important to put state back to the pool.
+```go
+planner := velty.New()
+planExecutor, newState, err := planner.Compile(template)
+poolSize := 1000
+pool := velty.NewPool(poolSize, newState)
 
+state := pool.State()
+defer pool.Put(state)
+result := planExecutor.Exec(state).String()
+```
 
 ## Bugs
 

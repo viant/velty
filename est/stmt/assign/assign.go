@@ -2,7 +2,7 @@ package assign
 
 import (
 	"fmt"
-	est2 "github.com/viant/velty/est"
+	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
 	"reflect"
 )
@@ -11,8 +11,8 @@ type assign struct {
 	x, y *op2.Operand
 }
 
-func Assign(expressions ...*op2.Expression) (est2.New, error) {
-	return func(control est2.Control) (est2.Compute, error) {
+func Assign(expressions ...*op2.Expression) (est.New, error) {
+	return func(control est.Control) (est.Compute, error) {
 		operands, err := op2.Expressions(expressions).Operands(control)
 		if err != nil {
 			return nil, err

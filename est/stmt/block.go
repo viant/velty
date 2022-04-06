@@ -1,15 +1,15 @@
 package stmt
 
 import (
-	est2 "github.com/viant/velty/est"
+	"github.com/viant/velty/est"
 	"unsafe"
 )
 
 type Block struct {
-	Stmt []est2.Compute
+	Stmt []est.Compute
 }
 
-func (s *Block) compute(state *est2.State) unsafe.Pointer {
+func (s *Block) compute(state *est.State) unsafe.Pointer {
 	var result unsafe.Pointer
 	for i := 0; i < len(s.Stmt); i++ {
 		result = s.Stmt[i](state)
@@ -18,39 +18,39 @@ func (s *Block) compute(state *est2.State) unsafe.Pointer {
 }
 
 type stmt1 struct {
-	est2.Compute
+	est.Compute
 }
 
-func newStmt1(args []est2.Compute) *stmt1 {
+func newStmt1(args []est.Compute) *stmt1 {
 	return &stmt1{Compute: args[0]}
 }
-func (s *stmt1) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt1) compute(state *est.State) unsafe.Pointer {
 	return s.Compute(state)
 }
 
 type stmt struct {
 	stmt1
-	est2.Compute
+	est.Compute
 }
 
-func newAstmt(args []est2.Compute) *stmt {
+func newAstmt(args []est.Compute) *stmt {
 	return &stmt{Compute: args[1],
 		stmt1: stmt1{
 			Compute: args[0],
 		},
 	}
 }
-func (s *stmt) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt) compute(state *est.State) unsafe.Pointer {
 	s.stmt1.compute(state)
 	return s.Compute(state)
 }
 
 type estmt struct {
 	stmt
-	est2.Compute
+	est.Compute
 }
 
-func newStmt(args []est2.Compute) *estmt {
+func newStmt(args []est.Compute) *estmt {
 	return &estmt{Compute: args[2],
 		stmt: stmt{
 			Compute: args[1],
@@ -60,17 +60,17 @@ func newStmt(args []est2.Compute) *estmt {
 		},
 	}
 }
-func (s *estmt) compute(state *est2.State) unsafe.Pointer {
+func (s *estmt) compute(state *est.State) unsafe.Pointer {
 	s.stmt.compute(state)
 	return s.Compute(state)
 }
 
 type stmt4 struct {
 	estmt
-	est2.Compute
+	est.Compute
 }
 
-func newStmt4(args []est2.Compute) *stmt4 {
+func newStmt4(args []est.Compute) *stmt4 {
 	return &stmt4{Compute: args[3],
 		estmt: estmt{
 			Compute: args[2],
@@ -83,17 +83,17 @@ func newStmt4(args []est2.Compute) *stmt4 {
 		},
 	}
 }
-func (s *stmt4) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt4) compute(state *est.State) unsafe.Pointer {
 	s.estmt.compute(state)
 	return s.Compute(state)
 }
 
 type stmt5 struct {
 	stmt4
-	est2.Compute
+	est.Compute
 }
 
-func newStmt5(args []est2.Compute) *stmt5 {
+func newStmt5(args []est.Compute) *stmt5 {
 	return &stmt5{Compute: args[4],
 		stmt4: stmt4{
 			Compute: args[3],
@@ -109,17 +109,17 @@ func newStmt5(args []est2.Compute) *stmt5 {
 		},
 	}
 }
-func (s *stmt5) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt5) compute(state *est.State) unsafe.Pointer {
 	s.stmt4.compute(state)
 	return s.Compute(state)
 }
 
 type stmt6 struct {
 	stmt5
-	est2.Compute
+	est.Compute
 }
 
-func newStmt6(args []est2.Compute) *stmt6 {
+func newStmt6(args []est.Compute) *stmt6 {
 	return &stmt6{Compute: args[5],
 		stmt5: stmt5{
 			Compute: args[4],
@@ -138,17 +138,17 @@ func newStmt6(args []est2.Compute) *stmt6 {
 		},
 	}
 }
-func (s *stmt6) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt6) compute(state *est.State) unsafe.Pointer {
 	s.stmt5.compute(state)
 	return s.Compute(state)
 }
 
 type stmt7 struct {
 	stmt6
-	est2.Compute
+	est.Compute
 }
 
-func newStmt7(args []est2.Compute) *stmt7 {
+func newStmt7(args []est.Compute) *stmt7 {
 	return &stmt7{Compute: args[6],
 		stmt6: stmt6{
 			Compute: args[5],
@@ -170,17 +170,17 @@ func newStmt7(args []est2.Compute) *stmt7 {
 		},
 	}
 }
-func (s *stmt7) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt7) compute(state *est.State) unsafe.Pointer {
 	s.stmt6.compute(state)
 	return s.Compute(state)
 }
 
 type stmt8 struct {
 	stmt7
-	est2.Compute
+	est.Compute
 }
 
-func newStmt8(args []est2.Compute) *stmt8 {
+func newStmt8(args []est.Compute) *stmt8 {
 	return &stmt8{Compute: args[7],
 		stmt7: stmt7{
 			Compute: args[6],
@@ -205,17 +205,17 @@ func newStmt8(args []est2.Compute) *stmt8 {
 		},
 	}
 }
-func (s *stmt8) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt8) compute(state *est.State) unsafe.Pointer {
 	s.stmt7.compute(state)
 	return s.Compute(state)
 }
 
 type stmt9 struct {
 	stmt8
-	est2.Compute
+	est.Compute
 }
 
-func newStmt9(args []est2.Compute) *stmt9 {
+func newStmt9(args []est.Compute) *stmt9 {
 	return &stmt9{Compute: args[8],
 		stmt8: stmt8{
 			Compute: args[7],
@@ -243,17 +243,17 @@ func newStmt9(args []est2.Compute) *stmt9 {
 		},
 	}
 }
-func (s *stmt9) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt9) compute(state *est.State) unsafe.Pointer {
 	s.stmt8.compute(state)
 	return s.Compute(state)
 }
 
 type stmt10 struct {
 	stmt9
-	est2.Compute
+	est.Compute
 }
 
-func newStmt10(args []est2.Compute) *stmt10 {
+func newStmt10(args []est.Compute) *stmt10 {
 	return &stmt10{Compute: args[9],
 		stmt9: stmt9{
 			Compute: args[8],
@@ -284,17 +284,17 @@ func newStmt10(args []est2.Compute) *stmt10 {
 		},
 	}
 }
-func (s *stmt10) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt10) compute(state *est.State) unsafe.Pointer {
 	s.stmt9.compute(state)
 	return s.Compute(state)
 }
 
 type stmt11 struct {
 	stmt10
-	est2.Compute
+	est.Compute
 }
 
-func newStmt11(args []est2.Compute) *stmt11 {
+func newStmt11(args []est.Compute) *stmt11 {
 	return &stmt11{Compute: args[10],
 		stmt10: stmt10{
 			Compute: args[9],
@@ -328,17 +328,17 @@ func newStmt11(args []est2.Compute) *stmt11 {
 		},
 	}
 }
-func (s *stmt11) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt11) compute(state *est.State) unsafe.Pointer {
 	s.stmt10.compute(state)
 	return s.Compute(state)
 }
 
 type stmt12 struct {
 	stmt11
-	est2.Compute
+	est.Compute
 }
 
-func newStmt12(args []est2.Compute) *stmt12 {
+func newStmt12(args []est.Compute) *stmt12 {
 	return &stmt12{Compute: args[11],
 		stmt11: stmt11{
 			Compute: args[10],
@@ -375,17 +375,17 @@ func newStmt12(args []est2.Compute) *stmt12 {
 		},
 	}
 }
-func (s *stmt12) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt12) compute(state *est.State) unsafe.Pointer {
 	s.stmt11.compute(state)
 	return s.Compute(state)
 }
 
 type stmt13 struct {
 	stmt12
-	est2.Compute
+	est.Compute
 }
 
-func newStmt13(args []est2.Compute) *stmt13 {
+func newStmt13(args []est.Compute) *stmt13 {
 	return &stmt13{Compute: args[12],
 		stmt12: stmt12{
 			Compute: args[11],
@@ -425,17 +425,17 @@ func newStmt13(args []est2.Compute) *stmt13 {
 		},
 	}
 }
-func (s *stmt13) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt13) compute(state *est.State) unsafe.Pointer {
 	s.stmt12.compute(state)
 	return s.Compute(state)
 }
 
 type stmt14 struct {
 	stmt13
-	est2.Compute
+	est.Compute
 }
 
-func newStmt14(args []est2.Compute) *stmt14 {
+func newStmt14(args []est.Compute) *stmt14 {
 	return &stmt14{Compute: args[13],
 		stmt13: stmt13{
 			Compute: args[12],
@@ -478,17 +478,17 @@ func newStmt14(args []est2.Compute) *stmt14 {
 		},
 	}
 }
-func (s *stmt14) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt14) compute(state *est.State) unsafe.Pointer {
 	s.stmt13.compute(state)
 	return s.Compute(state)
 }
 
 type stmt15 struct {
 	stmt14
-	est2.Compute
+	est.Compute
 }
 
-func newStmt15(args []est2.Compute) *stmt15 {
+func newStmt15(args []est.Compute) *stmt15 {
 	return &stmt15{Compute: args[14],
 		stmt14: stmt14{
 			Compute: args[13],
@@ -534,17 +534,17 @@ func newStmt15(args []est2.Compute) *stmt15 {
 		},
 	}
 }
-func (s *stmt15) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt15) compute(state *est.State) unsafe.Pointer {
 	s.stmt14.compute(state)
 	return s.Compute(state)
 }
 
 type stmt16 struct {
 	stmt15
-	est2.Compute
+	est.Compute
 }
 
-func newStmt16(args []est2.Compute) *stmt16 {
+func newStmt16(args []est.Compute) *stmt16 {
 	return &stmt16{Compute: args[15],
 		stmt15: stmt15{
 			Compute: args[14],
@@ -593,18 +593,18 @@ func newStmt16(args []est2.Compute) *stmt16 {
 		},
 	}
 }
-func (s *stmt16) compute(state *est2.State) unsafe.Pointer {
+func (s *stmt16) compute(state *est.State) unsafe.Pointer {
 	s.stmt15.compute(state)
 	return s.Compute(state)
 }
 
-func nop(_ *est2.State) unsafe.Pointer {
+func nop(_ *est.State) unsafe.Pointer {
 	return nil
 }
 
-func NewBlock(stmtsNew []est2.New) est2.New {
-	computers := est2.Computers(stmtsNew)
-	return func(control est2.Control) (est2.Compute, error) {
+func NewBlock(stmtsNew []est.New) est.New {
+	computers := est.Computers(stmtsNew)
+	return func(control est.Control) (est.Compute, error) {
 		stmts, err := computers.New(control)
 		if err != nil {
 			return nil, err

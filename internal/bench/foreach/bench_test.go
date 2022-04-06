@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
-	est2 "github.com/viant/velty/est"
+	est "github.com/viant/velty/est"
 	"testing"
 )
 
 //go:embed template.vm
 var template string
 
-var directExec *est2.Execution
-var directState *est2.State
-var directNewState func() *est2.State
+var directExec *est.Execution
+var directState *est.State
+var directNewState func() *est.State
 
-var indirectExec *est2.Execution
-var indirectState *est2.State
+var indirectExec *est.Execution
+var indirectState *est.State
 var benchStruct = Foo{
 	Values: Values{
 		Ints: []int{1000, 2500, 43245, 2145532, 12321, 543124214325, 23241321, 534214, 3251, 343531423, 54, 432},
@@ -89,7 +89,7 @@ func initIndirect() {
 	}
 
 	var err error
-	var benchNewState func() *est2.State
+	var benchNewState func() *est.State
 	indirectExec, benchNewState, err = planner.Compile([]byte(template))
 	if err != nil {
 		fmt.Println(err.Error())

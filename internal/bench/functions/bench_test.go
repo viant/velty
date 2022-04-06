@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
-	est2 "github.com/viant/velty/est"
+	est "github.com/viant/velty/est"
 	"strings"
 	"testing"
 )
@@ -13,8 +13,8 @@ import (
 //go:embed template.vm
 var template string
 
-var exec *est2.Execution
-var state *est2.State
+var exec *est.Execution
+var state *est.State
 
 func init() {
 	var err error
@@ -31,7 +31,7 @@ func init() {
 		panic(err)
 	}
 
-	var benchNewState func() *est2.State
+	var benchNewState func() *est.State
 	exec, benchNewState, err = planner.Compile([]byte(template))
 	if err != nil {
 		fmt.Println(err.Error())

@@ -1,33 +1,33 @@
 package stmt
 
 import (
-	est2 "github.com/viant/velty/est"
+	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
 	"unsafe"
 )
 
 type If struct {
-	ElseIf    est2.Compute
-	Block     est2.Compute
+	ElseIf    est.Compute
+	Block     est.Compute
 	Condition *op2.Operand
 }
 
-func (i *If) computeWithoutElse(state *est2.State) unsafe.Pointer {
+func (i *If) computeWithoutElse(state *est.State) unsafe.Pointer {
 	if *(*bool)(i.Condition.Exec(state)) {
 		return i.Block(state)
 	}
 	return nil
 }
 
-func (i *If) compute(state *est2.State) unsafe.Pointer {
+func (i *If) compute(state *est.State) unsafe.Pointer {
 	if *(*bool)(i.Condition.Exec(state)) {
 		return i.Block(state)
 	}
 	return i.ElseIf(state)
 }
 
-func NewIf(condition *op2.Expression, block, elseIf est2.New) (est2.New, error) {
-	return func(control est2.Control) (est2.Compute, error) {
+func NewIf(condition *op2.Expression, block, elseIf est.New) (est.New, error) {
+	return func(control est.Control) (est.Compute, error) {
 		result := &If{}
 		var err error
 

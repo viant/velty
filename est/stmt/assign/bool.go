@@ -1,11 +1,11 @@
 package assign
 
 import (
-	est2 "github.com/viant/velty/est"
+	"github.com/viant/velty/est"
 	"unsafe"
 )
 
-func (a *assign) assignAsBool() est2.Compute {
+func (a *assign) assignAsBool() est.Compute {
 	if a.y.Comp != nil {
 		return a.assignBoolComp
 	}
@@ -21,25 +21,25 @@ func (a *assign) assignAsBool() est2.Compute {
 	return a.assignBoolLiteral
 }
 
-func (a *assign) assignBoolComp(state *est2.State) unsafe.Pointer {
+func (a *assign) assignBoolComp(state *est.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*bool)(ret) = *(*bool)(a.y.Comp(state))
 	return ret
 }
 
-func (a *assign) assignBoolOffset(state *est2.State) unsafe.Pointer {
+func (a *assign) assignBoolOffset(state *est.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*bool)(ret) = *(*bool)(state.Pointer(*a.y.Offset))
 	return ret
 }
 
-func (a *assign) assignBoolSelPtr(state *est2.State) unsafe.Pointer {
+func (a *assign) assignBoolSelPtr(state *est.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*bool)(ret) = *(*bool)(a.y.Pointer(state))
 	return ret
 }
 
-func (a *assign) assignBoolLiteral(state *est2.State) unsafe.Pointer {
+func (a *assign) assignBoolLiteral(state *est.State) unsafe.Pointer {
 	ret := state.Pointer(*a.x.Offset)
 	*(*bool)(ret) = *(*bool)(*a.y.LiteralPtr)
 	return ret

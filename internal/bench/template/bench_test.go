@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
-	est2 "github.com/viant/velty/est"
+	est "github.com/viant/velty/est"
 	"strings"
 	"testing"
 )
@@ -16,13 +16,13 @@ var template string
 //go:embed template_no_functions.vm
 var templateWithoutFunc string
 
-var directExec *est2.Execution
-var directState *est2.State
-var directNewState func() *est2.State
+var directExec *est.Execution
+var directState *est.State
+var directNewState func() *est.State
 
-var noFuncExec *est2.Execution
-var noFuncState *est2.State
-var noFuncNewState func() *est2.State
+var noFuncExec *est.Execution
+var noFuncState *est.State
+var noFuncNewState func() *est.State
 
 var benchStruct = Foo{
 	Values: Values{
@@ -130,7 +130,7 @@ func initTemplateWithoutFunc() {
 }
 
 func Benchmark_Exec_Velty(b *testing.B) {
-	var ns *est2.State
+	var ns *est.State
 	var err error
 	b.ReportAllocs()
 	ns = directNewState()
@@ -144,7 +144,7 @@ func Benchmark_Exec_Velty(b *testing.B) {
 }
 
 func Benchmark_ExecFuncLess_Velty(b *testing.B) {
-	var ns *est2.State
+	var ns *est.State
 	var err error
 	b.ReportAllocs()
 
