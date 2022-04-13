@@ -247,6 +247,11 @@ func TestService_Parse(t *testing.T) {
 			input:       ``,
 			output:      `{"Stmt":[]}`,
 		},
+		{
+			description: `stmt block`,
+			input:       `#{if(1==1)}abc#{else}def#{end}`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "def" } ] } } } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

@@ -28,6 +28,8 @@ const (
 
 	parenthesesToken
 	squareBracketsToken
+	bracketsToken
+
 	expressionBlockToken
 	expressionStartToken
 	expressionEndToken
@@ -89,6 +91,7 @@ var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
 
 var Parentheses = parsly.NewToken(parenthesesToken, "Parentheses", matcher.NewBlock('(', ')', '\\'))
 var SquareBrackets = parsly.NewToken(squareBracketsToken, "Square brackets", matcher.NewBlock('[', ']', '\\'))
+var Brackets = parsly.NewToken(bracketsToken, "Brackets", matcher.NewBlock('{', '}', '\\'))
 
 var ExpressionBlock = parsly.NewToken(expressionBlockToken, "Expression block", matcher.NewBlock(';', ';', '\\'))
 var ExpressionStart = parsly.NewToken(expressionStartToken, "Expression start", matcher.NewByte(';'))
