@@ -15,6 +15,8 @@ func (p *Planner) compileExpr(e ast.Expression) (*op.Expression, error) {
 		return p.selectorExpr(actual)
 	case *aexpr.Binary:
 		return p.compileBinary(actual)
+	case *aexpr.Unary:
+		return p.compileUnary(actual)
 	case *aexpr.Parentheses:
 		return p.compileExpr(actual.P)
 	case *aexpr.Range:

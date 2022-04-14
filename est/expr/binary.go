@@ -26,14 +26,14 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 
 		switch exprs[0].Type.Kind() {
 		case reflect.Int:
-			return computeInt(token, binary, indirect)
+			return computeBinaryInt(token, binary, indirect)
 		case reflect.Float64:
-			return computeFloat(token, binary, indirect)
+			return computeBinaryFloat(token, binary, indirect)
 		case reflect.String:
-			return computeString(token, binary, indirect)
+			return computeBinaryString(token, binary, indirect)
 		case reflect.Bool:
-			return computeBool(token, binary, indirect)
+			return computeBinaryBool(token, binary, indirect)
 		}
-		return nil, fmt.Errorf("unsupported %v", exprs[0].Type.String())
+		return nil, fmt.Errorf("unsupported %v as binary expression", exprs[0].Type.String())
 	}, nil
 }

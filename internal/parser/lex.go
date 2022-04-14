@@ -69,6 +69,8 @@ const (
 	comaToken
 	newLineToken
 	dotToken
+	stringFinishToken
+	quoteToken
 )
 
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
@@ -130,3 +132,6 @@ var Increment = parsly.NewToken(incrementToken, "Increment", matcher.NewBytes([]
 var ComaTerminator = parsly.NewToken(comaToken, "Coma", matcher.NewTerminator(',', true))
 var NewLine = parsly.NewToken(newLineToken, "New line", matcher2.NewNewLine())
 var Dot = parsly.NewToken(dotToken, "Dot", matcher.NewByte('.'))
+
+var Quote = parsly.NewToken(quoteToken, "Quote", matcher.NewByte('"'))
+var StringFinish = parsly.NewToken(stringFinishToken, "Quote terminated", matcher.NewTerminator('"', true))

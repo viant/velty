@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-func computeString(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
+func computeBinaryString(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
 	switch token {
 	case ast.ADD:
 		if indirect {

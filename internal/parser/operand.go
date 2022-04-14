@@ -12,7 +12,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	matched := cursor.MatchAfterOptional(WhiteSpace, Negation)
 	hasNegation := matched.Code == negationToken
 
-	candidates = append([]*parsly.Token{SelectorStart}, candidates...)
+	candidates = append([]*parsly.Token{Quote, SelectorStart, Parentheses}, candidates...)
 
 	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
@@ -23,6 +23,22 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	switch matched.Code {
 	case parsly.EOF, parsly.Invalid:
 		return nil, nil, cursor.NewError(candidates...)
+	case parenthesesToken:
+		text := matched.Text(cursor)
+		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
+		token, expr, err := matchOperand(newCursor, candidates...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if hasNegation {
+			expr = &aexpr.Unary{
+				Token: ast.NEG,
+				X:     expr,
+			}
+		}
+
+		return token, expr, nil
 	case stringToken:
 		value := matched.Text(cursor)
 		matcher = String
@@ -45,6 +61,26 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		value := matched.Text(cursor)
 		matcher = Boolean
 		expression = aexpr.BoolLiteral(value)
+
+	case quoteToken:
+		matched = cursor.MatchOne(StringFinish)
+		if matched.Code != stringFinishToken {
+			return nil, nil, cursor.NewError(StringFinish)
+		}
+
+		value := matched.Text(cursor)
+		if len(value) == 1 { // matched `"`
+			matcher = String
+			expression = aexpr.StringLiteral("")
+		} else {
+			newCursor := parsly.NewCursor("", []byte(value[:len(value)-1]), 0)
+
+			matcher, expression, err = matchOperand(newCursor, candidates...)
+			if err != nil {
+				expression = aexpr.StringLiteral(value[:len(value)-1])
+			}
+		}
+
 	}
 
 	if hasNegation {

@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-func computeInt(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
+func computeBinaryInt(token ast.Token, binary *binaryExpr, indirect bool) (est.Compute, error) {
 	switch token {
 	case ast.QUO:
 		if indirect {

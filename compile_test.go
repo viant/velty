@@ -532,9 +532,25 @@ $abc
 			},
 			expect: "abc",
 		},
+		{
+			description: "unary neg",
+			template:    `#if(!$boolValue) abc #else def #end`,
+			definedVars: map[string]interface{}{
+				"boolValue": true,
+			},
+			expect: ` def `,
+		},
+		{
+			description: "unary",
+			template:    `#if($boolValue) abc #else def #end`,
+			definedVars: map[string]interface{}{
+				"boolValue": true,
+			},
+			expect: ` abc `,
+		},
 	}
 
-	//for i, testCase := range testCases[:len(testCases)-1] {
+	//for i, testCase := range testCases[len(testCases)-1:] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)

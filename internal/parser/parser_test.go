@@ -252,6 +252,16 @@ func TestService_Parse(t *testing.T) {
 			input:       `#{if(1==1)}abc#{else}def#{end}`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "def" } ] } } } ] }`,
 		},
+		{
+			description: `stmt block`,
+			input:       `http://localhost:8080/index#123`,
+			output:      `{ "Stmt": [ { "Append": "http://localhost:8080/index" }, { "Append": "#" }, { "Append": "123" } ] }`,
+		},
+		{
+			description: "!$",
+			input:       `#if(${abc} && !("$!{def}"=="")) abc #end`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Abc" }, "Token": "&&", "Y": { "Token": "!", "X": { "X": { "ID": "Def" }, "Token": "==", "Y": { "Value": "" } } } }, "Body": { "Stmt": [ { "Append": " abc "} ] } } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

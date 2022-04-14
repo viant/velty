@@ -77,7 +77,7 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 
 	}
 
-	candidates := []*parsly.Token{SelectorBlock, Selector}
+	candidates := []*parsly.Token{Selector}
 	matched = cursor.MatchAny(candidates...)
 	if matched.Code == parsly.EOF {
 		return nil, cursor.NewError(candidates...)

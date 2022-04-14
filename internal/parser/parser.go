@@ -16,13 +16,14 @@ func Parse(input []byte) (*astmt.Block, error) {
 	builder := NewBuilder()
 	var tokenMatch *parsly.TokenMatch
 	cursor := parsly.NewCursor("", input, 0)
+outer:
 	for cursor.Pos < len(input) {
 		tokenMatch = cursor.MatchOne(SpecialSign)
 		text := tokenMatch.Text(cursor)
 
 		if tokenMatch.Code == parsly.EOF || cursor.Pos >= len(input) {
 			if err := builder.PushStatement(appendToken, astmt.NewAppend(text)); err != nil {
-				return nil, err
+				return nil, cursorErr(cursor, err)
 			}
 			break
 		}
@@ -34,7 +35,7 @@ func Parse(input []byte) (*astmt.Block, error) {
 
 		err := appendStatementIfNeeded(text, builder)
 		if err != nil {
-			return nil, err
+			return nil, cursorErr(cursor, err)
 		}
 
 		switch cursor.Input[cursor.Pos-1] {
@@ -46,13 +47,18 @@ func Parse(input []byte) (*astmt.Block, error) {
 			builder.appendStatement(statement)
 
 		case '#':
+			lastPosition := cursor.Pos - 1
 			statement, match, err := matchStatement(cursor)
 			if err != nil {
-				return nil, err
+				rawValue := cursor.Input[lastPosition:cursor.Pos]
+				if errr := builder.PushStatement(appendToken, astmt.NewAppend(string(rawValue))); errr != nil {
+					return nil, cursorErr(cursor, errr)
+				}
+				continue outer
 			}
 
 			if err = builder.PushStatement(match, statement); err != nil {
-				return nil, err
+				return nil, cursorErr(cursor, err)
 			}
 		}
 	}
@@ -62,6 +68,10 @@ func Parse(input []byte) (*astmt.Block, error) {
 	}
 
 	return builder.Block(), nil
+}
+
+func cursorErr(cursor *parsly.Cursor, err error) error {
+	return fmt.Errorf("%w, cursor position: %v", err, cursor.Pos)
 }
 
 func appendStatementIfNeeded(text string, stack *Builder) error {
