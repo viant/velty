@@ -24,7 +24,11 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		binary := &binaryExpr{x: oprands[op.X], y: oprands[op.Y], z: oprands[op.Z]}
 		indirect := binary.x.IsIndirect() || binary.y.IsIndirect()
 
-		switch exprs[0].Type.Kind() {
+		rType := exprs[0].Type
+		if rType == nil {
+			rType = exprs[1].Type
+		}
+		switch rType.Kind() {
 		case reflect.Int:
 			return computeBinaryInt(token, binary, indirect)
 		case reflect.Float64:

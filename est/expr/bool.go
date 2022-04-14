@@ -18,6 +18,17 @@ func computeBinaryBool(token ast.Token, binary *binaryExpr, indirect bool) (est.
 			return binary.indirectBoolNeq, nil
 		}
 		return binary.directBoolNeq, nil
+	case ast.AND:
+		if indirect {
+			return binary.indirectBoolAnd, nil
+		}
+		return binary.directBoolAnd, nil
+
+	case ast.OR:
+		if indirect {
+			return binary.indirectBoolOr, nil
+		}
+		return binary.directBoolOr, nil
 
 	}
 
@@ -61,6 +72,46 @@ func (b *binaryExpr) directBoolNeq(state *est.State) unsafe.Pointer {
 	y := b.y.Pointer(state)
 	z := est.FalseValuePtr
 	if *(*bool)(x) != *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectBoolAnd(state *est.State) unsafe.Pointer {
+	x := b.x.Exec(state)
+	y := b.y.Exec(state)
+	z := est.FalseValuePtr
+	if *(*bool)(x) && *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) directBoolAnd(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+	if *(*bool)(x) && *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) indirectBoolOr(state *est.State) unsafe.Pointer {
+	x := b.x.Exec(state)
+	y := b.y.Exec(state)
+	z := est.FalseValuePtr
+	if *(*bool)(x) || *(*bool)(y) {
+		z = est.TrueValuePtr
+	}
+	return z
+}
+
+func (b *binaryExpr) directBoolOr(state *est.State) unsafe.Pointer {
+	x := b.x.Pointer(state)
+	y := b.y.Pointer(state)
+	z := est.FalseValuePtr
+	if *(*bool)(x) || *(*bool)(y) {
 		z = est.TrueValuePtr
 	}
 	return z

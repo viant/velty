@@ -57,7 +57,8 @@ func matchRange(cursor *parsly.Cursor) (ast.Expression, error) {
 	}, nil
 }
 
-func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
+func matchSelector(cursor *parsly.Cursor) (*aexpr.Select, error) {
+	selectorStart := cursor.Pos
 	matched := cursor.MatchOne(Negation) // Java velocity supports `$!`. If String is null, then it will be replaced with Empty String. In Go - we don't need that
 	matched = cursor.MatchOne(SelectorBlock)
 
@@ -73,6 +74,7 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 			return nil, fmt.Errorf("expected to match all data, but couldn't match %v", string(cursor.Input[cursor.Pos:]))
 		}
 
+		result.FullName = "$" + ID
 		return result, err
 
 	}
@@ -96,6 +98,8 @@ func matchSelector(cursor *parsly.Cursor) (ast.Expression, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		selector.FullName = "$" + string(cursor.Input[selectorStart:cursor.Pos])
 		return selector, nil
 	}
 

@@ -38,16 +38,20 @@ outer:
 			return nil, cursorErr(cursor, err)
 		}
 
+		lastPosition := cursor.Pos - 1
 		switch cursor.Input[cursor.Pos-1] {
 		case '$':
 			statement, err := matchSelector(cursor)
 			if err != nil {
-				return nil, err
+				rawValue := cursor.Input[lastPosition:cursor.Pos]
+				if errr := builder.PushStatement(appendToken, astmt.NewAppend(string(rawValue))); errr != nil {
+					return nil, cursorErr(cursor, errr)
+				}
+				continue outer
 			}
 			builder.appendStatement(statement)
 
 		case '#':
-			lastPosition := cursor.Pos - 1
 			statement, match, err := matchStatement(cursor)
 			if err != nil {
 				rawValue := cursor.Input[lastPosition:cursor.Pos]

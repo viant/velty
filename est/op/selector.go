@@ -16,6 +16,7 @@ type Selector struct {
 	Func          *Func
 	FuncArguments []ast.Expression
 	Args          []*Operand
+	Placeholder   string
 }
 
 //NewSelector create a selector

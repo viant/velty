@@ -548,6 +548,26 @@ $abc
 			},
 			expect: ` abc `,
 		},
+		{
+			description: "selector as placeholder",
+			template:    `$foo`,
+			expect:      `$foo`,
+		},
+		{
+			description: "selector block as placeholder",
+			template:    `${foo}`,
+			expect:      `${foo}`,
+		},
+		{
+			description: "binary &&",
+			template:    `#if((1==1) && (2==2)) abc #else def #end`,
+			expect:      ` abc `,
+		},
+		{
+			description: "binary ||",
+			template:    `#if((1==1) || (2==2)) abc #else def #end`,
+			expect:      ` abc `,
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

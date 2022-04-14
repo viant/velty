@@ -262,6 +262,11 @@ func TestService_Parse(t *testing.T) {
 			input:       `#if(${abc} && !("$!{def}"=="")) abc #end`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Abc" }, "Token": "&&", "Y": { "Token": "!", "X": { "X": { "ID": "Def" }, "Token": "==", "Y": { "Value": "" } } } }, "Body": { "Stmt": [ { "Append": " abc "} ] } } ] }`,
 		},
+		{
+			description: "$ before selector",
+			input:       `$${abc}`,
+			output:      `{ "Stmt": [ { "Append": "$" }, { "ID": "Abc", "FullName": "${abc}" } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

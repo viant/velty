@@ -71,6 +71,14 @@ func (a *directAppender) newAppendFloatIndirect() est.Compute {
 	}
 }
 
+func (a *directAppender) appendSelectorName() est.Compute {
+	asPtr := unsafe.Pointer(&a.x.Sel.Placeholder)
+	return func(state *est.State) unsafe.Pointer {
+		state.Buffer.AppendString(a.x.Sel.Placeholder)
+		return asPtr
+	}
+}
+
 func Selector(expr *op.Expression) est.New {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
@@ -79,6 +87,11 @@ func Selector(expr *op.Expression) est.New {
 		}
 
 		result := &directAppender{x: x}
+
+		if expr.Type == nil {
+			return result.appendSelectorName(), nil
+		}
+
 		switch expr.Type.Kind() {
 		case reflect.Int:
 			if !x.Sel.Indirect {
