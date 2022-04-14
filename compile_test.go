@@ -575,8 +575,8 @@ $abc
 		},
 	}
 
-	for i, testCase := range testCases[len(testCases)-1:] {
-		//for i, testCase := range testCases {
+	//for i, testCase := range testCases[len(testCases)-1:] {
+	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
 		if testCase.expectError {
@@ -657,7 +657,7 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 	}
 
 	for k, v := range d.embeddedVars {
-		err := state.SetValue(k, v)
+		err := state.EmbedValue(v)
 		if !assert.Nil(t, err, d.description+" var "+k) {
 			return err
 		}
