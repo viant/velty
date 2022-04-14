@@ -568,10 +568,15 @@ $abc
 			template:    `#if((1==1) || (2==2)) abc #else def #end`,
 			expect:      ` abc `,
 		},
+		{
+			description: "foreach over non existing slice",
+			template:    `#foreach($foo in $Foos) abc #end`,
+			expect:      ``,
+		},
 	}
 
-	//for i, testCase := range testCases[len(testCases)-1:] {
-	for i, testCase := range testCases {
+	for i, testCase := range testCases[len(testCases)-1:] {
+		//for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
 		if testCase.expectError {

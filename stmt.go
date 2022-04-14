@@ -104,6 +104,10 @@ func (p *Planner) compileForEachLoop(actual *astmt.ForEach) (est.New, error) {
 		return nil, err
 	}
 
+	if sliceSelector.Type == nil {
+		return nop(), nil
+	}
+
 	itemType := sliceSelector.Type.Elem()
 
 	if err := p.DefineVariable(actual.Item.ID, itemType); err != nil {
@@ -120,6 +124,14 @@ func (p *Planner) compileForEachLoop(actual *astmt.ForEach) (est.New, error) {
 		return nil, err
 	}
 	return stmt.ForEachLoop(block, selector, sliceSelector)
+}
+
+func nop() est.New {
+	return func(control est.Control) (est.Compute, error) {
+		return func(state *est.State) unsafe.Pointer {
+			return est.EmptyStringPtr
+		}, nil
+	}
 }
 
 func (p *Planner) compileAppend(actual *astmt.Append) (est.New, error) {

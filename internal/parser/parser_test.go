@@ -267,6 +267,11 @@ func TestService_Parse(t *testing.T) {
 			input:       `$${abc}`,
 			output:      `{ "Stmt": [ { "Append": "$" }, { "ID": "Abc", "FullName": "${abc}" } ] }`,
 		},
+		{
+			description: `for with !$`,
+			input:       ` #foreach ($abc in $!{collection}) forEach body #end`,
+			output:      `{ "Stmt": [ { "Append": " " }, { "Item": { "ID": "Abc", "FullName": "" }, "Set": { "ID": "Collection", "FullName": "${collection}" }, "Body": { "Stmt": [ { "Append": " forEach body " } ] } } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

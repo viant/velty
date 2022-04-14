@@ -82,3 +82,10 @@ func NewExpression(selector *Selector) *Expression {
 		Selector: selector,
 	}
 }
+
+func NewLiteralExpression(literalPtr *unsafe.Pointer, literalType reflect.Type) *Expression {
+	return &Expression{
+		LiteralPtr: literalPtr,
+		Type:       literalType,
+	}
+}

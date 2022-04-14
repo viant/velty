@@ -25,7 +25,7 @@ func matchRangeable(cursor *parsly.Cursor) (ast.Expression, error) {
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
 	case selectorStartToken:
-		return parseIdentity(cursor)
+		return matchSelector(cursor)
 	case squareBracketsToken:
 		text := matched.Text(cursor)
 		rangeCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)

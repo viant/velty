@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
+	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/internal/ast"
 	"reflect"
 )
@@ -15,6 +16,10 @@ type unaryExpr struct {
 
 func Unary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
+		if exprs[0].Type == nil {
+			return stmt.Selector(exprs[0])(control)
+		}
+
 		oprands, err := op.Expressions(exprs).Operands(control)
 		if err != nil {
 			return nil, err
