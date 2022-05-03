@@ -279,11 +279,12 @@ func TestService_Parse(t *testing.T) {
 #else
 #end
 `,
+			output: `{"Stmt": [ { "Condition": { "X": { "ID": "Foo", "FullName": "${foo}" }, "Token": "!=", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "\n            " }, { "Condition": { "X": { "ID": "Boo", "FullName": "${boo}" }, "Token": "==", "Y": { "Value": "2" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" }  },  "Body": { "Stmt": [ { "Append": "def"  } ] } } }, { "Append": "?';\n" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "\n" } ] } } }, { "Append": "\n" } ] }`,
 		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {
-		for i, useCase := range useCases {
+	for i, useCase := range useCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		node, err := Parse([]byte(useCase.input))
 
