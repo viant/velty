@@ -2,41 +2,41 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
+	stmt2 "github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/est/stmt/assign"
-	"github.com/viant/velty/internal/ast"
-	"github.com/viant/velty/internal/ast/expr"
-	astmt "github.com/viant/velty/internal/ast/stmt"
 	"unsafe"
 )
 
 func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 	switch actual := statement.(type) {
-	case *astmt.Statement:
+	case *stmt2.Statement:
 		return p.computeAssignment(actual)
-	case *astmt.Append:
+	case *stmt2.Append:
 		return p.compileAppend(actual)
 	case *expr.Select:
 		return p.compileStmtSelector(actual)
-	case *astmt.Block:
+	case *stmt2.Block:
 		return p.compileStmt(actual.Stmt)
-	case *astmt.If:
+	case *stmt2.If:
 		return p.compileIf(actual)
-	case *astmt.ForLoop:
+	case *stmt2.ForLoop:
 		return p.compileForLoop(actual)
-	case *astmt.ForEach:
+	case *stmt2.ForEach:
 		return p.compileForEachLoop(actual)
 	case []ast.Statement:
-		return p.compileBlock(&astmt.Block{Stmt: actual})
-	case *astmt.Evaluate:
+		return p.compileBlock(&stmt2.Block{Stmt: actual})
+	case *stmt2.Evaluate:
 		return p.compileEvaluate(actual)
 	}
 
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)
 }
 
-func (p *Planner) computeAssignment(actual *astmt.Statement) (est.New, error) {
+func (p *Planner) computeAssignment(actual *stmt2.Statement) (est.New, error) {
 	x, err := p.compileExpr(actual.X)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (p *Planner) computeAssignment(actual *astmt.Statement) (est.New, error) {
 	return assign.Assign(x, y)
 }
 
-func (p *Planner) compileIf(actual *astmt.If) (est.New, error) {
+func (p *Planner) compileIf(actual *stmt2.If) (est.New, error) {
 	cond, err := p.compileExpr(actual.Condition)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (p *Planner) compileIf(actual *astmt.If) (est.New, error) {
 	return stmt.NewIf(cond, body, elseIf)
 }
 
-func (p *Planner) compileForLoop(actual *astmt.ForLoop) (est.New, error) {
+func (p *Planner) compileForLoop(actual *stmt2.ForLoop) (est.New, error) {
 	init, err := p.compileStmt(actual.Init)
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (p *Planner) compileForLoop(actual *astmt.ForLoop) (est.New, error) {
 	return stmt.ForLoop(init, post, condition, block)
 }
 
-func (p *Planner) compileForEachLoop(actual *astmt.ForEach) (est.New, error) {
+func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 	sliceSelector, err := p.compileExpr(actual.Set)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func nop() est.New {
 	}
 }
 
-func (p *Planner) compileAppend(actual *astmt.Append) (est.New, error) {
+func (p *Planner) compileAppend(actual *stmt2.Append) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		ptr := unsafe.Pointer(&actual.Append)
 		return func(state *est.State) unsafe.Pointer {
@@ -144,7 +144,7 @@ func (p *Planner) compileAppend(actual *astmt.Append) (est.New, error) {
 	}, nil
 }
 
-func (p *Planner) compileEvaluate(actual *astmt.Evaluate) (est.New, error) {
+func (p *Planner) compileEvaluate(actual *stmt2.Evaluate) (est.New, error) {
 	selector, err := p.compileExpr(actual.X)
 	if err != nil {
 		return nil, err

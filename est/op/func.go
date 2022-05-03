@@ -3,7 +3,7 @@ package op
 import (
 	"fmt"
 	"github.com/viant/velty/est"
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"

@@ -1,7 +1,7 @@
 package op
 
 import (
-	"github.com/viant/velty/internal/ast"
+	"github.com/viant/velty/ast"
 	"github.com/viant/xunsafe"
 	"reflect"
 )

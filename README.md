@@ -203,7 +203,7 @@ Supported attributes:
 Benchmarks against the `text/template` and `Java velocity`:
 
 
-Bench 1: [The template](internal/bench/template/template.vm).
+Bench 1: [The template](bench/template/template.vm).
 
 ```
 Benchmark_Exec_Velty-8   	   54585	         21127 ns/op	       0 B/op	       0 allocs/op	       4 allocs/op
@@ -212,7 +212,7 @@ Benchmark_Exec_Velocity            44089                162599 ns/op
 ```
 
 
-Bench 2: [The template](internal/bench/template/template_no_functions.vm).
+Bench 2: [The template](bench/template/template_no_functions.vm).
 ```
 Benchmark_Exec_Velty       	        69561	             16867 ns/op	       0 B/op	       0 allocs/op
 Benchmark_Exec_Template   	        3103	            372839 ns/op	   66791 B/op	    2543 allocs/op
@@ -220,7 +220,7 @@ Benchmark_Exec_Velocity                62277                125636 ns/op
 ```
 
 
-Bench 3: [The template](internal/bench/foreach/template.vm).
+Bench 3: [The template](bench/foreach/template.vm).
 
 ```
 Benchmark_Exec_Velty     2077510       523.2 ns/op	       0 B/op	       0 allocs/op

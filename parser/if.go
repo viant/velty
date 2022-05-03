@@ -2,18 +2,18 @@ package parser
 
 import (
 	"github.com/viant/parsly"
-	astmt "github.com/viant/velty/internal/ast/stmt"
+	"github.com/viant/velty/ast/stmt"
 )
 
-func matchIf(cursor *parsly.Cursor) (*astmt.If, error) {
+func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
 	expression, err := matchEquationExpression(cursor)
 	if err != nil {
 		return nil, err
 	}
 
-	return &astmt.If{
+	return &stmt.If{
 		Condition: expression,
-		Body:      astmt.Block{},
+		Body:      stmt.Block{},
 		Else:      nil,
 	}, nil
 }

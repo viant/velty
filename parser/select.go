@@ -3,14 +3,14 @@ package parser
 import (
 	"fmt"
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
+	"github.com/viant/velty/utils"
 	"strconv"
 	"strings"
 )
 
-func matchVariable(cursor *parsly.Cursor) (*aexpr.Select, error) {
+func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
 	candidates := []*parsly.Token{SelectorStart}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
@@ -51,13 +51,13 @@ func matchRange(cursor *parsly.Cursor) (ast.Expression, error) {
 		return nil, err
 	}
 
-	return &aexpr.Range{
-		X: aexpr.Number(begin),
-		Y: aexpr.Number(finish),
+	return &expr.Range{
+		X: expr.Number(begin),
+		Y: expr.Number(finish),
 	}, nil
 }
 
-func matchSelector(cursor *parsly.Cursor) (*aexpr.Select, error) {
+func matchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 	selectorStart := cursor.Pos
 	matched := cursor.MatchOne(Negation) // Java velocity supports `$!`. If String is null, then it will be replaced with Empty String. In Go - we don't need that
 	matched = cursor.MatchOne(SelectorBlock)
@@ -131,7 +131,7 @@ func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 	return nil, nil
 }
 
-func parseIdentity(cursor *parsly.Cursor) (*aexpr.Select, error) {
+func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
 	candidates := []*parsly.Token{Selector, SelectorBlock}
 	matched := cursor.MatchAny(candidates...)
 	selectorId := matched.Text(cursor)
@@ -139,12 +139,12 @@ func parseIdentity(cursor *parsly.Cursor) (*aexpr.Select, error) {
 	case parsly.Invalid:
 		return nil, cursor.NewError(candidates...)
 	case parsly.EOF:
-		return &aexpr.Select{ID: selectorId}, nil
+		return &expr.Select{ID: selectorId}, nil
 	case selectorBlockToken:
 		newCursor := parsly.NewCursor("", []byte(selectorId[1:len(selectorId)-1]), 0)
 		return parseIdentity(newCursor)
 	case selectorToken:
-		selector := &aexpr.Select{ID: utils.UpperCaseFirstLetter(selectorId)}
+		selector := &expr.Select{ID: utils.UpperCaseFirstLetter(selectorId)}
 		var err error
 		selector.X, err = matchCall(cursor)
 		if err != nil {
@@ -155,7 +155,7 @@ func parseIdentity(cursor *parsly.Cursor) (*aexpr.Select, error) {
 	return nil, cursor.NewError(candidates...)
 }
 
-func matchFunctionCall(cursor *parsly.Cursor) (*aexpr.Call, error) {
+func matchFunctionCall(cursor *parsly.Cursor) (*expr.Call, error) {
 	expressions := make([]ast.Expression, 0)
 
 	for cursor.Pos < cursor.InputSize-1 {
@@ -168,7 +168,7 @@ func matchFunctionCall(cursor *parsly.Cursor) (*aexpr.Call, error) {
 		expressions = append(expressions, expression)
 	}
 
-	return &aexpr.Call{Args: expressions}, nil
+	return &expr.Call{Args: expressions}, nil
 }
 
 func extractArgument(cursor *parsly.Cursor) *parsly.Cursor {

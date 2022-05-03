@@ -3,7 +3,7 @@ package parser
 import (
 	"github.com/viant/parsly"
 	"github.com/viant/parsly/matcher"
-	matcher2 "github.com/viant/velty/internal/parser/matcher"
+	matcher3 "github.com/viant/velty/parser/matcher"
 )
 
 const (
@@ -74,10 +74,10 @@ const (
 )
 
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
-var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", matcher2.NewVelty(true, '#', '$'))
+var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", matcher3.NewVelty(true, '#', '$'))
 
 var SelectorBlock = parsly.NewToken(selectorBlockToken, "Sel block", matcher.NewBlock('{', '}', '\\'))
-var Selector = parsly.NewToken(selectorToken, "Sel", matcher2.NewIdentity())
+var Selector = parsly.NewToken(selectorToken, "Sel", matcher3.NewIdentity())
 
 var SelectorStart = parsly.NewToken(selectorStartToken, "Sel start", matcher.NewRunes([]rune{'$'}))
 
@@ -113,7 +113,7 @@ var LessEqual = parsly.NewToken(lessEqualToken, "Less or equal", matcher.NewFrag
 var And = parsly.NewToken(andToken, "And", matcher.NewFragment("&&"))
 var Or = parsly.NewToken(orToken, "Or", matcher.NewFragment("||"))
 
-var String = parsly.NewToken(stringToken, "String", matcher2.NewStringMatcher('"'))
+var String = parsly.NewToken(stringToken, "String", matcher3.NewStringMatcher('"'))
 var Boolean = parsly.NewToken(booleanToken, "Boolean", matcher.NewFragments([]byte("true"), []byte("false")))
 var Number = parsly.NewToken(numberToken, "Number", matcher.NewNumber())
 
@@ -130,7 +130,7 @@ var Decrement = parsly.NewToken(decrementToken, "Decrement", matcher.NewBytes([]
 var Increment = parsly.NewToken(incrementToken, "Increment", matcher.NewBytes([]byte("++")))
 
 var ComaTerminator = parsly.NewToken(comaToken, "Coma", matcher.NewTerminator(',', true))
-var NewLine = parsly.NewToken(newLineToken, "New line", matcher2.NewNewLine())
+var NewLine = parsly.NewToken(newLineToken, "New line", matcher3.NewNewLine())
 var Dot = parsly.NewToken(dotToken, "Dot", matcher.NewByte('.'))
 
 var Quote = parsly.NewToken(quoteToken, "Quote", matcher.NewByte('"'))

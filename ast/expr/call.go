@@ -1,7 +1,7 @@
 package expr
 
 import (
-	"github.com/viant/velty/internal/ast"
+	"github.com/viant/velty/ast"
 	"reflect"
 )
 

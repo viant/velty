@@ -1,14 +1,14 @@
 package expr
 
 import (
-	"github.com/viant/velty/internal/ast"
+	ast2 "github.com/viant/velty/ast"
 	"reflect"
 )
 
 //Unary represents unary expression
 type Unary struct {
-	Token ast.Token
-	X     ast.Expression
+	Token ast2.Token
+	X     ast2.Expression
 }
 
 func (u *Unary) Type() reflect.Type {

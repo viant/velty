@@ -1,8 +1,8 @@
 package expr
 
 import (
+	"github.com/viant/velty/ast"
 	"github.com/viant/velty/est"
-	"github.com/viant/velty/internal/ast"
 	"unsafe"
 )
 

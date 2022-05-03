@@ -3,14 +3,14 @@ package parser
 import (
 	"fmt"
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
-	astmt "github.com/viant/velty/internal/ast/stmt"
+	"github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
+	"github.com/viant/velty/ast/stmt"
 )
 
-func Parse(input []byte) (*astmt.Block, error) {
+func Parse(input []byte) (*stmt.Block, error) {
 	if len(input) == 0 {
-		return &astmt.Block{}, nil
+		return &stmt.Block{}, nil
 	}
 
 	builder := NewBuilder()
@@ -22,7 +22,7 @@ outer:
 		text := tokenMatch.Text(cursor)
 
 		if tokenMatch.Code == parsly.EOF || cursor.Pos >= len(input) {
-			if err := builder.PushStatement(appendToken, astmt.NewAppend(text)); err != nil {
+			if err := builder.PushStatement(appendToken, stmt.NewAppend(text)); err != nil {
 				return nil, cursorErr(cursor, err)
 			}
 			break
@@ -44,7 +44,7 @@ outer:
 			statement, err := matchSelector(cursor)
 			if err != nil {
 				rawValue := cursor.Input[lastPosition:cursor.Pos]
-				if errr := builder.PushStatement(appendToken, astmt.NewAppend(string(rawValue))); errr != nil {
+				if errr := builder.PushStatement(appendToken, stmt.NewAppend(string(rawValue))); errr != nil {
 					return nil, cursorErr(cursor, errr)
 				}
 				continue outer
@@ -55,7 +55,7 @@ outer:
 			statement, match, err := matchStatement(cursor)
 			if err != nil {
 				rawValue := cursor.Input[lastPosition:cursor.Pos]
-				if errr := builder.PushStatement(appendToken, astmt.NewAppend(string(rawValue))); errr != nil {
+				if errr := builder.PushStatement(appendToken, stmt.NewAppend(string(rawValue))); errr != nil {
 					return nil, cursorErr(cursor, errr)
 				}
 				continue outer
@@ -84,7 +84,7 @@ func appendStatementIfNeeded(text string, stack *Builder) error {
 		return nil
 	}
 
-	if err := stack.PushStatement(appendToken, astmt.NewAppend(text)); err != nil {
+	if err := stack.PushStatement(appendToken, stmt.NewAppend(text)); err != nil {
 		return err
 	}
 	return nil
@@ -117,13 +117,13 @@ func matchStatement(cursor *parsly.Cursor) (ast.Statement, int, error) {
 		}
 		return ifStmt, expressionCode, nil
 	case elseToken:
-		return &astmt.If{
-			Condition: &aexpr.Binary{
-				X:     aexpr.BoolLiteral("true"),
+		return &stmt.If{
+			Condition: &expr.Binary{
+				X:     expr.BoolLiteral("true"),
 				Token: "==",
-				Y:     aexpr.BoolLiteral("true"),
+				Y:     expr.BoolLiteral("true"),
 			},
-			Body: astmt.Block{},
+			Body: stmt.Block{},
 		}, expressionCode, nil
 
 	case setToken:
@@ -175,7 +175,7 @@ func matchStatement(cursor *parsly.Cursor) (ast.Statement, int, error) {
 			return nil, 0, err
 		}
 
-		return &astmt.Evaluate{X: operand}, expressionCode, nil
+		return &stmt.Evaluate{X: operand}, expressionCode, nil
 	case endToken:
 		return nil, expressionCode, nil
 	}

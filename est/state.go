@@ -2,7 +2,7 @@ package est
 
 import (
 	"fmt"
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/utils"
 	"reflect"
 	"strings"
 	"unsafe"

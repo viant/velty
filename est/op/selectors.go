@@ -2,7 +2,7 @@ package op
 
 import (
 	"fmt"
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/utils"
 )
 
 type Selectors struct {

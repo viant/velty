@@ -1,9 +1,9 @@
 package velty
 
 import (
+	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
-	"github.com/viant/velty/internal/ast/stmt"
-	"github.com/viant/velty/internal/parser"
+	"github.com/viant/velty/parser"
 	"github.com/viant/xunsafe"
 	"reflect"
 )

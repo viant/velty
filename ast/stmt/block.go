@@ -1,7 +1,7 @@
 package stmt
 
 import (
-	"github.com/viant/velty/internal/ast"
+	"github.com/viant/velty/ast"
 )
 
 //Block represents block of statements

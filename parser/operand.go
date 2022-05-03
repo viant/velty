@@ -2,13 +2,13 @@ package parser
 
 import (
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
+	ast2 "github.com/viant/velty/ast"
+	aexpr "github.com/viant/velty/ast/expr"
 )
 
 var dataTypeMatchers = []*parsly.Token{String, Boolean, Number}
 
-func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.Token, ast.Expression, error) {
+func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.Token, ast2.Expression, error) {
 	matched := cursor.MatchAfterOptional(WhiteSpace, Negation)
 	hasNegation := matched.Code == negationToken
 
@@ -17,7 +17,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	matched = cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
 	var matcher *parsly.Token
-	var expression ast.Expression
+	var expression ast2.Expression
 	var err error
 
 	switch matched.Code {
@@ -33,7 +33,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 
 		if hasNegation {
 			expr = &aexpr.Unary{
-				Token: ast.NEG,
+				Token: ast2.NEG,
 				X:     expr,
 			}
 		}
@@ -85,7 +85,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 
 	if hasNegation {
 		expression = &aexpr.Unary{
-			Token: ast.NEG,
+			Token: ast2.NEG,
 			X:     expression,
 		}
 	}
@@ -97,7 +97,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	return matcher, expression, nil
 }
 
-func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression) error {
+func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) error {
 	for {
 		candidates := []*parsly.Token{Add, Sub, Multiply, Quo, NotEqual, Negation, Equal, And, Or, GreaterEqual, Greater, LessEqual, Less}
 		matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
@@ -111,7 +111,7 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression) erro
 
 		eprCursor, err := matchExpressionBlock(cursor)
 
-		var rightExpression ast.Expression
+		var rightExpression ast2.Expression
 		if err == nil {
 			rightExpression, err = matchEquationExpression(eprCursor)
 			rightExpression = &aexpr.Parentheses{P: rightExpression}
@@ -141,7 +141,7 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast.Expression) erro
 	}
 }
 
-func adjustPrecedence(expression *ast.Expression, token ast.Token, y *aexpr.Binary) *ast.Expression {
+func adjustPrecedence(expression *ast2.Expression, token ast2.Token, y *aexpr.Binary) *ast2.Expression {
 	p := &aexpr.Parentheses{}
 	p.P = &aexpr.Binary{
 		X:     *expression,
@@ -157,7 +157,7 @@ func adjustPrecedence(expression *ast.Expression, token ast.Token, y *aexpr.Bina
 	return expression
 }
 
-func isPrecedenceToken(token ast.Token) bool {
-	hasPrecedence := token == ast.MUL || token == ast.QUO
+func isPrecedenceToken(token ast2.Token) bool {
+	hasPrecedence := token == ast2.MUL || token == ast2.QUO
 	return hasPrecedence
 }

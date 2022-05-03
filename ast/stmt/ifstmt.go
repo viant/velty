@@ -1,13 +1,13 @@
 package stmt
 
 import (
-	"github.com/viant/velty/internal/ast"
+	ast2 "github.com/viant/velty/ast"
 	"reflect"
 )
 
 //If represents conditional statement
 type If struct {
-	Condition ast.Expression
+	Condition ast2.Expression
 	Body      Block
 	Else      *If
 }
@@ -16,11 +16,11 @@ func (i *If) Type() reflect.Type {
 	return reflect.TypeOf(true)
 }
 
-func (i *If) Statements() []ast.Statement {
+func (i *If) Statements() []ast2.Statement {
 	return i.Body.Statements()
 }
 
-func (i *If) AddStatement(statement ast.Statement) {
+func (i *If) AddStatement(statement ast2.Statement) {
 	temp := i
 	for temp.Else != nil {
 		temp = temp.Else

@@ -1,9 +1,9 @@
 package velty
 
 import (
+	aexpr "github.com/viant/velty/ast/expr"
 	eexpr "github.com/viant/velty/est/expr"
 	"github.com/viant/velty/est/op"
-	aexpr "github.com/viant/velty/internal/ast/expr"
 )
 
 func (p *Planner) compileUnary(actual *aexpr.Unary) (*op.Expression, error) {

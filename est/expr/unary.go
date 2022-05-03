@@ -2,10 +2,10 @@ package expr
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/stmt"
-	"github.com/viant/velty/internal/ast"
 	"reflect"
 )
 

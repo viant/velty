@@ -2,24 +2,24 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est/op"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
 )
 
 func (p *Planner) compileExpr(e ast.Expression) (*op.Expression, error) {
 	switch actual := e.(type) {
-	case *aexpr.Literal:
+	case *expr.Literal:
 		return p.literalExpr(actual)
-	case *aexpr.Select:
+	case *expr.Select:
 		return p.selectorExpr(actual)
-	case *aexpr.Binary:
+	case *expr.Binary:
 		return p.compileBinary(actual)
-	case *aexpr.Unary:
+	case *expr.Unary:
 		return p.compileUnary(actual)
-	case *aexpr.Parentheses:
+	case *expr.Parentheses:
 		return p.compileExpr(actual.P)
-	case *aexpr.Range:
+	case *expr.Range:
 		return p.compileRange(actual)
 	}
 

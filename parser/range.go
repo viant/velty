@@ -2,12 +2,12 @@ package parser
 
 import (
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
-	astmt "github.com/viant/velty/internal/ast/stmt"
+	ast2 "github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
+	"github.com/viant/velty/ast/stmt"
 )
 
-func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
+func matchForEach(cursor *parsly.Cursor) (*stmt.ForEach, error) {
 	variable, err := matchVariable(cursor)
 	if err != nil {
 		return nil, err
@@ -15,7 +15,7 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 	candidates := []*parsly.Token{ComaTerminator}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
-	var index *aexpr.Select
+	var index *expr.Select
 	if matched.Code == comaToken {
 		index, err = matchVariable(cursor)
 		if err != nil {
@@ -34,15 +34,15 @@ func matchForEach(cursor *parsly.Cursor) (*astmt.ForEach, error) {
 		return nil, err
 	}
 
-	return &astmt.ForEach{
+	return &stmt.ForEach{
 		Index: index,
 		Item:  variable,
 		Set:   dataSet,
-		Body:  astmt.Block{},
+		Body:  stmt.Block{},
 	}, nil
 }
 
-func matchFor(cursor *parsly.Cursor) (*astmt.ForLoop, error) {
+func matchFor(cursor *parsly.Cursor) (*stmt.ForLoop, error) {
 	initCursor := extractForSegment(cursor)
 	forInit, err := matchAssign(initCursor)
 	if err != nil {
@@ -61,14 +61,14 @@ func matchFor(cursor *parsly.Cursor) (*astmt.ForLoop, error) {
 		return nil, err
 	}
 
-	return &astmt.ForLoop{
+	return &stmt.ForLoop{
 		Init: forInit,
 		Cond: forCondition,
 		Post: forPost,
 	}, nil
 }
 
-func matchForPost(cursor *parsly.Cursor) (ast.Statement, error) {
+func matchForPost(cursor *parsly.Cursor) (ast2.Statement, error) {
 	variable, err := matchVariable(cursor)
 	if err != nil {
 		return nil, err
@@ -82,17 +82,17 @@ func matchForPost(cursor *parsly.Cursor) (ast.Statement, error) {
 		return nil, cursor.NewError(candidates...)
 
 	case decrementToken:
-		return &astmt.Statement{
+		return &stmt.Statement{
 			X:  variable,
-			Op: ast.ASSIGN,
-			Y:  aexpr.BinaryExpression(variable, ast.SUB, aexpr.NumberLiteral("1")),
+			Op: ast2.ASSIGN,
+			Y:  expr.BinaryExpression(variable, ast2.SUB, expr.NumberLiteral("1")),
 		}, nil
 
 	case incrementToken:
-		return &astmt.Statement{
+		return &stmt.Statement{
 			X:  variable,
-			Op: ast.ASSIGN,
-			Y:  aexpr.BinaryExpression(variable, ast.ADD, aexpr.NumberLiteral("1")),
+			Op: ast2.ASSIGN,
+			Y:  expr.BinaryExpression(variable, ast2.ADD, expr.NumberLiteral("1")),
 		}, nil
 	}
 
@@ -104,7 +104,7 @@ func matchForPost(cursor *parsly.Cursor) (ast.Statement, error) {
 
 	token, rightOperand = normalizeTokensIfNeeded(variable, token, rightOperand, matched)
 
-	return &astmt.Statement{
+	return &stmt.Statement{
 		X:  variable,
 		Op: token,
 		Y:  rightOperand,

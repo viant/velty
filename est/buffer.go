@@ -1,7 +1,7 @@
 package est
 
 import (
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/utils"
 	"html"
 	"strconv"
 )

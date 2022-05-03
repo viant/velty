@@ -3,7 +3,7 @@ package velty
 import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
-	"github.com/viant/velty/internal/parser"
+	"github.com/viant/velty/parser"
 	"unsafe"
 )
 

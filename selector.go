@@ -1,10 +1,10 @@
 package velty
 
 import (
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/stmt"
-	"github.com/viant/velty/internal/ast/expr"
 )
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {

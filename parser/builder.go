@@ -2,20 +2,20 @@ package parser
 
 import (
 	"fmt"
-	"github.com/viant/velty/internal/ast"
-	astmt "github.com/viant/velty/internal/ast/stmt"
+	ast2 "github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/stmt"
 )
 
 type Builder struct {
-	buffer []ast.StatementContainer
-	block  astmt.Block
+	buffer []ast2.StatementContainer
+	block  stmt.Block
 }
 
 func NewBuilder() *Builder {
 	return &Builder{}
 }
 
-func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
+func (s *Builder) PushStatement(matchToken int, statement ast2.Statement) error {
 	switch matchToken {
 	case elseIfToken, elseToken:
 		lastNode := s.Last()
@@ -31,7 +31,7 @@ func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
 	}
 
 	switch actual := statement.(type) {
-	case ast.StatementContainer:
+	case ast2.StatementContainer:
 		if last := s.Last(); last != nil {
 			last.AddStatement(actual)
 		}
@@ -43,11 +43,11 @@ func (s *Builder) PushStatement(matchToken int, statement ast.Statement) error {
 	return nil
 }
 
-func addIfExpression(node ast.Node, expression ast.Node) error {
+func addIfExpression(node ast2.Node, expression ast2.Node) error {
 	switch nodeType := node.(type) {
-	case astmt.ConditionContainer:
+	case stmt.ConditionContainer:
 		switch exprType := expression.(type) {
-		case *astmt.If:
+		case *stmt.If:
 			nodeType.AddCondition(exprType)
 			return nil
 		default:
@@ -72,7 +72,7 @@ func (s *Builder) terminateStatement() error {
 	return nil
 }
 
-func (s *Builder) Last() ast.StatementContainer {
+func (s *Builder) Last() ast2.StatementContainer {
 	if len(s.buffer) == 0 {
 		return nil
 	}
@@ -83,11 +83,11 @@ func (s *Builder) BufferSize() int {
 	return len(s.buffer)
 }
 
-func (s *Builder) Block() *astmt.Block {
+func (s *Builder) Block() *stmt.Block {
 	return &s.block
 }
 
-func (s *Builder) appendStatement(statement ast.Statement) {
+func (s *Builder) appendStatement(statement ast2.Statement) {
 	if len(s.buffer) != 0 {
 		s.Last().AddStatement(statement)
 		return

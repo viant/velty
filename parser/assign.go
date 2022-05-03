@@ -3,7 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast/stmt"
+	"github.com/viant/velty/ast/stmt"
 )
 
 func matchAssign(cursor *parsly.Cursor) (*stmt.Statement, error) {

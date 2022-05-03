@@ -1,8 +1,8 @@
 package velty
 
 import (
+	aexpr "github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est/op"
-	aexpr "github.com/viant/velty/internal/ast/expr"
 	"reflect"
 	"strconv"
 	"unsafe"

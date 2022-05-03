@@ -1,9 +1,9 @@
 package velty
 
 import (
+	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	estmt "github.com/viant/velty/est/stmt"
-	"github.com/viant/velty/internal/ast/stmt"
 )
 
 func (p *Planner) compileBlock(root *stmt.Block) (est.New, error) {

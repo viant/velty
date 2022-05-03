@@ -2,11 +2,11 @@ package parser
 
 import (
 	"github.com/viant/parsly"
-	"github.com/viant/velty/internal/ast"
-	aexpr "github.com/viant/velty/internal/ast/expr"
+	ast2 "github.com/viant/velty/ast"
+	"github.com/viant/velty/ast/expr"
 )
 
-func matchEquationExpression(cursor *parsly.Cursor) (ast.Expression, error) {
+func matchEquationExpression(cursor *parsly.Cursor) (ast2.Expression, error) {
 	candidates := []*parsly.Token{Parentheses}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
@@ -27,10 +27,10 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast.Expression, error) {
 			return nil, err
 		}
 
-		var result ast.Expression = &aexpr.Parentheses{P: expression}
+		var result ast2.Expression = &expr.Parentheses{P: expression}
 		if shouldNegate {
-			result = &aexpr.Unary{
-				Token: ast.NEG,
+			result = &expr.Unary{
+				Token: ast2.NEG,
 				X:     result,
 			}
 		}

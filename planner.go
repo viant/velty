@@ -2,10 +2,10 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
-	aexpr "github.com/viant/velty/internal/ast/expr"
-	"github.com/viant/velty/internal/utils"
+	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
@@ -137,7 +137,7 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	return p.createSelectors("", field, nil, 0, false)
 }
 
-func (p *Planner) selector(selector *aexpr.Select) (*op.Selector, error) {
+func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 	resultSelector := p.selectorByName(selector.ID)
 	if resultSelector == nil {
 		return nil, nil
@@ -155,12 +155,12 @@ func (p *Planner) selector(selector *aexpr.Select) (*op.Selector, error) {
 	for call != nil {
 		parentType = deref(parentType)
 		switch actual := call.(type) {
-		case *aexpr.Select:
+		case *expr.Select:
 			selectorId = selectorId + fieldSeparator + actual.ID
 
 			if actual.X != nil {
 				switch next := actual.X.(type) {
-				case *aexpr.Call:
+				case *expr.Call:
 					var err error
 					resultSelector, err = p.newFuncSelector(selectorId, actual, next, resultSelector)
 					if err != nil {
@@ -192,7 +192,7 @@ func (p *Planner) selector(selector *aexpr.Select) (*op.Selector, error) {
 	return resultSelector, nil
 }
 
-func (p *Planner) fieldByName(parentType reflect.Type, actual *aexpr.Select, selectorId string) (*xunsafe.Field, error) {
+func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
 	field := xunsafe.FieldByName(parentType, actual.ID)
 	if field != nil {
 		if Parse(field.Tag.Get(velty)).Omit {
@@ -271,7 +271,7 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 	return nil
 }
 
-func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *aexpr.Call, prev *op.Selector) (*op.Selector, error) {
+func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
 	aFunc, ok := p.Functions.Method(prev.Type, field.ID)
 	if !ok {
@@ -292,7 +292,7 @@ func (p *Planner) newFuncSelector(selectorId string, field *aexpr.Select, call *
 	return newSelector, nil
 }
 
-func (p *Planner) selectorOperands(call *aexpr.Call, prev *op.Selector) ([]*op.Operand, error) {
+func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Operand, error) {
 	var err error
 	operands := make([]*op.Operand, len(call.Args)+1)
 	operands[0], err = op.NewExpression(prev).Operand(*p.Control)
