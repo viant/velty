@@ -11,10 +11,6 @@ func (a *assign) assignAsInt() est.Compute {
 	}
 
 	if a.y.Sel != nil {
-		if a.y.Offset != nil {
-			return a.assignIntOffset
-		}
-
 		return a.assignIntSelPtr
 	}
 
@@ -22,26 +18,26 @@ func (a *assign) assignAsInt() est.Compute {
 }
 
 func (a *assign) assignIntLiteral(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*int)(ret) = *(*int)(*a.y.LiteralPtr)
 
 	return ret
 }
 
 func (a *assign) assignIntComp(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*int)(ret) = *(*int)(a.y.Comp(state))
 	return ret
 }
 
 func (a *assign) assignIntOffset(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
-	*(*int)(ret) = *(*int)(state.Pointer(*a.y.Offset))
+	ret := a.x.Pointer(state)
+	*(*int)(ret) = *(*int)(a.y.Pointer(state))
 	return ret
 }
 
 func (a *assign) assignIntSelPtr(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*int)(ret) = *(*int)(a.y.Pointer(state))
 	return ret
 }

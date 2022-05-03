@@ -75,7 +75,7 @@ func computeBinaryInt(token ast.Token, binary *binaryExpr, indirect bool) (est.C
 func (b *binaryExpr) indirectIntQuo(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) / *(*int)(y)
 	return z
 }
@@ -83,7 +83,7 @@ func (b *binaryExpr) indirectIntQuo(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directIntQuo(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) / *(*int)(y)
 	return z
 }
@@ -92,7 +92,7 @@ func (b *binaryExpr) indirectIntAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) + *(*int)(y)
 
 	return z
@@ -101,7 +101,7 @@ func (b *binaryExpr) indirectIntAdd(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directIntAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) + *(*int)(y)
 
 	return z
@@ -110,7 +110,7 @@ func (b *binaryExpr) directIntAdd(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectIntSub(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) - *(*int)(y)
 
 	return z
@@ -119,7 +119,7 @@ func (b *binaryExpr) indirectIntSub(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directIntSub(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) - *(*int)(y)
 
 	return z
@@ -128,7 +128,7 @@ func (b *binaryExpr) directIntSub(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectIntMul(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 
 	*(*int)(z) = *(*int)(x) * *(*int)(y)
 	return z
@@ -137,7 +137,7 @@ func (b *binaryExpr) indirectIntMul(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directIntMul(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*int)(z) = *(*int)(x) * *(*int)(y)
 
 	return z

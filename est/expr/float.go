@@ -70,7 +70,7 @@ func computeBinaryFloat(token ast.Token, binary *binaryExpr, indirect bool) (est
 func (b *binaryExpr) indirectFloatQuo(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) / *(*float64)(y)
 	return z
 }
@@ -78,7 +78,7 @@ func (b *binaryExpr) indirectFloatQuo(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directFloatQuo(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) / *(*float64)(y)
 	return z
 }
@@ -86,7 +86,7 @@ func (b *binaryExpr) directFloatQuo(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectFloatAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) + *(*float64)(y)
 
 	return z
@@ -95,7 +95,7 @@ func (b *binaryExpr) indirectFloatAdd(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directFloatAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) + *(*float64)(y)
 
 	return z
@@ -104,7 +104,7 @@ func (b *binaryExpr) directFloatAdd(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectFloatSub(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) - *(*float64)(y)
 
 	return z
@@ -113,7 +113,7 @@ func (b *binaryExpr) indirectFloatSub(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directFloatSub(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) - *(*float64)(y)
 
 	return z
@@ -122,7 +122,7 @@ func (b *binaryExpr) directFloatSub(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) indirectFloatMul(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) * *(*float64)(y)
 
 	return z
@@ -131,7 +131,7 @@ func (b *binaryExpr) indirectFloatMul(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directFloatMul(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*float64)(z) = *(*float64)(x) * *(*float64)(y)
 
 	return z

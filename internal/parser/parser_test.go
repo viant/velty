@@ -249,7 +249,7 @@ func TestService_Parse(t *testing.T) {
 		},
 		{
 			description: `stmt block`,
-			input:       `#{if(1==1)}abc#{else}def#{end}`,
+			input:       `#if(1==1)abc#{else}def#{end}`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "Value": "1" }, "Token": "==", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "def" } ] } } } ] }`,
 		},
 		{
@@ -272,10 +272,18 @@ func TestService_Parse(t *testing.T) {
 			input:       ` #foreach ($abc in $!{collection}) forEach body #end`,
 			output:      `{ "Stmt": [ { "Append": " " }, { "Item": { "ID": "Abc", "FullName": "" }, "Set": { "ID": "Collection", "FullName": "${collection}" }, "Body": { "Stmt": [ { "Append": " forEach body " } ] } } ] }`,
 		},
+		{
+			description: `stmt block #2`,
+			input: `#if (${foo} != 1)
+            #if(${boo}==2)abc#{else}def#{end}?';
+#else
+#end
+`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {
-	for i, useCase := range useCases {
+		for i, useCase := range useCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		node, err := Parse([]byte(useCase.input))
 

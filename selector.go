@@ -5,7 +5,6 @@ import (
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/internal/ast/expr"
-	"reflect"
 )
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
@@ -32,25 +31,5 @@ func (p *Planner) compileStmtSelector(actual *expr.Select) (est.New, error) {
 	}
 
 	p.Type.ValueAccessor(actual.ID)
-	p.updateFieldOffset(actual, selExpr.Selector)
-
 	return stmt.Selector(selExpr), nil
-}
-
-func (p *Planner) updateFieldOffset(actual *expr.Select, selector *op.Selector) {
-	if selector == nil || selector.Indirect {
-		return
-	}
-
-	xField, ok := p.Type.ValueAccessor(actual.ID)
-	if !ok || xField.Type.Kind() != reflect.Struct {
-		return
-	}
-
-	for selector.Parent != nil {
-		selector = selector.Parent
-	}
-
-	selectorField := selector.Field
-	selectorField.Offset += xField.Offset
 }

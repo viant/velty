@@ -17,6 +17,7 @@ type Selector struct {
 	FuncArguments []ast.Expression
 	Args          []*Operand
 	Placeholder   string
+	ParentOffset  uintptr
 }
 
 //NewSelector create a selector
@@ -41,12 +42,13 @@ func newXField(name string, sType reflect.Type) *xunsafe.Field {
 	return xField
 }
 
-func SelectorWithField(id string, field *xunsafe.Field, parent *Selector, indirect bool) *Selector {
+func SelectorWithField(id string, field *xunsafe.Field, parent *Selector, indirect bool, offset uintptr) *Selector {
 	return &Selector{
-		ID:       id,
-		Field:    field,
-		Parent:   parent,
-		Indirect: indirect,
+		ID:           id,
+		Field:        field,
+		Parent:       parent,
+		Indirect:     indirect,
+		ParentOffset: offset,
 	}
 }
 

@@ -11,10 +11,6 @@ func (a *assign) assignAsBool() est.Compute {
 	}
 
 	if a.y.Sel != nil {
-		if a.y.Offset != nil {
-			return a.assignBoolOffset
-		}
-
 		return a.assignBoolSelPtr
 	}
 
@@ -22,25 +18,25 @@ func (a *assign) assignAsBool() est.Compute {
 }
 
 func (a *assign) assignBoolComp(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*bool)(ret) = *(*bool)(a.y.Comp(state))
 	return ret
 }
 
 func (a *assign) assignBoolOffset(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
-	*(*bool)(ret) = *(*bool)(state.Pointer(*a.y.Offset))
+	ret := a.x.Pointer(state)
+	*(*bool)(ret) = *(*bool)(a.y.Pointer(state))
 	return ret
 }
 
 func (a *assign) assignBoolSelPtr(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*bool)(ret) = *(*bool)(a.y.Pointer(state))
 	return ret
 }
 
 func (a *assign) assignBoolLiteral(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*bool)(ret) = *(*bool)(*a.y.LiteralPtr)
 	return ret
 }

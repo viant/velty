@@ -22,18 +22,17 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		return operand, nil
 	}
 
-	if e.Selector != nil && e.Selector.Func != nil {
-		operand.Type = e.Selector.Type
+	if e.Selector != nil {
 		operand.Sel = e.Selector
+		operand.Type = e.Selector.Type
+	}
+
+	if e.Selector != nil && e.Selector.Func != nil {
 		operand.Comp = e.funcCall()
 		return operand, nil
 	}
 
 	if e.Selector != nil {
-		operand.Offset = &e.Selector.Offset
-		operand.Type = e.Selector.Type
-		operand.Sel = e.Selector
-
 		if e.Selector != nil && e.Selector.Indirect {
 			operand.Comp = e.newIndirectSelector()
 		}
@@ -80,12 +79,5 @@ func (e *Expression) newIndirectSelector() est.Compute {
 func NewExpression(selector *Selector) *Expression {
 	return &Expression{
 		Selector: selector,
-	}
-}
-
-func NewLiteralExpression(literalPtr *unsafe.Pointer, literalType reflect.Type) *Expression {
-	return &Expression{
-		LiteralPtr: literalPtr,
-		Type:       literalType,
 	}
 }

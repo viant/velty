@@ -8,14 +8,13 @@ import (
 
 type Operand struct {
 	LiteralPtr *unsafe.Pointer
-	Offset     *uintptr
 	Sel        *Selector
 	Comp       est.Compute
 	Type       reflect.Type
 }
 
 func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
-	return unsafe.Pointer(uintptr(state.MemPtr) + *o.Offset)
+	return unsafe.Pointer(uintptr(state.MemPtr) + o.Sel.Offset + o.Sel.ParentOffset)
 }
 
 func (o *Operand) Exec(state *est.State) unsafe.Pointer {
@@ -27,13 +26,13 @@ func (o *Operand) Exec(state *est.State) unsafe.Pointer {
 		return *o.LiteralPtr
 	}
 
-	if o.Offset != nil {
+	if o.Sel != nil {
 		return o.Pointer(state)
 	}
 
-	return o.Sel.Pointer(state.MemPtr)
+	return unsafe.Pointer(uintptr(state.MemPtr) + o.Sel.Offset + o.Sel.ParentOffset)
 }
 
 func (o *Operand) IsIndirect() bool {
-	return (o.Sel != nil && o.Sel.Indirect) || o.Offset == nil
+	return o.Sel == nil || o.Sel.Indirect
 }

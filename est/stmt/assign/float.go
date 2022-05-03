@@ -11,10 +11,6 @@ func (a *assign) assignAsFloat() est.Compute {
 	}
 
 	if a.y.Sel != nil {
-		if a.y.Offset != nil {
-			return a.assignFloatOffset
-		}
-
 		return a.assignFloatSelPtr
 	}
 
@@ -22,25 +18,25 @@ func (a *assign) assignAsFloat() est.Compute {
 }
 
 func (a *assign) assignFloatComp(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*float64)(ret) = *(*float64)(a.y.Comp(state))
 	return ret
 }
 
 func (a *assign) assignFloatOffset(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
-	*(*float64)(ret) = *(*float64)(state.Pointer(*a.y.Offset))
+	ret := a.x.Pointer(state)
+	*(*float64)(ret) = *(*float64)(a.y.Pointer(state))
 	return ret
 }
 
 func (a *assign) assignFloatSelPtr(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*float64)(ret) = *(*float64)(a.y.Pointer(state))
 	return ret
 }
 
 func (a *assign) assignFloatLiteral(state *est.State) unsafe.Pointer {
-	ret := state.Pointer(*a.x.Offset)
+	ret := a.x.Pointer(state)
 	*(*float64)(ret) = *(*float64)(*a.y.LiteralPtr)
 	return ret
 }

@@ -13,26 +13,26 @@ type directAppender struct {
 }
 
 func (a *directAppender) appendString(state *est.State) unsafe.Pointer {
-	ptr := state.Pointer(*a.x.Offset)
+	ptr := a.x.Pointer(state)
 	state.Buffer.AppendString(*(*string)(ptr))
 	return ptr
 }
 
 func (a *directAppender) appendInt(state *est.State) unsafe.Pointer {
-	ptr := state.Pointer(*a.x.Offset)
+	ptr := a.x.Pointer(state)
 	state.Buffer.AppendInt(*(*int)(ptr))
 	return ptr
 
 }
 
 func (a *directAppender) appendBool(state *est.State) unsafe.Pointer {
-	ptr := state.Pointer(*a.x.Offset)
+	ptr := a.x.Pointer(state)
 	state.Buffer.AppendBool(*(*bool)(ptr))
 	return ptr
 }
 
 func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
-	ptr := state.Pointer(*a.x.Offset)
+	ptr := a.x.Pointer(state)
 	state.Buffer.AppendFloat(*(*float64)(ptr))
 	return ptr
 }

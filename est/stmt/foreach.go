@@ -18,7 +18,7 @@ type ForEach struct {
 }
 
 func (e *ForEach) compute(state *est.State) unsafe.Pointer {
-	xPtr := state.Pointer(e.X.Sel.Offset)
+	xPtr := e.X.Pointer(state)
 	l := e.Slice.Len(xPtr)
 
 	var resultPtr unsafe.Pointer
@@ -32,7 +32,7 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 }
 
 func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
-	xPtr := state.Pointer(e.X.Sel.Offset)
+	xPtr := e.X.Pointer(state)
 	l := e.Slice.Len(xPtr)
 
 	var resultPtr unsafe.Pointer

@@ -16,9 +16,9 @@ type State struct {
 	Buffer    *Buffer
 }
 
-func (s *State) Pointer(offset uintptr) unsafe.Pointer {
-	return unsafe.Pointer(uintptr(s.MemPtr) + offset)
-}
+//func (s *State) Pointer(offset uintptr) unsafe.Pointer {
+//	return unsafe.Pointer(uintptr(s.MemPtr) + offset)
+//}
 
 func (s *State) SetValue(k string, v interface{}) error {
 	k = utils.UpperCaseFirstLetter(k)

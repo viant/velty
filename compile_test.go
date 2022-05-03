@@ -61,6 +61,7 @@ func TestPlanner_Compile(t *testing.T) {
 		Index:        10,
 		Values:       []string{"Var1", "Var2", "Var3", "Var4"},
 	}
+
 	department := &Department{
 		Address: values,
 	}
@@ -573,6 +574,25 @@ $abc
 			template:    `#foreach($foo in $Foos) abc #end`,
 			expect:      ``,
 		},
+		{
+			description: `multiple fields embeded`,
+			template:    `$bar.Name`,
+			expect:      `bar name`,
+			variables: []Variable{
+				{
+					Name:  "foo",
+					Value: Foo{},
+				},
+				{
+					Value: Values{},
+					Embed: true,
+				},
+				{
+					Name:  "bar",
+					Value: bar{Name: "bar name"},
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -600,9 +620,16 @@ type testdata struct {
 	definedVars  map[string]interface{}
 	embeddedVars map[string]interface{}
 	functions    map[string]interface{}
+	variables    []Variable
 	expectError  bool
 	expect       string
 	options      []velty.Option
+}
+
+type Variable struct {
+	Name  string
+	Value interface{}
+	Embed bool
 }
 
 func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
@@ -634,6 +661,20 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 		}
 	}
 
+	for i, variable := range d.variables {
+		if variable.Embed {
+			err := planner.EmbedVariable(d.variables[i])
+			if !assert.Nil(t, err, d.description) {
+				return nil, nil, err
+			}
+		} else {
+			err := planner.DefineVariable(variable.Name, d.variables[i])
+			if !assert.Nil(t, err, d.description) {
+				return nil, nil, err
+			}
+		}
+	}
+
 	exec, newState, err := planner.Compile([]byte(d.template))
 
 	if err != nil {
@@ -660,6 +701,20 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 		err := state.EmbedValue(v)
 		if !assert.Nil(t, err, d.description+" var "+k) {
 			return err
+		}
+	}
+
+	for i, variable := range d.variables {
+		if variable.Embed {
+			err := state.EmbedValue(d.variables[i])
+			if !assert.Nil(t, err, d.description) {
+				return err
+			}
+		} else {
+			err := state.SetValue(variable.Name, d.variables[i].Value)
+			if !assert.Nil(t, err, d.description) {
+				return err
+			}
 		}
 	}
 

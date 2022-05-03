@@ -30,7 +30,7 @@ func computeBinaryString(token ast.Token, binary *binaryExpr, indirect bool) (es
 func (b *binaryExpr) indirectStringAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*string)(z) = *(*string)(x) + *(*string)(y)
 	return z
 }
@@ -38,7 +38,7 @@ func (b *binaryExpr) indirectStringAdd(state *est.State) unsafe.Pointer {
 func (b *binaryExpr) directStringAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Pointer(state)
 	y := b.y.Pointer(state)
-	z := state.Pointer(*b.z.Offset)
+	z := b.z.Pointer(state)
 	*(*string)(z) = *(*string)(x) + *(*string)(y)
 	return z
 }
