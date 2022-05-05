@@ -22,9 +22,15 @@ func (b *bar) Concat(values ...string) string {
 }
 
 func TestPlanner_Compile(t *testing.T) {
+	type Boo struct {
+		UUID  string
+		Price float64
+	}
+
 	type Foo struct {
 		Name string
 		ID   int
+		Boo  *Boo
 	}
 
 	type Values struct {
@@ -593,6 +599,21 @@ $abc
 				},
 			},
 		},
+		{
+			description: `defined as non-pointer, indirect access`,
+			template:    `$foo.Boo.Price`,
+			expect:      `125.5`,
+			variables: []Variable{
+				{
+					Name:  "bar",
+					Value: bar{Name: "bar name"},
+				},
+				{
+					Name:  "foo",
+					Value: Foo{Boo: &Boo{Price: 125.5}},
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -663,12 +684,12 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 
 	for i, variable := range d.variables {
 		if variable.Embed {
-			err := planner.EmbedVariable(d.variables[i])
+			err := planner.EmbedVariable(d.variables[i].Value)
 			if !assert.Nil(t, err, d.description) {
 				return nil, nil, err
 			}
 		} else {
-			err := planner.DefineVariable(variable.Name, d.variables[i])
+			err := planner.DefineVariable(variable.Name, d.variables[i].Value)
 			if !assert.Nil(t, err, d.description) {
 				return nil, nil, err
 			}
@@ -706,7 +727,7 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 
 	for i, variable := range d.variables {
 		if variable.Embed {
-			err := state.EmbedValue(d.variables[i])
+			err := state.EmbedValue(d.variables[i].Value)
 			if !assert.Nil(t, err, d.description) {
 				return err
 			}

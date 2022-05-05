@@ -58,14 +58,10 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		return err
 	}
 
-	rType, wasPtr := dereference(field)
+	rType, _ := dereference(field)
 	if rType.Kind() == reflect.Struct {
 		for i := 0; i < rType.NumField(); i++ {
-
-			actualParent := parent
-			if wasPtr {
-				actualParent = p.ensureStructSelector(field, prefix)
-			}
+			actualParent := p.ensureStructSelector(field, prefix)
 
 			childPrefix := vTag.Prefix
 			if !field.Anonymous {
