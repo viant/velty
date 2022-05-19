@@ -49,27 +49,23 @@ func (p *Planner) EmbedVariable(val interface{}) error {
 }
 
 func (p *Planner) addSelectors(prefix string, field reflect.StructField) error {
-	var anonymousOffset uintptr
-	if field.Anonymous {
-		anonymousOffset = field.Offset
-	}
-
-	return p.createSelectors(prefix, field, nil, anonymousOffset, anonymousOffset, anonymousOffset, false)
+	return p.createSelectors(prefix, field, nil, 0, 0, false)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, anonymousOffset, initialOffset uintptr, indirect bool) error {
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, initialOffset uintptr, indirect bool) error {
+	if field.Anonymous {
+		initialOffset += field.Offset
+	}
+
 	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 	vTag := Parse(field.Tag.Get(velty))
-	if err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offsetSoFar-anonymousOffset, initialOffset, indirect); err != nil {
+	if err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offsetSoFar, initialOffset, indirect); err != nil {
 		return err
 	}
 
-	offsetSoFar += field.Offset
 	if !field.Anonymous {
+		offsetSoFar += field.Offset
 		initialOffset = 0
-		anonymousOffset = 0
-	} else {
-		anonymousOffset += field.Offset
 	}
 
 	rType, _ := dereference(field)
@@ -82,7 +78,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 				childPrefix = field.Name + fieldSeparator
 			}
 
-			err := p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, anonymousOffset, indirect)
+			err := p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, indirect)
 			if err != nil {
 				return err
 			}
@@ -102,10 +98,10 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 		fieldNames = vTag.Names
 	}
 
+	newField := xunsafe.NewField(field)
+	newField.Offset += anonymousOffset
 	var err error
 	for _, name := range fieldNames {
-		newField := xunsafe.NewField(field)
-		newField.Offset += anonymousOffset
 		fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 		parent = fieldSelector
 		if err = p.selectors.Append(fieldSelector); err != nil {
