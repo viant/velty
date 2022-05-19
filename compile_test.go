@@ -761,7 +761,7 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 	return nil
 }
 
-func Test_ForEach_Isse(t *testing.T) {
+func Test_ForEach_Issue(t *testing.T) {
 
 	type Foo struct {
 		Bar  string `velty:"names=Bar"`
