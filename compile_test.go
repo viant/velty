@@ -614,6 +614,25 @@ $abc
 				},
 			},
 		},
+		{
+			description: `unary operator`,
+			template:    `#if(${x} && ${y} == "y") test #end`,
+			expect:      ` test `,
+			variables: []Variable{
+				{
+					Name:  "x",
+					Value: true,
+				},
+				{
+					Name:  "y",
+					Value: "y",
+				},
+			},
+		},
+
+		/*
+
+		 */
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -740,4 +759,45 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 	}
 
 	return nil
+}
+
+func Test_ForEach_Isse(t *testing.T) {
+
+	type Foo struct {
+		Bar  string `velty:"names=Bar"`
+		Bar1 int    `velty:"names=Bar1"`
+	}
+
+	type Repeated struct {
+		URLs []string `velty:"names=URLS"`
+	}
+	type Test struct {
+		Foo // when foo is commented out it's working otherwise it does not, address for slice not correctly computed
+		Repeated
+	}
+
+	tmpl := `#foreach ($url in ${URLS})
+<img src="${url}" style="display:none" height="1" width="1">
+#end`
+	planner := velty.New()
+	planner.EmbedVariable(Test{})
+	exec, newState, err := planner.Compile([]byte(tmpl))
+	assert.Nil(t, err)
+	aState := newState()
+	aTest := Test{}
+	aTest.URLs = []string{"urtl1", "urtl2", "urtl3"}
+	aState.EmbedValue(aTest)
+
+	exec.Exec(aState)
+	actual := aState.Buffer.String()
+
+	expect := `
+<img src="urtl1" style="display:none" height="1" width="1">
+
+<img src="urtl2" style="display:none" height="1" width="1">
+
+<img src="urtl3" style="display:none" height="1" width="1">
+`
+	assert.EqualValues(t, expect, actual)
+
 }
