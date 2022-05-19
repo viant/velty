@@ -45,17 +45,31 @@ func (p *Planner) EmbedVariable(val interface{}) error {
 	field := p.Type.EmbedType(rType)
 	vTag := Parse(field.Tag.Get(velty))
 
-	return p.createSelectors(vTag.Prefix, field, nil, 0, false)
+	return p.addSelectors(vTag.Prefix, field)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offset uintptr, indirect bool) error {
-	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
+func (p *Planner) addSelectors(prefix string, field reflect.StructField) error {
+	var anonymousOffset uintptr
+	if field.Anonymous {
+		anonymousOffset = field.Offset
+	}
 
+	return p.createSelectors(prefix, field, nil, anonymousOffset, anonymousOffset, anonymousOffset, false)
+}
+
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, anonymousOffset, initialOffset uintptr, indirect bool) error {
+	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 	vTag := Parse(field.Tag.Get(velty))
-	err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offset, indirect)
-	offset += field.Offset
-	if err != nil {
+	if err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offsetSoFar-anonymousOffset, initialOffset, indirect); err != nil {
 		return err
+	}
+
+	offsetSoFar += field.Offset
+	if !field.Anonymous {
+		initialOffset = 0
+		anonymousOffset = 0
+	} else {
+		anonymousOffset += field.Offset
 	}
 
 	rType, _ := dereference(field)
@@ -68,7 +82,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 				childPrefix = field.Name + fieldSeparator
 			}
 
-			err = p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offset, indirect)
+			err := p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, anonymousOffset, indirect)
 			if err != nil {
 				return err
 			}
@@ -78,7 +92,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 	return nil
 }
 
-func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, vTag *Tag, offset uintptr, indirect bool) error {
+func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, vTag *Tag, offset uintptr, anonymousOffset uintptr, indirect bool) error {
 	if field.Anonymous {
 		return nil
 	}
@@ -91,6 +105,7 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 	var err error
 	for _, name := range fieldNames {
 		newField := xunsafe.NewField(field)
+		newField.Offset += anonymousOffset
 		fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 		parent = fieldSelector
 		if err = p.selectors.Append(fieldSelector); err != nil {
@@ -130,7 +145,7 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	}
 
 	field := p.Type.AddField(name, name, sType)
-	return p.createSelectors("", field, nil, 0, false)
+	return p.addSelectors("", field)
 }
 
 func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
