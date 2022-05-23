@@ -7,6 +7,7 @@ import (
 
 func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
 	expression, err := matchEquationExpression(cursor)
+
 	if err != nil {
 		return nil, err
 	}
