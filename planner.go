@@ -296,6 +296,8 @@ func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *e
 
 	newSelector := op.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
 	newSelector.Args = operands
+	newSelector.Type = aFunc.ResultType
+
 	return newSelector, nil
 }
 

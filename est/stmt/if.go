@@ -67,7 +67,12 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 		rType = condition.Selector.Type
 	}
 
-	if err != nil || rType == nil || rType.Kind() == reflect.Bool {
+	if rType == nil {
+		//If type is empty it means that placeholder/function was not registered
+		rType = reflect.TypeOf("")
+	}
+
+	if err != nil || rType.Kind() == reflect.Bool {
 		return anOperand, err
 	}
 
