@@ -67,6 +67,10 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 		rType = condition.Selector.Type
 	}
 
+	if condition.New != nil {
+		rType = reflect.TypeOf(true)
+	}
+
 	if rType == nil {
 		//If type is empty it means that placeholder/function was not registered
 		rType = reflect.TypeOf("")
