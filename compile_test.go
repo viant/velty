@@ -77,6 +77,10 @@ func TestPlanner_Compile(t *testing.T) {
 		Name string
 	}
 
+	type FooNames struct {
+		Names []string `velty:"names=NAMES|FOO_NAMES"`
+	}
+
 	taggedStruct := &Tagged{ID: 100}
 	var testCases = []testdata{
 		{
@@ -629,10 +633,23 @@ $abc
 				},
 			},
 		},
-
-		/*
-
-		 */
+		{
+			description: `slice with multiple names`,
+			template:    `#foreach($foo in $FOO_NAMES) $foo #end`,
+			expect:      ` abc  def  ghi `,
+			variables: []Variable{
+				{
+					Name:  "Values",
+					Value: Values{},
+					Embed: true,
+				},
+				{
+					Name:  "FooNames",
+					Value: FooNames{Names: []string{"abc", "def", "ghi"}},
+					Embed: true,
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

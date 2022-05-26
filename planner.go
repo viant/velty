@@ -103,7 +103,6 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 	var err error
 	for _, name := range fieldNames {
 		fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
-		parent = fieldSelector
 		if err = p.selectors.Append(fieldSelector); err != nil {
 			return fmt.Errorf("%w, prefix is required, if parent field is an Anonymous, and any other parent field has the same name", err)
 		}
