@@ -158,47 +158,47 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "set value",
 			input:       `#set ($message="Hello World")`,
-			output:      `{ "Stmt": [ { "X": { "ID": "Message" }, "Op": "=", "Y": { "Value": "Hello World" } } ] }`,
+			output:      `{ "Stmt": [ { "X": { "ID": "message" }, "Op": "=", "Y": { "Value": "Hello World" } } ] }`,
 		},
 		{
 			description: "set value as equation",
 			input:       `#set ($value= 10 + 10 * 10)`,
-			output:      `{ "Stmt": [ { "X": { "ID": "Value" }, "Op": "=", "Y": { "X": { "Value": "10" }, "Token": "+", "Y": { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } } } } ] }`,
+			output:      `{ "Stmt": [ { "X": { "ID": "value" }, "Op": "=", "Y": { "X": { "Value": "10" }, "Token": "+", "Y": { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } } } } ] }`,
 		},
 		{
 			description: "foreach",
-			input:       `<ul>#foreach( $value in $values)<li>${Value}</li>#end</ul>`,
-			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Item": { "ID": "Value" }, "Set": { "ID": "Values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "Value" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
+			input:       `<ul>#foreach( $value in $values)<li>${value}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Item": { "ID": "value" }, "Set": { "ID": "values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
 		},
 		{
 			description: "foreach with index",
-			input:       `<ul>#foreach( $value, $index in $values)<li>${Value}, ${Index}</li>#end</ul>`,
-			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Index": { "ID": "Index" }, "Item": { "ID": "Value" }, "Set": { "ID": "Values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "Value" }, { "Append": ", " }, { "ID": "Index" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
+			input:       `<ul>#foreach( $value, $index in $values)<li>${value}, ${index}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Index": { "ID": "index" }, "Item": { "ID": "value" }, "Set": { "ID": "values" }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": ", " }, { "ID": "index" }, { "Append": "</li>" } ] } }, { "Append": "</ul>" } ] }`,
 		},
 		{
 			description: "for loop",
-			input:       `<ul>#for( $var = 1; $var < 10; $var++ )<li>${Value}, ${Index}</li>#end</ul>`,
-			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Init": { "X": { "ID": "Var" }, "Op": "=", "Y": { "Value": "1" } }, "Cond": { "X": { "ID": "Var" }, "Token": "<", "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "Value" }, { "Append": ", " }, { "ID": "Index" }, { "Append": "</li>" } ] }, "Post": { "X": { "ID": "Var" }, "Op": "=", "Y": { "X": { "ID": "Var" }, "Token": "+", "Y": { "Value": "1" } } } }, { "Append": "</ul>" } ] }`,
+			input:       `<ul>#for( $var = 1; $var < 10; $var++ )<li>${value}, ${index}</li>#end</ul>`,
+			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Init": { "X": { "ID": "var" }, "Op": "=", "Y": { "Value": "1" } }, "Cond": { "X": { "ID": "var" }, "Token": "<", "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": ", " }, { "ID": "index" }, { "Append": "</li>" } ] }, "Post": { "X": { "ID": "var" }, "Op": "=", "Y": { "X": { "ID": "var" }, "Token": "+", "Y": { "Value": "1" } } } }, { "Append": "</ul>" } ] }`,
 		},
 		{
 			description: "different selectors",
 			input:       `#if( $id == ${Id3.Name} )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Id" }, "Token": "==", "Y": { "ID": "Id3", "X": { "ID": "Name" } } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "Id3", "X": { "ID": "Name" } } } } ] }`,
 		},
 		{
 			description: "selector without brackets and number",
 			input:       `#if( $id == 1 )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Id" }, "Token": "==", "Y": { "Value": "1" } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "Value": "1" } } } ] }`,
 		},
 		{
 			description: "multiple comparisons",
 			input:       `#if( $id == 1 == true == false )#end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Id" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "false" } } } } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "X": { "Value": "1" }, "Token": "==", "Y": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "false" } } } } } ] }`,
 		},
 		{
 			description: "function call",
 			input:       `${foo.Function(123, !true, -5, 123+321, 10 * 10,!${USER_LOGGED})}`,
-			output:      `{ "Stmt": [ { "ID": "Foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "-5" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
+			output:      `{ "Stmt": [ { "ID": "foo", "X": { "ID": "Function", "X": { "Args": [ { "Value": "123" }, { "Token": "!", "X": { "Value": "true" } }, { "Value": "-5" }, { "X": { "Value": "123" }, "Token": "+", "Y": { "Value": "321" } }, { "X": { "Value": "10" }, "Token": "*", "Y": { "Value": "10" } }, { "Token": "!", "X": { "ID": "USER_LOGGED" } } ] } } } ] }`,
 		},
 		{
 			description: "comments",
@@ -210,12 +210,12 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: `assign binary expression`,
 			input:       `#set( $var1 = $foo + 10)abc`,
-			output:      `{ "Stmt": [ { "X": { "ID": "Var1" }, "Op": "=", "Y": { "X": { "ID": "Foo" }, "Token": "+", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
+			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "+", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
 		},
 		{
 			description: `assign binary expression`,
 			input:       `#set( $var1 = $foo != 10)abc`,
-			output:      `{ "Stmt": [ { "X": { "ID": "Var1" }, "Op": "=", "Y": { "X": { "ID": "Foo" }, "Token": "!=", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
+			output:      `{ "Stmt": [ { "X": { "ID": "var1" }, "Op": "=", "Y": { "X": { "ID": "foo" }, "Token": "!=", "Y": { "Value": "10" } } }, { "Append": "abc" } ] }`,
 		},
 		{
 			description: `evaluate`,
@@ -235,12 +235,12 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: `range`,
 			input:       `#foreach($int in [-10...10]) abc #end`,
-			output:      `{ "Stmt": [ { "Item": { "ID": "Int" }, "Set": { "X": { "Value": "-10" }, "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": " abc " } ] } } ] }`,
+			output:      `{ "Stmt": [ { "Item": { "ID": "int" }, "Set": { "X": { "Value": "-10" }, "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": " abc " } ] } } ] }`,
 		},
 		{
 			description: `method call`,
 			input:       `$bar.Concat($foo, $var.toUpperCase(), "abcdef")`,
-			output:      `{ "Stmt": [ { "ID": "Bar", "X": { "ID": "Concat", "X": { "Args": [ { "ID": "Foo" }, { "ID": "Var", "X": { "ID": "ToUpperCase", "X": { "Args": [] } } }, { "Value": "abcdef" } ] } } } ] }`,
+			output:      `{ "Stmt": [ { "ID": "bar", "X": { "ID": "Concat", "X": { "Args": [ { "ID": "foo" }, { "ID": "var", "X": { "ID": "toUpperCase", "X": { "Args": [] } } }, { "Value": "abcdef" } ] } } } ] }`,
 		},
 		{
 			description: `empty input`,
@@ -260,17 +260,17 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "!$",
 			input:       `#if(${abc} && !("$!{def}"=="")) abc #end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "Abc" }, "Token": "&&", "Y": { "Token": "!", "X": { "X": { "ID": "Def" }, "Token": "==", "Y": { "Value": "" } } } }, "Body": { "Stmt": [ { "Append": " abc "} ] } } ] }`,
+			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "abc" }, "Token": "&&", "Y": { "Token": "!", "X": { "X": { "ID": "def" }, "Token": "==", "Y": { "Value": "" } } } }, "Body": { "Stmt": [ { "Append": " abc "} ] } } ] }`,
 		},
 		{
 			description: "$ before selector",
 			input:       `$${abc}`,
-			output:      `{ "Stmt": [ { "Append": "$" }, { "ID": "Abc", "FullName": "${abc}" } ] }`,
+			output:      `{ "Stmt": [ { "Append": "$" }, { "ID": "abc", "FullName": "${abc}" } ] }`,
 		},
 		{
 			description: `for with !$`,
-			input:       ` #foreach ($abc in $!{collection}) forEach body #end`,
-			output:      `{ "Stmt": [ { "Append": " " }, { "Item": { "ID": "Abc", "FullName": "" }, "Set": { "ID": "Collection", "FullName": "${collection}" }, "Body": { "Stmt": [ { "Append": " forEach body " } ] } } ] }`,
+			input:       ` #foreach ($abc in $!{Collection}) forEach body #end`,
+			output:      `{ "Stmt": [ { "Append": " " }, { "Item": { "ID": "abc", "FullName": "" }, "Set": { "ID": "Collection", "FullName": "${Collection}" }, "Body": { "Stmt": [ { "Append": " forEach body " } ] } } ] }`,
 		},
 		{
 			description: `stmt block #2`,
@@ -279,7 +279,7 @@ func TestService_Parse(t *testing.T) {
 #else
 #end
 `,
-			output: `{"Stmt": [ { "Condition": { "X": { "ID": "Foo", "FullName": "${foo}" }, "Token": "!=", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "\n            " }, { "Condition": { "X": { "ID": "Boo", "FullName": "${boo}" }, "Token": "==", "Y": { "Value": "2" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" }  },  "Body": { "Stmt": [ { "Append": "def"  } ] } } }, { "Append": "?';\n" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "\n" } ] } } }, { "Append": "\n" } ] }`,
+			output: `{"Stmt": [ { "Condition": { "X": { "ID": "foo", "FullName": "${foo}" }, "Token": "!=", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "\n            " }, { "Condition": { "X": { "ID": "boo", "FullName": "${boo}" }, "Token": "==", "Y": { "Value": "2" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" }  },  "Body": { "Stmt": [ { "Append": "def"  } ] } } }, { "Append": "?';\n" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "\n" } ] } } }, { "Append": "\n" } ] }`,
 		},
 	}
 
