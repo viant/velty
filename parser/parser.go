@@ -6,6 +6,7 @@ import (
 	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/ast/stmt"
+	"strings"
 )
 
 func Parse(input []byte) (*stmt.Block, error) {
@@ -52,6 +53,14 @@ outer:
 			builder.appendStatement(statement)
 
 		case '#':
+			appendStmt, ok := checkIfEscaped(cursor)
+			if ok {
+				if err = builder.PushStatement(appendToken, appendStmt); err != nil {
+					return nil, err
+				}
+				continue
+			}
+
 			statement, match, err := matchStatement(cursor)
 			if err != nil {
 				rawValue := cursor.Input[lastPosition:cursor.Pos]
@@ -72,6 +81,23 @@ outer:
 	}
 
 	return builder.Block(), nil
+}
+
+func checkIfEscaped(cursor *parsly.Cursor) (*stmt.Append, bool) {
+	lastCursorPos := cursor.Pos
+	matched := cursor.MatchOne(SquareBrackets)
+	if matched.Code == squareBracketsToken {
+		body := matched.Text(cursor)
+		if strings.HasPrefix(body, "[[") && strings.HasSuffix(body, "]]") {
+			matched = cursor.MatchOne(Hash)
+			if matched.Code == hashToken {
+				return stmt.NewAppend(body[2 : len(body)-2]), true
+			}
+		}
+	}
+
+	cursor.Pos = lastCursorPos
+	return nil, false
 }
 
 func cursorErr(cursor *parsly.Cursor, err error) error {

@@ -650,6 +650,11 @@ $abc
 				},
 			},
 		},
+		{
+			description: `slice with multiple names`,
+			template:    `$strings.ToUpper("abc")`,
+			expect:      `ABC`,
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

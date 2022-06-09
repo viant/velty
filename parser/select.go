@@ -126,6 +126,24 @@ func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 			return nil, err
 		}
 		return call, nil
+
+	case squareBracketsToken:
+		id := matched.Text(cursor)
+		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
+		_, expression, err := matchOperand(newCursor, Number)
+		if err != nil {
+			return nil, err
+		}
+
+		index := &expr.SliceIndex{
+			X: expression,
+		}
+		index.Y, err = matchCall(cursor)
+		if err != nil {
+			return nil, err
+		}
+
+		return index, nil
 	}
 
 	return nil, nil

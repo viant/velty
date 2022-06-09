@@ -13,6 +13,7 @@ const (
 	selectorStartToken
 	selectorBlockToken
 	selectorToken
+	hashToken
 
 	ifToken
 	elseIfToken
@@ -78,6 +79,7 @@ var SpecialSign = parsly.NewToken(specialSignToken, "Special sign", matcher3.New
 
 var SelectorBlock = parsly.NewToken(selectorBlockToken, "Sel block", matcher.NewBlock('{', '}', '\\'))
 var Selector = parsly.NewToken(selectorToken, "Sel", matcher3.NewIdentity())
+var Hash = parsly.NewToken(hashToken, "Hash", matcher.NewByte('#'))
 
 var SelectorStart = parsly.NewToken(selectorStartToken, "Sel start", matcher.NewRunes([]rune{'$'}))
 

@@ -281,6 +281,16 @@ func TestService_Parse(t *testing.T) {
 `,
 			output: `{"Stmt": [ { "Condition": { "X": { "ID": "foo", "FullName": "${foo}" }, "Token": "!=", "Y": { "Value": "1" } }, "Body": { "Stmt": [ { "Append": "\n            " }, { "Condition": { "X": { "ID": "boo", "FullName": "${boo}" }, "Token": "==", "Y": { "Value": "2" } }, "Body": { "Stmt": [ { "Append": "abc" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" }  },  "Body": { "Stmt": [ { "Append": "def"  } ] } } }, { "Append": "?';\n" } ] }, "Else": { "Condition": { "X": { "Value": "true" }, "Token": "==", "Y": { "Value": "true" } }, "Body": { "Stmt": [ { "Append": "\n" } ] } } }, { "Append": "\n" } ] }`,
 		},
+		{
+			description: `escape selector`,
+			input:       `#[[$ABC_DEF]]#.Columns[$i].Values[$j]`,
+			output:      `{ "Stmt": [ { "Append": "$ABC_DEF" }, { "Append": ".Columns[" }, { "ID": "i", "FullName": "$i" }, { "Append": "].Values[" }, { "ID": "j", "FullName": "$j" }, { "Append": "]" } ] }`,
+		},
+		{
+			description: `slices chain`,
+			input:       `$Columns[$i].Values[$j].Value`,
+			output:      ` { "Stmt": [ { "ID": "Columns", "X": { "X": { "ID": "i", "FullName": "$i" }, "Y": { "ID": "Values", "X": { "X": { "ID": "j", "FullName": "$j" }, "Y": { "ID": "Value", "FullName": "$Value" } }, "FullName": "$Values[$j].Value" } }, "FullName": "$Columns[$i].Values[$j].Value" } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {

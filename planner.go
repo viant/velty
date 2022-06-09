@@ -5,6 +5,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
+	"github.com/viant/velty/functions"
 	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
@@ -337,13 +338,13 @@ func New(options ...Option) *Planner {
 		constants:  newConstants(),
 	}
 
-	planner.apply(options)
+	planner.init(options)
 
 	return planner
 }
 
 func (p *Planner) New() *Planner {
-	return &Planner{
+	scope := &Planner{
 		bufferSize: p.bufferSize,
 		transients: p.transients,
 		Control:    p.Control,
@@ -354,6 +355,8 @@ func (p *Planner) New() *Planner {
 		cache:      p.cache,
 		escapeHTML: p.escapeHTML,
 	}
+
+	return scope
 }
 
 func (p *Planner) apply(options []Option) {
@@ -371,4 +374,12 @@ func (p *Planner) apply(options []Option) {
 
 func (p *Planner) registerConst(i *[]int) {
 	p.constants.add(i)
+}
+
+func (p *Planner) init(options []Option) {
+	p.apply(options)
+
+	_ = p.DefineVariable("strings", functions.Strings{})
+	_ = p.DefineVariable("math", functions.Math{})
+	_ = p.DefineVariable("strconv", functions.Strconv{})
 }
