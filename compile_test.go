@@ -665,8 +665,8 @@ $abc
 		},
 	}
 
-	for i, testCase := range testCases[len(testCases)-1:] {
-		//for i, testCase := range testCases {
+	//for i, testCase := range testCases[len(testCases)-1:] {
+	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
 		if testCase.expectError {
