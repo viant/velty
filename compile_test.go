@@ -651,14 +651,22 @@ $abc
 			},
 		},
 		{
-			description: `slice with multiple names`,
+			description: `built in strings.ToUpper function`,
 			template:    `$strings.ToUpper("abc")`,
 			expect:      `ABC`,
 		},
+		{
+			description: `built in slices.Length function`,
+			template:    `$slices.Length($foos)`,
+			expect:      `3`,
+			definedVars: map[string]interface{}{
+				"foos": []int{1, 2, 3},
+			},
+		},
 	}
 
-	//for i, testCase := range testCases[len(testCases)-1:] {
-	for i, testCase := range testCases {
+	for i, testCase := range testCases[len(testCases)-1:] {
+		//for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)
 		exec, state, err := testCase.init(t)
 		if testCase.expectError {

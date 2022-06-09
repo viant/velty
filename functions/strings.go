@@ -48,3 +48,7 @@ func (s Strings) Trim(val, cutset string) string {
 func (s Strings) LastIndex(val, substr string) int {
 	return strings.LastIndex(val, substr)
 }
+
+func (s Strings) Length(val string) int {
+	return len(val)
+}
