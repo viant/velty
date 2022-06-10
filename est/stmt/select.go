@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
+	"github.com/viant/xunsafe"
 	"reflect"
+	"time"
 	"unsafe"
 )
 
@@ -79,6 +81,31 @@ func (a *directAppender) appendSelectorName() est.Compute {
 	}
 }
 
+func (a *directAppender) newInterfaceAppender() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		exec := a.x.Exec(state)
+		iface := xunsafe.AsInterface(exec)
+		switch actual := iface.(type) {
+		case string:
+			state.Buffer.AppendString(actual)
+		case int:
+			state.Buffer.AppendInt(actual)
+		case float64:
+			state.Buffer.AppendFloat(actual)
+		case time.Time:
+			state.Buffer.AppendString(actual.Format(time.RFC3339))
+		case *time.Time:
+			state.Buffer.AppendString(actual.Format(time.RFC3339))
+		case bool:
+			state.Buffer.AppendBool(actual)
+		default:
+			state.Buffer.AppendString(fmt.Sprintf("%v", actual))
+		}
+
+		return exec
+	}
+}
+
 func Selector(expr *op.Expression) est.New {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
@@ -116,6 +143,9 @@ func Selector(expr *op.Expression) est.New {
 				return result.appendFloat64, nil
 			}
 			return result.newAppendFloatIndirect(), nil
+
+		case reflect.Interface:
+			return result.newInterfaceAppender(), nil
 		}
 		return nil, fmt.Errorf("unsupported append selector: %s", expr.Type.String())
 	}
