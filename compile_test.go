@@ -679,6 +679,14 @@ $abc
 				"values": []interface{}{1, "abc", true, 2.0},
 			},
 		},
+		{
+			description: `foreach over interfaces`,
+			template:    `#foreach($value in $values) $types.IsString($value)#end`,
+			definedVars: map[string]interface{}{
+				"values": []interface{}{1, "abc", true, 2.0},
+			},
+			expect: ` false true false false`,
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
