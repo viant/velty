@@ -106,6 +106,15 @@ func (a *directAppender) newInterfaceAppender() est.Compute {
 	}
 }
 
+func (a *directAppender) newGenericAppender() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		exec := a.x.Exec(state)
+		iface := a.x.Sel.Interface(exec)
+		state.Buffer.AppendString(fmt.Sprintf("%v", iface))
+		return exec
+	}
+}
+
 func Selector(expr *op.Expression) est.New {
 	return func(control est.Control) (est.Compute, error) {
 		x, err := expr.Operand(control)
@@ -146,7 +155,8 @@ func Selector(expr *op.Expression) est.New {
 
 		case reflect.Interface:
 			return result.newInterfaceAppender(), nil
+		default:
+			return result.newGenericAppender(), nil
 		}
-		return nil, fmt.Errorf("unsupported append selector: %s", expr.Type.String())
 	}
 }

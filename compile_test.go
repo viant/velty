@@ -671,6 +671,14 @@ $abc
 			},
 			expect: ` 1 , abc , true , 2 ,`,
 		},
+		{
+			description: `foreach over interfaces`,
+			template:    `$values`,
+			expect:      `[1 abc true 2]`,
+			definedVars: map[string]interface{}{
+				"values": []interface{}{1, "abc", true, 2.0},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
