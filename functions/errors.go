@@ -44,3 +44,11 @@ func (e Errors) AssertBool(value interface{}) (bool, error) {
 
 	return true, nil
 }
+
+func (e Errors) AssertWithMessage(isValid bool, message string) (bool, error) {
+	if isValid {
+		return true, nil
+	}
+
+	return false, fmt.Errorf(message)
+}
