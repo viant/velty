@@ -78,6 +78,10 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 			matcher, expression, err = matchOperand(newCursor, candidates...)
 			if err != nil {
 				expression = aexpr.StringLiteral(value[:len(value)-1])
+			} else {
+				if _, ok := expression.(*aexpr.Select); !ok {
+					expression = aexpr.StringLiteral(value[:len(value)-1])
+				}
 			}
 		}
 

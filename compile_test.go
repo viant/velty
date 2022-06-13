@@ -695,6 +695,14 @@ $abc
 			},
 			expectTemplateErr: true,
 		},
+		{
+			description: `String in`,
+			template:    `$strings.In($Set, "2")`,
+			definedVars: map[string]interface{}{
+				"Set": []string{"1", "2", "3"},
+			},
+			expect: "true",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

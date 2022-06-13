@@ -52,3 +52,12 @@ func (s Strings) LastIndex(val, substr string) int {
 func (s Strings) Length(val string) int {
 	return len(val)
 }
+
+func (s Strings) In(set []string, candidate string) bool {
+	for _, c := range set {
+		if c == candidate {
+			return true
+		}
+	}
+	return false
+}
