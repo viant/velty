@@ -25,7 +25,7 @@ type (
 		index map[string]int
 		funcs []*Func
 
-		receivers map[string]Receiver
+		receivers map[string]*Receiver
 	}
 
 	Receiver struct {
@@ -112,7 +112,7 @@ func NewFunctions() *Functions {
 	return &Functions{
 		index:     map[string]int{},
 		funcs:     make([]*Func, 0),
-		receivers: map[string]Receiver{},
+		receivers: map[string]*Receiver{},
 	}
 }
 
@@ -637,16 +637,16 @@ func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) 
 func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
 	receiver, ok := f.receivers[asMapKey(receiverType)]
 	if ok {
-		return &receiver
+		return receiver
 	}
 
-	receiver = Receiver{
+	receiver = &Receiver{
 		index: map[string]int{},
 		funcs: make([]*Func, 0),
 	}
-	f.receivers[asMapKey(receiverType)] = receiver
 
-	return &receiver
+	f.receivers[asMapKey(receiverType)] = receiver
+	return receiver
 }
 
 func asMapKey(receiverType reflect.Type) string {
