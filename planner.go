@@ -384,4 +384,5 @@ func (p *Planner) init(options []Option) {
 	_ = p.DefineVariable("strconv", functions.Strconv{})
 	_ = p.DefineVariable("slices", functions.Slices{})
 	_ = p.DefineVariable("types", functions.Types{})
+	_ = p.DefineVariable("errors", functions.Errors{})
 }

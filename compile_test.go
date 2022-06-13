@@ -687,6 +687,14 @@ $abc
 			},
 			expect: ` false true false false`,
 		},
+		{
+			description: `register error`,
+			template:    `$errors.RegisterError("error was thrown " + $message)`,
+			definedVars: map[string]interface{}{
+				"message": "this is error message",
+			},
+			expectTemplateErr: true,
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -702,22 +710,28 @@ $abc
 			continue
 		}
 
-		assert.Nil(t, exec.Exec(state))
+		err = exec.Exec(state)
+		if testCase.expectTemplateErr {
+			assert.NotNil(t, err, testCase.description)
+		} else {
+			assert.Nil(t, err, testCase.description)
+		}
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
 	}
 }
 
 type testdata struct {
-	description  string
-	template     string
-	definedVars  map[string]interface{}
-	embeddedVars map[string]interface{}
-	functions    map[string]interface{}
-	variables    []Variable
-	expectError  bool
-	expect       string
-	options      []velty.Option
+	description       string
+	template          string
+	definedVars       map[string]interface{}
+	embeddedVars      map[string]interface{}
+	functions         map[string]interface{}
+	variables         []Variable
+	expectError       bool
+	expect            string
+	options           []velty.Option
+	expectTemplateErr bool
 }
 
 type Variable struct {

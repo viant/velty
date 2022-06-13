@@ -41,6 +41,9 @@ type (
 		caller     reflect.Value
 		ResultType reflect.Type
 		Function   Funeexpression
+
+		maxArgs    int
+		isVariadic bool
 	}
 )
 
@@ -60,13 +63,26 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 
 func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
 	values := make([]reflect.Value, len(operands))
+	var argType reflect.Type
+
 	for i := 0; i < len(values); i++ {
 		ptr := operands[i].Exec(state)
+		if i < f.maxArgs {
+			argType = f.caller.Type().In(i)
+		}
+
+		if f.maxArgs-1 == i && f.isVariadic {
+			argType = argType.Elem()
+		}
+
+		if i >= f.maxArgs && !f.isVariadic {
+			return nil, fmt.Errorf("too much non-variadic function arguments")
+		}
 
 		if operands[i].Sel != nil {
 			values[i] = reflect.ValueOf(operands[i].Sel.Interface(state.MemPtr))
 		} else {
-			values[i] = reflect.ValueOf(asInterface(operands[i].Type, ptr))
+			values[i] = reflect.ValueOf(asInterface(argType, ptr))
 		}
 	}
 
@@ -156,6 +172,8 @@ func (f *Functions) reflectFunc(function interface{}, fType reflect.Type) (*Func
 	aFunc := &Func{
 		caller:     caller,
 		ResultType: outType,
+		isVariadic: caller.Type().IsVariadic(),
+		maxArgs:    caller.Type().NumIn(),
 	}
 
 	aFunc.Function = aFunc.funcCall
@@ -648,7 +666,7 @@ func asInterface(t reflect.Type, pointer unsafe.Pointer) interface{} {
 		return *(*string)(pointer)
 	}
 
-	return xunsafe.AsInterface
+	return xunsafe.AsInterface(pointer)
 }
 
 func incorrectArgumentsError(wanted string, got []*Operand) error {
