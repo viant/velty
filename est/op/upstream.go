@@ -48,7 +48,7 @@ func Upstream(selector *Selector) func(state *est.State) unsafe.Pointer {
 		if parents[i].Func == nil {
 			continue
 		}
-		callers[i] = parents[i].Func.Function
+		callers[i] = parents[i].Func.CallFunc
 	}
 
 	return func(state *est.State) unsafe.Pointer {

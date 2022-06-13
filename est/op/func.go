@@ -18,7 +18,7 @@ var (
 	float64Type     = reflect.TypeOf(0.0)
 )
 
-type Funeexpression = func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer
+type Funeexpression = func(operands []*Operand, state *est.State) (interface{}, error)
 
 type (
 	Functions struct {
@@ -44,11 +44,21 @@ type (
 	}
 )
 
-func (f *Func) CallPtrs(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
-	return f.Function(accumulator, operands, state)
+func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	anIface, err := f.Function(operands, state)
+	if err != nil {
+		state.Errors = append(state.Errors, err)
+	}
+
+	if anIface != nil {
+		accumulator.Set(state.MemPtr, anIface)
+		return xunsafe.AsPointer(anIface)
+	}
+
+	return nil
 }
 
-func (f *Func) funcCall(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
 	values := make([]reflect.Value, len(operands))
 	for i := 0; i < len(values); i++ {
 		ptr := operands[i].Exec(state)
@@ -61,8 +71,25 @@ func (f *Func) funcCall(accumulator *Selector, operands []*Operand, state *est.S
 	}
 
 	result := f.caller.Call(values)
-	accumulator.SetValue(state.MemPtr, result[0].Interface())
-	return accumulator.Pointer(state.MemPtr)
+	if len(result) == 1 {
+		return result[0].Interface(), nil
+	} else if len(result) == 2 {
+		var err error
+		var ok bool
+		errInface := result[1].Interface()
+		if errInface != nil {
+			err, ok = errInface.(error)
+			if !ok {
+				return nil, fmt.Errorf("unexpected error type %T", errInface)
+			}
+		}
+
+		return result[0].Interface(), err
+	} else if len(result) == 0 {
+		return nil, nil
+	} else {
+		return nil, fmt.Errorf("unexpected number of returned values, expected <= 2, but got %v", len(result))
+	}
 }
 
 func NewFunctions() *Functions {
@@ -193,421 +220,381 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 func (f *Functions) discover(function interface{}) (Funeexpression, reflect.Type, bool) {
 	switch actual := function.(type) {
 	case func(s, substr string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(s1, s2 string) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
 		}, stringType, true
 
 	case func(s string) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(string)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*string)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state))), nil
 		}, stringType, true
 
 	case func(s1, s2 string) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
 		}, intType, true
 
 	case func(s1 string) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(string)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*string)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state))), nil
 		}, intType, true
 
 	case func(s string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*string)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state))), nil
 		}, boolType, true
 
 	case func(s1, s2 string, start int) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 3 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string, int)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))), nil
 		}, intType, true
 
 	case func(s, old, new string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 3 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string, string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*string)(operands[2].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*string)(operands[2].Exec(state))), nil
 		}, boolType, true
 
 	case func(s, split string) []string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string)", operands)
 			}
 
-			accumulator.SetValue(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
 		}, stringSliceType, true
 
 	case func(s1, s2 string, i int) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 3 {
-				return nil
+				return nil, incorrectArgumentsError("(string, string, int)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))), nil
 		}, boolType, true
 
 	case func(s string, i int) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("(string, int)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, stringType, true
 
 	case func(s string, i, end int) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 3 {
-				return nil
+				return nil, incorrectArgumentsError("(string, int, int)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state)), *(*int)(operands[2].Exec(state))), nil
 
 		}, stringType, true
 
 	case func(i []int, i2 int) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]int, []int)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []bool, i2 bool) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]bool, []bool)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]bool)(operands[0].Exec(state)), *(*bool)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]bool)(operands[0].Exec(state)), *(*bool)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []float64, i2 float64) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]float64, []float64)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]float64)(operands[0].Exec(state)), *(*float64)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]float64)(operands[0].Exec(state)), *(*float64)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []uint8, i2 uint8) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]uint8, []uint8)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]uint8)(operands[0].Exec(state)), *(*uint8)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]uint8)(operands[0].Exec(state)), *(*uint8)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []string, i2 string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]string, []string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []int, i2 []int) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]int, []int)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]int)(operands[0].Exec(state)), *(*[]int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]int)(operands[0].Exec(state)), *(*[]int)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []bool, i2 []bool) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]bool, []bool) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]bool, []bool)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]bool)(operands[0].Exec(state)), *(*[]bool)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]bool)(operands[0].Exec(state)), *(*[]bool)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []float64, i2 []float64) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]float64, []float64) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]float64, []float64)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]float64)(operands[0].Exec(state)), *(*[]float64)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]float64)(operands[0].Exec(state)), *(*[]float64)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []uint8, i2 []uint8) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]uint8, []uint8) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]uint8, []uint8)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]uint8)(operands[0].Exec(state)), *(*[]uint8)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]uint8)(operands[0].Exec(state)), *(*[]uint8)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
 	case func(i []string, i2 []string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]string, []string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]string)(operands[0].Exec(state)), *(*[]string)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]string)(operands[0].Exec(state)), *(*[]string)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []int, i2 int) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]int, int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]int, int)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*[]int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, intType, true
 
-	case func(i []bool, i2 int) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]bool, int) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]bool, int)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]bool)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]bool)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []float64, i2 int) float64:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]float64, int) float64:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]float64, int)", operands)
 			}
 
-			accumulator.SetFloat64(state.MemPtr, actual(*(*[]float64)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]float64)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, float64Type, true
 
-	case func(i []uint8, i2 int) uint8:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]uint8, int) uint8:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]uint8, int)", operands)
 			}
 
-			accumulator.SetUint8(state.MemPtr, actual(*(*[]uint8)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]uint8)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, uint8Type, true
 
-	case func(i []string, i2 int) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]string, int) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {
-				return nil
+				return nil, incorrectArgumentsError("([]string, int)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*[]string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
 
 		}, stringType, true
 
-	case func(i []int) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]int) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]int)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]int)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]int)(operands[0].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []bool) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]bool) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]bool)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]bool)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]bool)(operands[0].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []float64) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]float64) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]float64)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]float64)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]float64)(operands[0].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []uint8) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]uint8) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]uint8)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]uint8)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]uint8)(operands[0].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []string) bool:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]string) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]string)", operands)
 			}
 
-			accumulator.Set(state.MemPtr, actual(*(*[]string)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]string)(operands[0].Exec(state))), nil
 
 		}, boolType, true
 
-	case func(i []int) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]int)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*[]int)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]int)(operands[0].Exec(state))), nil
 
 		}, intType, true
 
-	case func(i []bool) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]bool) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]bool)", operands)
 			}
 
-			accumulator.SetInt(state.MemPtr, actual(*(*[]bool)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]bool)(operands[0].Exec(state))), nil
 
 		}, intType, true
 
-	case func(i []float64) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]float64) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]float64)", operands)
 			}
 
-			accumulator.SetValue(state.MemPtr, actual(*(*[]float64)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*[]float64)(operands[0].Exec(state))), nil
 
 		}, intType, true
 
-	case func(i []string) int:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func([]string) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("([]string)", operands)
 			}
 
-			accumulator.SetValue(state.MemPtr, actual(*(*[]string)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
-
+			return actual(*(*[]string)(operands[0].Exec(state))), nil
 		}, intType, true
 
-	case func(int2 int) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func(int) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(int)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*int)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*int)(operands[0].Exec(state))), nil
 		}, stringType, true
 
-	case func(int2 bool) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func(bool) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(bool)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*bool)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*bool)(operands[0].Exec(state))), nil
 
 		}, stringType, true
 
-	case func(int2 float64) string:
-		return func(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
+	case func(float64) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 1 {
-				return nil
+				return nil, incorrectArgumentsError("(float)", operands)
 			}
 
-			accumulator.SetString(state.MemPtr, actual(*(*float64)(operands[0].Exec(state))))
-			return accumulator.Pointer(state.MemPtr)
+			return actual(*(*float64)(operands[0].Exec(state))), nil
 
 		}, stringType, true
 	}
@@ -662,4 +649,8 @@ func asInterface(t reflect.Type, pointer unsafe.Pointer) interface{} {
 	}
 
 	return xunsafe.AsInterface
+}
+
+func incorrectArgumentsError(wanted string, got []*Operand) error {
+	return fmt.Errorf("expected to got %v but got %v", wanted, len(got))
 }

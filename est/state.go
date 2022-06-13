@@ -14,6 +14,7 @@ type State struct {
 	MemPtr    unsafe.Pointer
 	StateType *Type
 	Buffer    *Buffer
+	Errors    []error
 }
 
 //func (s *State) Pointer(offset uintptr) unsafe.Pointer {
@@ -59,4 +60,5 @@ func (s *State) EmbedValue(v interface{}) error {
 
 func (s *State) Reset() {
 	s.Buffer.Reset()
+	s.Errors = nil
 }

@@ -702,7 +702,7 @@ $abc
 			continue
 		}
 
-		exec.Exec(state)
+		assert.Nil(t, exec.Exec(state))
 		output := state.Buffer.Bytes()
 		assert.Equal(t, testCase.expect, string(output), testCase.description)
 	}
@@ -842,7 +842,7 @@ func Test_ForEach_Issue(t *testing.T) {
 	aTest.URLs = []string{"urtl1", "urtl2", "urtl3"}
 	aState.EmbedValue(aTest)
 
-	exec.Exec(aState)
+	assert.Nil(t, exec.Exec(aState))
 	actual := aState.Buffer.String()
 
 	expect := `
