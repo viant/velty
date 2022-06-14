@@ -190,10 +190,10 @@ func matchFunctionCall(cursor *parsly.Cursor) (*expr.Call, error) {
 }
 
 func extractArgument(cursor *parsly.Cursor) *parsly.Cursor {
-	candidates := []*parsly.Token{ComaTerminator}
+	candidates := []*parsly.Token{Argument}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
-	case comaToken:
+	case argumentToken:
 		text := matched.Text(cursor)
 		return parsly.NewCursor("", []byte(text), 0)
 	}

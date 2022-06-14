@@ -237,6 +237,7 @@ func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
+		sel.ValueField = xunsafe.NewField(reflect.StructField{Name: "TEMP", Offset: 0, Type: t})
 	}
 	return sel
 }

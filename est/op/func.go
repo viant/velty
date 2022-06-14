@@ -54,7 +54,7 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 	}
 
 	if anIface != nil {
-		accumulator.Set(state.MemPtr, anIface)
+		accumulator.SetValue(state.MemPtr, anIface)
 		return xunsafe.AsPointer(anIface)
 	}
 
@@ -72,11 +72,11 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 		}
 
 		if i >= f.maxArgs && !f.isVariadic {
-			return nil, fmt.Errorf("too much non-variadic function arguments")
+			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
 		var anInterface interface{}
-		if argSelector != nil {
+		if argSelector != nil && argSelector.ValueField != nil {
 			anInterface = argSelector.ValueField.Interface(valuePtr)
 		} else {
 			anInterface = asInterface(operands[i].Type, valuePtr)

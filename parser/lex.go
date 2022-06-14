@@ -72,6 +72,7 @@ const (
 	dotToken
 	stringFinishToken
 	quoteToken
+	argumentToken
 )
 
 var WhiteSpace = parsly.NewToken(whiteSpaceToken, "Whitespace", matcher.NewWhiteSpace())
@@ -137,3 +138,4 @@ var Dot = parsly.NewToken(dotToken, "Dot", matcher.NewByte('.'))
 
 var Quote = parsly.NewToken(quoteToken, "Quote", matcher.NewByte('"'))
 var StringFinish = parsly.NewToken(stringFinishToken, "Quote terminated", matcher.NewTerminator('"', true))
+var Argument = parsly.NewToken(argumentToken, "Function argument", matcher3.NewArgumentMatcher())

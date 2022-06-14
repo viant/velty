@@ -14,8 +14,9 @@ func (p *Planner) literalExpr(literal *expr.Literal) (*op.Expression, error) {
 	switch literal.RType.Kind() {
 	case reflect.Int:
 		i, _ := strconv.Atoi(literal.Value)
-		p.constants.add(&i)
-		ptr := unsafe.Pointer(&i)
+		iPtr := &i
+		p.constants.add(iPtr)
+		ptr := unsafe.Pointer(iPtr)
 		expr.Type = reflect.TypeOf(i)
 		expr.LiteralPtr = &ptr
 	case reflect.Float64:

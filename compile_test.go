@@ -766,6 +766,29 @@ $abc
 			}},
 			expect: "\nabcdef\n\nghi\n",
 		},
+		{
+			description: `chaining methods`,
+			template: `#foreach($barColumn in $bar.Columns)
+#set($lastColumnName = $slices.StringAt($strings.Split($barColumn.column_name, "-"), 0))
+#end
+$lastColumnName`,
+			definedVars: map[string]interface{}{
+				"bar": Bar{Columns: []struct {
+					Name  string `velty:"column_name"`
+					Value string `velty:"column_value"`
+				}{
+					{
+						Name:  "Col - 1",
+						Value: "Val - 1",
+					},
+					{
+						Name:  "Col - 2",
+						Value: "Val - 2",
+					},
+				}},
+			},
+			expect: "\n\n\n\n\nCol ",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
