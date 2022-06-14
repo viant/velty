@@ -241,18 +241,13 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 		return nil
 	}
 
-	expr.Type = t
-	field := p.Type.AddField(expr.Selector.ID, expr.Selector.Name, t)
-
-	expr.Field = xunsafe.NewField(field)
-
-	expr.Selector.Indirect = t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice
-
-	if err := p.validateSelector(expr.Selector); err != nil {
+	if err := p.DefineVariable(expr.Name, t); err != nil {
 		return err
 	}
 
-	return p.selectors.Append(expr.Selector)
+	expr.Type = t
+	expr.Selector = p.selectorByName(expr.Name)
+	return nil
 }
 
 func (p *Planner) validateSelector(sel *op.Selector) error {

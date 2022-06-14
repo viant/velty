@@ -82,6 +82,15 @@ func TestPlanner_Compile(t *testing.T) {
 	}
 
 	taggedStruct := &Tagged{ID: 100}
+
+	type Bar struct {
+		Columns []struct {
+			Name  string `velty:"column_name"`
+			Value string `velty:"column_value"`
+		}
+		Id int
+	}
+
 	var testCases = []testdata{
 		{
 			description: "assign int",
@@ -702,6 +711,26 @@ $abc
 				"Set": []string{"1", "2", "3"},
 			},
 			expect: "true",
+		},
+		{
+			description: `assign struct`,
+			template:    `#foreach($barColumn in $bar.Columns)#set($lastColumn = $barColumn)#end $lastColumn.column_name  $lastColumn.column_value`,
+			definedVars: map[string]interface{}{
+				"bar": Bar{Columns: []struct {
+					Name  string `velty:"column_name"`
+					Value string `velty:"column_value"`
+				}{
+					{
+						Name:  "Col - 1",
+						Value: "Val - 1",
+					},
+					{
+						Name:  "Col - 2",
+						Value: "Val - 2",
+					},
+				}},
+			},
+			expect: ` Col - 2  Val - 2`,
 		},
 	}
 

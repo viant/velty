@@ -4,11 +4,24 @@ import (
 	"fmt"
 	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
+	"github.com/viant/xunsafe"
 	"reflect"
+	"unsafe"
 )
 
 type assign struct {
 	x, y *op2.Operand
+}
+
+func (a *assign) assignValue() est.Compute {
+	return func(state *est.State) unsafe.Pointer {
+		ptr := a.y.Exec(state)
+		if ptr != nil {
+			xunsafe.Copy(a.x.Exec(state), ptr, int(a.x.Type.Size()))
+		}
+
+		return ptr
+	}
 }
 
 func Assign(expressions ...*op2.Expression) (est.New, error) {
@@ -29,6 +42,7 @@ func Assign(expressions ...*op2.Expression) (est.New, error) {
 		case reflect.Bool:
 			return assign.assignAsBool(), nil
 		default:
+			return assign.assignValue(), nil
 			return nil, fmt.Errorf("unsupported assign type: %s", expressions[op2.Y].Type.String())
 		}
 
