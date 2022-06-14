@@ -732,6 +732,17 @@ $abc
 			},
 			expect: ` Col - 2  Val - 2`,
 		},
+		{
+			description: `foreach`,
+			template:    `#foreach($anInt in $ints)$anInt,#end#foreach($anInt in $ints)$anInt,#end`,
+			expect:      `1,2,3,4,1,2,3,4,`,
+			variables: []Variable{
+				{
+					Value: []int{1, 2, 3, 4},
+					Name:  "ints",
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

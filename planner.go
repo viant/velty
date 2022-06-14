@@ -34,7 +34,6 @@ type (
 //EmbedVariable enrich the Type by adding Anonymous field with given name.
 //val can be either of the reflect.Type or regular type (i.e. Foo)
 func (p *Planner) EmbedVariable(val interface{}) error {
-
 	var rType reflect.Type
 	switch actual := val.(type) {
 	case reflect.Type:
@@ -130,6 +129,10 @@ func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string)
 //DefineVariable enrich the Type by adding field with given name.
 //val can be either of the reflect.Type or regular type (i.e. Foo)
 func (p *Planner) DefineVariable(name string, v interface{}) error {
+	if p.selectorByName(name) != nil {
+		return nil
+	}
+
 	name = utils.UpperCaseFirstLetter(name)
 
 	var sType reflect.Type
