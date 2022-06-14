@@ -743,6 +743,29 @@ $abc
 				},
 			},
 		},
+		{
+			description: `or`,
+			template:    `#if(("abc" == "abc") && (1 == 1))equal#elsenot equal#end`,
+			expect:      `equal`,
+		},
+		{
+			description: `set function call`,
+			template: `#foreach($foo in $Foos)
+#set($aVar = $strings.ToLower($foo.Name))$aVar
+#end`,
+			variables: []Variable{{
+				Name: "Foos",
+				Value: []Foo{
+					{
+						Name: "ABCDEF",
+					},
+					{
+						Name: "GHI",
+					},
+				},
+			}},
+			expect: "\nabcdef\n\nghi\n",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {

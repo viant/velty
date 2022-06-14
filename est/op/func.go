@@ -63,27 +63,26 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 
 func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
 	values := make([]reflect.Value, len(operands))
-	var argType reflect.Type
+	var argSelector *Selector
 
 	for i := 0; i < len(values); i++ {
-		ptr := operands[i].Exec(state)
+		valuePtr := operands[i].Exec(state)
 		if i < f.maxArgs {
-			argType = f.caller.Type().In(i)
-		}
-
-		if f.maxArgs-1 == i && f.isVariadic {
-			argType = argType.Elem()
+			argSelector = operands[i].Sel
 		}
 
 		if i >= f.maxArgs && !f.isVariadic {
 			return nil, fmt.Errorf("too much non-variadic function arguments")
 		}
 
-		if operands[i].Sel != nil {
-			values[i] = reflect.ValueOf(operands[i].Sel.Interface(state.MemPtr))
+		var anInterface interface{}
+		if argSelector != nil {
+			anInterface = argSelector.ValueField.Interface(valuePtr)
 		} else {
-			values[i] = reflect.ValueOf(asInterface(argType, ptr))
+			anInterface = asInterface(operands[i].Type, valuePtr)
 		}
+
+		values[i] = reflect.ValueOf(anInterface)
 	}
 
 	result := f.caller.Call(values)

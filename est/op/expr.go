@@ -28,6 +28,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	}
 
 	if e.Selector != nil && e.Selector.Func != nil {
+		operand.Type = e.Func.ResultType
 		operand.Comp = e.funcCall()
 		return operand, nil
 	}
@@ -40,6 +41,8 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		return operand, nil
 
 	}
+
+	operand.Type = e.Type
 	compute, err := e.New(control)
 	if err != nil {
 		return nil, err
@@ -49,7 +52,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 }
 
 func (e *Expression) funcCall() est.Compute {
-	upstream := Upstream(e.Selector)
+	upstream := Upstream(e.Selector, false)
 	return func(state *est.State) unsafe.Pointer {
 		return upstream(state)
 	}
@@ -69,7 +72,7 @@ func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
 }
 
 func (e *Expression) newIndirectSelector() est.Compute {
-	upstream := Upstream(e.Selector)
+	upstream := Upstream(e.Selector, true)
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state)
 		return ret

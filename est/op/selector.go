@@ -18,6 +18,7 @@ type Selector struct {
 	Args          []*Operand
 	Placeholder   string
 	ParentOffset  uintptr
+	ValueField    *xunsafe.Field
 }
 
 //NewSelector create a selector

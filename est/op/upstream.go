@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-func Upstream(selector *Selector) func(state *est.State) unsafe.Pointer {
+func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.Pointer {
 	sel := selector.Parent
 	counter := -1
 	for sel != nil {
@@ -59,7 +59,11 @@ func Upstream(selector *Selector) func(state *est.State) unsafe.Pointer {
 
 		for i := 0; i < parentLen; i++ {
 			if parents[i].Func == nil {
-				ptr = parents[i].ValuePointer(ptr)
+				if (derefLast && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
+					ptr = parents[i].Pointer(ptr)
+				} else {
+					ptr = parents[i].ValuePointer(ptr)
+				}
 			} else {
 				ptr = callers[i](parents[i], parents[i].Args, state)
 			}
