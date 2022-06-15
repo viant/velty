@@ -83,10 +83,10 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 		}
 
 		if anInterface == nil {
-			anInterface = interface{}(nil)
+			values[i] = reflect.Zero(operands[i].Type)
+		} else {
+			values[i] = reflect.ValueOf(anInterface)
 		}
-
-		values[i] = reflect.ValueOf(anInterface)
 	}
 
 	result := f.caller.Call(values)
