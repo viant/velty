@@ -19,10 +19,6 @@ func (t *whitespaceOnly) Match(cursor *parsly.Cursor) (matched int) {
 	return matched
 }
 
-func NewWhitespaceOnly() *whitespaceOnly {
-	return &whitespaceOnly{}
-}
-
 type newLine struct {
 }
 

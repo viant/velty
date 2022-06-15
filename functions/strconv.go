@@ -28,6 +28,10 @@ func (s Strconv) ParseUint(val string) (uint64, error) {
 }
 
 func (s Strconv) AsFloat(value interface{}) (float64, error) {
+	if value == nil {
+		return 0, nil
+	}
+
 	switch actual := value.(type) {
 	case float64:
 		return actual, nil
