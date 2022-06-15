@@ -9,17 +9,22 @@ type argument struct {
 
 func (a *argument) Match(cursor *parsly.Cursor) (matched int) {
 	depth := 0
+	inQuote := false
 	for i := cursor.Pos; i < cursor.InputSize; i++ {
 		matched++
 		switch cursor.Input[i] {
 		case '(':
-			depth++
+			if !inQuote {
+				depth++
+			}
 		case ')':
-			if depth > 0 {
+			if depth > 0 && !inQuote {
 				depth--
 			}
+		case '"':
+			inQuote = !inQuote
 		case ',':
-			if depth == 0 {
+			if depth == 0 && !inQuote {
 				return matched
 			}
 		}

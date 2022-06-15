@@ -789,6 +789,29 @@ $lastColumnName`,
 			},
 			expect: "\n\n\n\n\nCol ",
 		},
+		{
+			description: `reverse strings`,
+			template: ` 
+		#foreach($column in $foo.columns)
+			#foreach($value in $column.values)
+					#if($errors.AssertString($value))
+						#set($reversed = $slices.ReverseStrings($strings.Split($value, ",")))
+						#foreach($value in $reversed)$value#end
+					#end
+			#end
+		#end
+	`,
+			definedVars: map[string]interface{}{
+				"foo": filter{
+					columns: []column{
+						{
+							values: []interface{}{"abc,def", "ghi,jkl"},
+						},
+					},
+				},
+			},
+			expect: " \n\t\t\n\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tdefabc\n\t\t\t\t\t\n\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tjklghi\n\t\t\t\t\t\n\t\t\t\n\t\t\n\t",
+		},
 	}
 
 	//for i, testCase := range testCases[len(testCases)-1:] {
@@ -962,4 +985,14 @@ func Test_ForEach_Issue(t *testing.T) {
 `
 	assert.EqualValues(t, expect, actual)
 
+}
+
+type filter struct {
+	columns []column
+}
+
+type column struct {
+	values  []interface{}
+	aBool   bool
+	aString string
 }
