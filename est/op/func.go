@@ -82,6 +82,10 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 			anInterface = asInterface(operands[i].Type, valuePtr)
 		}
 
+		if anInterface == nil {
+			anInterface = interface{}(nil)
+		}
+
 		values[i] = reflect.ValueOf(anInterface)
 	}
 
