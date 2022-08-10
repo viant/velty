@@ -5,6 +5,10 @@ import "fmt"
 type Errors struct {
 }
 
+func (e Errors) Raise(message string) (string, error) {
+	return "", fmt.Errorf(message)
+}
+
 func (e Errors) RegisterError(message string) (string, error) {
 	return "", fmt.Errorf(message)
 }

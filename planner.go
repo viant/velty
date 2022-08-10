@@ -224,7 +224,7 @@ func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, sele
 }
 
 func deref(rType reflect.Type) reflect.Type {
-	if rType.Kind() == reflect.Ptr {
+	if rType.Kind() == reflect.Ptr || rType.Kind() == reflect.Slice {
 		return deref(rType.Elem())
 	}
 	return rType
