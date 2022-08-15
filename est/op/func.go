@@ -177,7 +177,7 @@ func (f *Functions) reflectFunc(function interface{}, fType reflect.Type) (*Func
 		caller:     caller,
 		ResultType: outType,
 		isVariadic: caller.Type().IsVariadic(),
-		maxArgs:    caller.Type().NumIn(),
+		maxArgs:    caller.Type().NumIn() + 1, //reflect.Method.Call require to pass a receiver as first Arg.
 	}
 
 	aFunc.Function = aFunc.funcCall
@@ -653,7 +653,7 @@ func (f *Functions) undiscoverByReceiver(receiverType reflect.Type, function int
 	if !ok {
 		return nil, nil, false
 	}
-	
+
 	return handler, resultType, ok
 }
 
