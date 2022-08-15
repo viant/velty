@@ -639,7 +639,7 @@ func (f *Functions) undiscoverByReceiver(receiverType reflect.Type, function int
 		return nil, nil, false
 	}
 
-	found, ok := result[1].Interface().(bool)
+	found, ok := result[2].Interface().(bool)
 	if !found || !ok {
 		return nil, nil, false
 	}
