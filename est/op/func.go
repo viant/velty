@@ -10,12 +10,13 @@ import (
 )
 
 var (
-	boolType        = reflect.TypeOf(true)
-	stringType      = reflect.TypeOf("")
-	stringSliceType = reflect.TypeOf([]string{""})
-	intType         = reflect.TypeOf(0)
-	uint8Type       = reflect.TypeOf(uint8(0))
-	float64Type     = reflect.TypeOf(0.0)
+	boolType          = reflect.TypeOf(true)
+	stringType        = reflect.TypeOf("")
+	stringSliceType   = reflect.TypeOf([]string{""})
+	intType           = reflect.TypeOf(0)
+	uint8Type         = reflect.TypeOf(uint8(0))
+	float64Type       = reflect.TypeOf(0.0)
+	discoveryableType = reflect.TypeOf(discoveryableMock{})
 )
 
 type Funeexpression = func(operands []*Operand, state *est.State) (interface{}, error)
@@ -122,7 +123,7 @@ func NewFunctions() *Functions {
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	name = utils.UpperCaseFirstLetter(name)
 
-	if discoveredFn, rType, discovered := f.discover(function); discovered {
+	if discoveredFn, rType, discovered := f.discover(nil, function); discovered {
 		aFunc := &Func{
 			Function:   discoveredFn,
 			ResultType: rType,
@@ -222,7 +223,7 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 
 	methodSignature := method.Func.Interface()
 	aFunc := &Func{}
-	if funExpr, resultType, ok := f.discover(methodSignature); ok {
+	if funExpr, resultType, ok := f.discover(receiverType, methodSignature); ok {
 		aFunc.Function = funExpr
 		aFunc.ResultType = resultType
 	} else {
@@ -238,7 +239,7 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 	return aFunc, true
 }
 
-func (f *Functions) discover(function interface{}) (Funeexpression, reflect.Type, bool) {
+func (f *Functions) discover(receiverType reflect.Type, function interface{}) (Funeexpression, reflect.Type, bool) {
 	switch actual := function.(type) {
 	case func(s, substr string) bool:
 		return func(operands []*Operand, state *est.State) (interface{}, error) {
@@ -620,7 +621,40 @@ func (f *Functions) discover(function interface{}) (Funeexpression, reflect.Type
 		}, stringType, true
 	}
 
-	return nil, nil, false
+	return f.undiscoverByReceiver(receiverType, function)
+}
+
+func (f *Functions) undiscoverByReceiver(receiverType reflect.Type, function interface{}) (Funeexpression, reflect.Type, bool) {
+	if receiverType == nil {
+		return nil, nil, false
+	}
+
+	discoveryMethod, ok := receiverType.MethodByName("Discover")
+	if !ok {
+		return nil, nil, false
+	}
+
+	result := discoveryMethod.Func.Call([]reflect.Value{reflect.New(receiverType).Elem(), reflect.ValueOf(function)})
+	if len(result) != 3 {
+		return nil, nil, false
+	}
+
+	found, ok := result[1].Interface().(bool)
+	if !found || !ok {
+		return nil, nil, false
+	}
+
+	handler, ok := result[0].Interface().(Funeexpression)
+	if !ok {
+		return nil, nil, false
+	}
+
+	resultType, ok := result[1].Interface().(reflect.Type)
+	if !ok {
+		return nil, nil, false
+	}
+	
+	return handler, resultType, ok
 }
 
 func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) error {

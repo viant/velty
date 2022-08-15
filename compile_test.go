@@ -5,8 +5,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/functions"
 	"strings"
 	"testing"
+	"time"
 )
 
 type bar struct {
@@ -22,6 +24,11 @@ func (b *bar) Concat(values ...string) string {
 }
 
 func TestPlanner_Compile(t *testing.T) {
+	functions.Now = func() time.Time {
+		parse, _ := time.Parse("2006-01-02 15:04:05.000000000 -0700 MST", "2014-11-12 11:45:26.000000000 +0000 UTC")
+		return parse
+	}
+
 	type Boo struct {
 		UUID  string
 		Price float64
@@ -811,6 +818,11 @@ $lastColumnName`,
 				},
 			},
 			expect: " \n\t\t\n\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tdefabc\n\t\t\t\t\t\n\t\t\t\n\t\t\t\t\t\n\t\t\t\t\t\t\n\t\t\t\t\t\tjklghi\n\t\t\t\t\t\n\t\t\t\n\t\t\n\t",
+		},
+		{
+			description: `time now`,
+			template:    `$time.Now()`,
+			expect:      `2014-11-12 11:45:26 +0000 UTC`,
 		},
 	}
 

@@ -380,10 +380,11 @@ func (p *Planner) registerConst(i *[]int) {
 func (p *Planner) init(options []Option) {
 	p.apply(options)
 
-	_ = p.DefineVariable("strings", functions.Strings{})
-	_ = p.DefineVariable("math", functions.Math{})
-	_ = p.DefineVariable("strconv", functions.Strconv{})
-	_ = p.DefineVariable("slices", functions.Slices{})
-	_ = p.DefineVariable("types", functions.Types{})
-	_ = p.DefineVariable("errors", functions.Errors{})
+	_ = p.DefineVariable(functions.StringsFunc, functions.Strings{})
+	_ = p.DefineVariable(functions.MathFunc, functions.Math{})
+	_ = p.DefineVariable(functions.StrconvFunc, functions.Strconv{})
+	_ = p.DefineVariable(functions.SlicesFunc, functions.Slices{})
+	_ = p.DefineVariable(functions.TypesFunc, functions.Types{})
+	_ = p.DefineVariable(functions.ErrorsFunc, functions.Errors{})
+	_ = p.DefineVariable(functions.TimeFunc, functions.Time{})
 }
