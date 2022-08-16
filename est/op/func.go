@@ -10,13 +10,12 @@ import (
 )
 
 var (
-	boolType          = reflect.TypeOf(true)
-	stringType        = reflect.TypeOf("")
-	stringSliceType   = reflect.TypeOf([]string{""})
-	intType           = reflect.TypeOf(0)
-	uint8Type         = reflect.TypeOf(uint8(0))
-	float64Type       = reflect.TypeOf(0.0)
-	discoveryableType = reflect.TypeOf(discoveryableMock{})
+	boolType        = reflect.TypeOf(true)
+	stringType      = reflect.TypeOf("")
+	stringSliceType = reflect.TypeOf([]string{""})
+	intType         = reflect.TypeOf(0)
+	uint8Type       = reflect.TypeOf(uint8(0))
+	float64Type     = reflect.TypeOf(0.0)
 )
 
 type Funeexpression = func(operands []*Operand, state *est.State) (interface{}, error)
@@ -621,40 +620,7 @@ func (f *Functions) discover(receiverType reflect.Type, function interface{}) (F
 		}, stringType, true
 	}
 
-	return f.undiscoverByReceiver(receiverType, function)
-}
-
-func (f *Functions) undiscoverByReceiver(receiverType reflect.Type, function interface{}) (Funeexpression, reflect.Type, bool) {
-	if receiverType == nil {
-		return nil, nil, false
-	}
-
-	discoveryMethod, ok := receiverType.MethodByName("Discover")
-	if !ok {
-		return nil, nil, false
-	}
-
-	result := discoveryMethod.Func.Call([]reflect.Value{reflect.New(receiverType).Elem(), reflect.ValueOf(function)})
-	if len(result) != 3 {
-		return nil, nil, false
-	}
-
-	found, ok := result[2].Interface().(bool)
-	if !found || !ok {
-		return nil, nil, false
-	}
-
-	handler, ok := result[0].Interface().(Funeexpression)
-	if !ok {
-		return nil, nil, false
-	}
-
-	resultType, ok := result[1].Interface().(reflect.Type)
-	if !ok {
-		return nil, nil, false
-	}
-
-	return handler, resultType, ok
+	return nil, nil, false
 }
 
 func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) error {
