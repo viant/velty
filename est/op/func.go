@@ -63,23 +63,19 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 
 func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
 	values := make([]reflect.Value, len(operands))
-	var argSelector *Selector
 
 	for i := 0; i < len(values); i++ {
 		valuePtr := operands[i].Exec(state)
-		if i < f.maxArgs {
-			argSelector = operands[i].Sel
-		}
 
 		if i >= f.maxArgs && !f.isVariadic {
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
 		var anInterface interface{}
-		if argSelector != nil && argSelector.ValueField != nil {
-			anInterface = argSelector.ValueField.Interface(valuePtr)
+		if operands[i].XType.Kind() != reflect.Interface {
+			anInterface = operands[i].XType.Interface(valuePtr)
 		} else {
-			anInterface = asInterface(operands[i].Type, valuePtr)
+			anInterface = xunsafe.AsInterface(valuePtr)
 		}
 
 		if anInterface == nil {

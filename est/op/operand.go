@@ -2,6 +2,7 @@ package op
 
 import (
 	"github.com/viant/velty/est"
+	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
 )
@@ -11,6 +12,7 @@ type Operand struct {
 	Sel        *Selector
 	Comp       est.Compute
 	Type       reflect.Type
+	XType      *xunsafe.Type
 }
 
 func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
@@ -35,4 +37,13 @@ func (o *Operand) Exec(state *est.State) unsafe.Pointer {
 
 func (o *Operand) IsIndirect() bool {
 	return o.Sel == nil || o.Sel.Indirect
+}
+
+func (o *Operand) SetType(rType reflect.Type) {
+	o.Type = rType
+	if rType != nil {
+		o.XType = xunsafe.NewType(rType)
+	} else {
+		o.XType = nil
+	}
 }

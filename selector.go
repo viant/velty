@@ -5,8 +5,6 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/est/stmt"
-	"github.com/viant/xunsafe"
-	"reflect"
 )
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
@@ -22,10 +20,8 @@ func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
 		expression.Selector = op.NewSelector(id, selector.ID, nil, nil)
 		expression.Selector.Placeholder = selector.FullName
 	}
+
 	expression.Type = expression.Selector.Type
-	if expression.Type != nil {
-		expression.ValueField = xunsafe.NewField(reflect.StructField{Name: "TEMP", Offset: 0, Type: expression.Type})
-	}
 	return expression, nil
 }
 

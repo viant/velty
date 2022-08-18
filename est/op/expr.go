@@ -18,17 +18,17 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 
 	if e.LiteralPtr != nil {
 		operand.LiteralPtr = e.LiteralPtr
-		operand.Type = e.Type
+		operand.SetType(e.Type)
 		return operand, nil
 	}
 
 	if e.Selector != nil {
 		operand.Sel = e.Selector
-		operand.Type = e.Selector.Type
+		operand.SetType(e.Selector.Type)
 	}
 
 	if e.Selector != nil && e.Selector.Func != nil {
-		operand.Type = e.Func.ResultType
+		operand.SetType(e.Func.ResultType)
 		operand.Comp = e.funcCall()
 		return operand, nil
 	}
@@ -42,7 +42,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 
 	}
 
-	operand.Type = e.Type
+	operand.SetType(e.Type)
 	compute, err := e.New(control)
 	if err != nil {
 		return nil, err

@@ -41,10 +41,12 @@ func (p *Planner) computeAssignment(actual *stmt2.Statement) (est.New, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	y, err := p.compileExpr(actual.Y)
 	if err != nil {
 		return nil, err
 	}
+
 	if err = p.adjustSelector(x, y.Type); err != nil {
 		return nil, err
 	}

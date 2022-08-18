@@ -18,7 +18,6 @@ type Selector struct {
 	Args          []*Operand
 	Placeholder   string
 	ParentOffset  uintptr
-	ValueField    *xunsafe.Field
 }
 
 //NewSelector create a selector
@@ -40,6 +39,7 @@ func newXField(name string, sType reflect.Type) *xunsafe.Field {
 	} else {
 		xField = &xunsafe.Field{Name: name, Type: sType}
 	}
+
 	return xField
 }
 

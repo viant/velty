@@ -100,14 +100,12 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 
 	newField := xunsafe.NewField(field)
 	newField.Offset += anonymousOffset
-	valueField := xunsafe.NewField(reflect.StructField{Name: "TEMP", Offset: 0, Type: field.Type})
 	var err error
 	for _, name := range fieldNames {
 		fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 		if err = p.selectors.Append(fieldSelector); err != nil {
 			return fmt.Errorf("%w, prefix is required, if parent field is an Anonymous, and any other parent field has the same name", err)
 		}
-		fieldSelector.ValueField = valueField
 	}
 
 	return nil
@@ -237,7 +235,6 @@ func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
-		sel.ValueField = xunsafe.NewField(reflect.StructField{Name: "TEMP", Offset: 0, Type: t})
 	}
 	return sel
 }
