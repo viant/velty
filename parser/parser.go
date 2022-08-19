@@ -42,7 +42,7 @@ outer:
 		lastPosition := cursor.Pos - 1
 		switch cursor.Input[cursor.Pos-1] {
 		case '$':
-			statement, err := matchSelector(cursor)
+			statement, err := MatchSelector(cursor)
 			if err != nil {
 				rawValue := cursor.Input[lastPosition:cursor.Pos]
 				if errr := builder.PushStatement(appendToken, stmt.NewAppend(string(rawValue))); errr != nil {

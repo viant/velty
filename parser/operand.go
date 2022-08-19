@@ -45,7 +45,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		expression = aexpr.StringLiteral(value[1 : len(value)-1])
 
 	case selectorStartToken:
-		expression, err = matchSelector(cursor)
+		expression, err = MatchSelector(cursor)
 		if err != nil {
 			return nil, nil, err
 		}

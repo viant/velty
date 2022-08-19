@@ -25,7 +25,7 @@ func matchRangeable(cursor *parsly.Cursor) (ast.Expression, error) {
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
 	case selectorStartToken:
-		return matchSelector(cursor)
+		return MatchSelector(cursor)
 	case squareBracketsToken:
 		text := matched.Text(cursor)
 		rangeCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
@@ -57,7 +57,7 @@ func matchRange(cursor *parsly.Cursor) (ast.Expression, error) {
 	}, nil
 }
 
-func matchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
+func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 	selectorStart := cursor.Pos
 	matched := cursor.MatchOne(Negation) // Java velocity supports `$!`. If String is null, then it will be replaced with Empty String. In Go - we don't need that
 	matched = cursor.MatchOne(SelectorBlock)
@@ -65,7 +65,7 @@ func matchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 	if matched.Code == selectorBlockToken {
 		ID := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)
-		result, err := matchSelector(selectorCursor)
+		result, err := MatchSelector(selectorCursor)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 	matched := cursor.MatchAny(candidates...)
 	switch matched.Code {
 	case dotToken:
-		return matchSelector(cursor)
+		return MatchSelector(cursor)
 	case parenthesesToken:
 		id := matched.Text(cursor)
 		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
