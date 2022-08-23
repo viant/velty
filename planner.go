@@ -278,9 +278,9 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 
 func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
-	aFunc, ok := p.Functions.Method(prev.Type, field.ID)
-	if !ok {
-		return nil, fmt.Errorf("not found function: %v", field.ID)
+	aFunc, err := p.Functions.Method(prev.Type, field.ID)
+	if err != nil {
+		return nil, fmt.Errorf("not found function %v, due to: %w", field.ID, err)
 	}
 
 	name := "_T" + strconv.Itoa(*p.transients)

@@ -23,6 +23,13 @@ func (t Time) Discover(aFunc interface{}) (func(operands []*op.Operand, state *e
 
 			return aTime, nil
 		}, timeType, true
+
+	case func() time.Time:
+		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+			aTime := actual()
+
+			return aTime, nil
+		}, timeType, true
 	}
 
 	return nil, nil, false

@@ -44,6 +44,7 @@ type (
 
 		maxArgs    int
 		isVariadic bool
+		Name       string
 	}
 )
 
@@ -62,7 +63,22 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 }
 
 func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
+	if len(operands) == 0 {
+		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
+	}
+
+	receiverIface := f.asInterface(operands[0], operands[0].Exec(state))
+	receiverValue := reflect.ValueOf(receiverIface)
+	if actual, ok := receiverIface.(Discoveryable); ok {
+		method := receiverValue.MethodByName(f.Name)
+		handler, _, ok := actual.Discover(method.Interface())
+		if ok {
+			return handler(operands, state)
+		}
+	}
+
 	values := make([]reflect.Value, len(operands))
+	values[0] = receiverValue
 
 	for i := 0; i < len(values); i++ {
 		valuePtr := operands[i].Exec(state)
@@ -71,12 +87,7 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
-		var anInterface interface{}
-		if operands[i].XType.Kind() != reflect.Interface {
-			anInterface = operands[i].XType.Interface(valuePtr)
-		} else {
-			anInterface = xunsafe.AsInterface(valuePtr)
-		}
+		anInterface := f.asInterface(operands[i], valuePtr)
 
 		if anInterface == nil {
 			values[i] = reflect.Zero(operands[i].Type)
@@ -107,6 +118,17 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 	}
 }
 
+func (f *Func) asInterface(operand *Operand, valuePtr unsafe.Pointer) interface{} {
+	var anInterface interface{}
+	if operand.XType.Kind() != reflect.Interface {
+		anInterface = operand.XType.Interface(valuePtr)
+	} else {
+		anInterface = xunsafe.AsInterface(valuePtr)
+	}
+
+	return anInterface
+}
+
 func NewFunctions() *Functions {
 	return &Functions{
 		index:     map[string]int{},
@@ -120,6 +142,7 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 
 	if discoveredFn, rType, discovered := f.discover(nil, function); discovered {
 		aFunc := &Func{
+			Name:       name,
 			Function:   discoveredFn,
 			ResultType: rType,
 		}
@@ -139,7 +162,7 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 		return fmt.Errorf("expected func, got %v", function)
 	}
 
-	aFunc, err := f.reflectFunc(function, fType)
+	aFunc, err := f.reflectFunc(name, function, fType)
 	if err != nil {
 		return err
 	}
@@ -150,7 +173,7 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	return nil
 }
 
-func (f *Functions) reflectFunc(function interface{}, fType reflect.Type) (*Func, error) {
+func (f *Functions) reflectFunc(name string, function interface{}, fType reflect.Type) (*Func, error) {
 	caller := reflect.ValueOf(function)
 
 	var outType reflect.Type
@@ -169,6 +192,7 @@ func (f *Functions) reflectFunc(function interface{}, fType reflect.Type) (*Func
 	}
 
 	aFunc := &Func{
+		Name:       name,
 		caller:     caller,
 		ResultType: outType,
 		isVariadic: caller.Type().IsVariadic(),
@@ -190,7 +214,7 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 	return nil
 }
 
-func (f *Functions) Method(rType reflect.Type, id string) (*Func, bool) {
+func (f *Functions) Method(rType reflect.Type, id string) (*Func, error) {
 	id = utils.UpperCaseFirstLetter(id)
 	if method, ok := rType.MethodByName(id); ok {
 		return f.asFunc(rType, id, method)
@@ -199,21 +223,21 @@ func (f *Functions) Method(rType reflect.Type, id string) (*Func, bool) {
 	return f.funcByName(id)
 }
 
-func (f *Functions) funcByName(id string) (*Func, bool) {
+func (f *Functions) funcByName(id string) (*Func, error) {
 	index, ok := f.index[id]
 	if !ok {
-		return nil, false
+		return nil, fmt.Errorf("not found function %v", id)
 	}
 
-	return f.funcs[index], true
+	return f.funcs[index], nil
 }
 
-func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.Method) (*Func, bool) {
+func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.Method) (*Func, error) {
 	f.ensureReceiver(receiverType)
 	receiver, _ := f.receivers[asMapKey(receiverType)]
 	index, ok := receiver.index[id]
 	if ok {
-		return receiver.funcs[index], true
+		return receiver.funcs[index], nil
 	}
 
 	methodSignature := method.Func.Interface()
@@ -223,15 +247,15 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 		aFunc.ResultType = resultType
 	} else {
 		var err error
-		aFunc, err = f.reflectFunc(methodSignature, method.Type)
+		aFunc, err = f.reflectFunc(id, methodSignature, method.Type)
 		if err != nil {
-			return nil, false
+			return nil, err
 		}
 	}
 
 	receiver.index[id] = len(receiver.funcs)
 	receiver.funcs = append(receiver.funcs, aFunc)
-	return aFunc, true
+	return aFunc, nil
 }
 
 func (f *Functions) discover(receiverType reflect.Type, function interface{}) (Funeexpression, reflect.Type, bool) {
@@ -650,22 +674,6 @@ func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
 
 func asMapKey(receiverType reflect.Type) string {
 	return receiverType.String()
-}
-
-//TODO: Move to the selector
-func asInterface(t reflect.Type, pointer unsafe.Pointer) interface{} {
-	switch t.Kind() {
-	case reflect.Int:
-		return *(*int)(pointer)
-	case reflect.Float64:
-		return *(*float64)(pointer)
-	case reflect.Bool:
-		return *(*bool)(pointer)
-	case reflect.String:
-		return *(*string)(pointer)
-	}
-
-	return xunsafe.AsInterface(pointer)
 }
 
 func incorrectArgumentsError(wanted string, got []*Operand) error {
