@@ -2,11 +2,11 @@ package velty
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/functions"
-	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strconv"
@@ -133,8 +133,6 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 		return nil
 	}
 
-	name = utils.UpperCaseFirstLetter(name)
-
 	var sType reflect.Type
 	switch t := v.(type) {
 	case reflect.Type:
@@ -161,45 +159,52 @@ func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 
 	parentType := resultSelector.Type
 	selectorId := selector.ID
-
+	var err error
 	for call != nil {
 		parentType = deref(parentType)
-		switch actual := call.(type) {
-		case *expr.Select:
-			selectorId = selectorId + fieldSeparator + actual.ID
-
-			if actual.X != nil {
-				switch next := actual.X.(type) {
-				case *expr.Call:
-					var err error
-					resultSelector, err = p.newFuncSelector(selectorId, actual, next, resultSelector)
-					if err != nil {
-						return nil, err
-					}
-
-					parentType = resultSelector.Func.ResultType
-					call = next.X
-					continue
-				}
-			}
-
-			field, err := p.fieldByName(parentType, actual, selectorId)
-			if err != nil {
-				return nil, err
-			}
-
-			var found bool
-			resultSelector, found = p.selectors.ById(selectorId)
-			if !found {
-				return nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
-			}
-
-			parentType = field.Type
-			call = actual.X
+		resultSelector, call, err = p.matchSelector(call, resultSelector, selectorId, parentType)
+		if err != nil {
+			return nil, err
 		}
+		parentType = resultSelector.Type
+		selectorId = resultSelector.ID
 	}
 
 	return resultSelector, nil
+}
+
+func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector, selectorId string, parentType reflect.Type) (*op.Selector, ast.Expression, error) {
+	selector, next, err := p.tryMatchCall(call, resultSelector, selectorId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if selector != nil {
+		return selector, next, err
+	}
+
+	switch actual := call.(type) {
+	case *expr.Select:
+		if callSelector, callNext, callErr := p.tryMatchCall(actual.X, resultSelector, actual.ID); callSelector != nil || callErr != nil {
+			return callSelector, callNext, callErr
+		}
+
+		_, err = p.fieldByName(parentType, actual, actual.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		selectorId = selectorId + fieldSeparator + actual.ID
+		var found bool
+		resultSelector, found = p.selectors.ById(selectorId)
+		if !found {
+			return nil, nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
+		}
+
+		return resultSelector, actual.X, nil
+	}
+
+	return resultSelector, nil, nil
 }
 
 func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
@@ -222,10 +227,14 @@ func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, sele
 }
 
 func deref(rType reflect.Type) reflect.Type {
-	if rType.Kind() == reflect.Ptr || rType.Kind() == reflect.Slice {
-		return deref(rType.Elem())
+	for {
+		switch rType.Kind() {
+		case reflect.Ptr, reflect.Slice:
+			rType = rType.Elem()
+		default:
+			return rType
+		}
 	}
-	return rType
 }
 
 func (p *Planner) accumulator(t reflect.Type) *op.Selector {
@@ -276,23 +285,20 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 	return nil
 }
 
-func (p *Planner) newFuncSelector(selectorId string, field *expr.Select, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
+func (p *Planner) newFuncSelector(selectorId string, methodName string, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
-	aFunc, err := p.Functions.Method(prev.Type, field.ID)
+	aFunc, err := p.Functions.Method(prev.Type, methodName)
 	if err != nil {
-		return nil, fmt.Errorf("not found function %v, due to: %w", field.ID, err)
+		return nil, fmt.Errorf("not found function %v, due to: %w", methodName, err)
 	}
-
-	name := "_T" + strconv.Itoa(*p.transients)
-	*p.transients++
-	strField := p.Type.AddField(name, name, aFunc.ResultType)
 
 	operands, err := p.selectorOperands(call, prev)
 	if err != nil {
 		return nil, err
 	}
 
-	newSelector := op.FunctionSelector(selectorId, strField, aFunc, call.Args, prev)
+	accumulator := p.accumulator(aFunc.ResultType)
+	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
 	newSelector.Args = operands
 	newSelector.Type = aFunc.ResultType
 
@@ -384,4 +390,54 @@ func (p *Planner) init(options []Option) {
 	_ = p.DefineVariable(functions.TypesFunc, functions.Types{})
 	_ = p.DefineVariable(functions.ErrorsFunc, functions.Errors{})
 	_ = p.DefineVariable(functions.TimeFunc, functions.Time{})
+	_ = p.DefineVariable(functions.MapsFunc, functions.Maps{})
+}
+
+func (p *Planner) isMethod(parentType reflect.Type, id string) bool {
+	_, err := p.Method(parentType, id)
+	return err == nil
+}
+
+func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID string) (*op.Selector, ast.Expression, error) {
+	if call == nil {
+		return nil, nil, nil
+	}
+
+	switch actual := call.(type) {
+	case *expr.Call:
+		callSelector, err := p.newFuncSelector(ID, ID, actual, selector)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return callSelector, actual.X, nil
+	case *expr.SliceIndex:
+		sliceSelector, err := p.newSliceSelector(ID, actual, selector)
+		if err != nil {
+			return nil, nil, nil
+		}
+
+		return sliceSelector, actual.Y, nil
+	}
+
+	return nil, nil, nil
+}
+
+func (p *Planner) newSliceSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
+	indexEpression, err := p.compileExpr(actual.X)
+	if err != nil {
+		return nil, err
+	}
+
+	operandExpression, err := indexEpression.Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+
+	sliceOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+
+	return op.SliceSelector(id, "", sliceOperand, operandExpression, selector)
 }

@@ -1,5 +1,13 @@
 package functions
 
+import "reflect"
+
+var (
+	stringType = reflect.TypeOf("")
+	boolType   = reflect.TypeOf(false)
+	floatType  = reflect.TypeOf(0.0)
+)
+
 type Types struct{}
 
 func (t Types) IsInt(value interface{}) bool {

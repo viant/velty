@@ -2,7 +2,6 @@ package op
 
 import (
 	"fmt"
-	"github.com/viant/velty/utils"
 )
 
 type Selectors struct {
@@ -36,8 +35,6 @@ func (s *Selectors) Selectors() []*Selector {
 }
 
 func (s *Selectors) ById(selectorId string) (*Selector, bool) {
-	selectorId = utils.UpperCaseFirstLetter(selectorId)
-
 	index, found := s.Index[selectorId]
 	if !found {
 		return nil, found

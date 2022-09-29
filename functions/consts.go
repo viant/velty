@@ -8,4 +8,5 @@ const (
 	StrconvFunc = "strconv"
 	MathFunc    = "math"
 	StringsFunc = "strings"
+	MapsFunc    = "maps"
 )

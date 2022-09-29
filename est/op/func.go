@@ -3,7 +3,6 @@ package op
 import (
 	"fmt"
 	"github.com/viant/velty/est"
-	"github.com/viant/velty/utils"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
@@ -51,7 +50,7 @@ type (
 func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
 	anIface, err := f.Function(operands, state)
 	if err != nil {
-		state.Errors = append(state.Errors, err)
+		state.AddError(err)
 	}
 
 	if anIface != nil {
@@ -67,14 +66,10 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
 	}
 
-	receiverIface := f.asInterface(operands[0], operands[0].Exec(state))
+	receiverIface := AsInterface(operands[0], operands[0].Exec(state))
 	receiverValue := reflect.ValueOf(receiverIface)
-	if actual, ok := receiverIface.(Discoveryable); ok {
-		method := receiverValue.MethodByName(f.Name)
-		handler, _, ok := actual.Discover(method.Interface())
-		if ok {
-			return handler(operands, state)
-		}
+	if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
+		return handler()
 	}
 
 	values := make([]reflect.Value, len(operands))
@@ -87,7 +82,7 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
-		anInterface := f.asInterface(operands[i], valuePtr)
+		anInterface := AsInterface(operands[i], valuePtr)
 
 		if anInterface == nil {
 			values[i] = reflect.Zero(operands[i].Type)
@@ -118,7 +113,37 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 	}
 }
 
-func (f *Func) asInterface(operand *Operand, valuePtr unsafe.Pointer) interface{} {
+func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, state *est.State, receiverValue reflect.Value) (func() (interface{}, error), bool) {
+	if actual, ok := receiver.(Discoveryable); ok {
+		method := receiverValue.MethodByName(f.Name)
+		handler, _, ok := actual.Discover(method.Interface())
+		if ok {
+			return func() (interface{}, error) {
+				return handler(operands, state)
+			}, true
+		}
+	}
+
+	if actual, ok := receiver.(DiscoveryableIface); ok {
+		method := receiverValue.MethodByName(f.Name)
+		handler, _, ok := actual.DiscoverInterfaces(method.Interface())
+		if ok {
+			return func() (interface{}, error) {
+				ifaces := make([]interface{}, len(operands))
+				ifaces[0] = receiver
+				for i := 1; i < len(operands); i++ {
+					ifaces[i] = AsInterface(operands[i], operands[i].Exec(state))
+				}
+
+				return handler(ifaces...)
+			}, true
+		}
+	}
+
+	return nil, false
+}
+
+func AsInterface(operand *Operand, valuePtr unsafe.Pointer) interface{} {
 	var anInterface interface{}
 	if operand.XType.Kind() != reflect.Interface {
 		anInterface = operand.XType.Interface(valuePtr)
@@ -138,8 +163,6 @@ func NewFunctions() *Functions {
 }
 
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
-	name = utils.UpperCaseFirstLetter(name)
-
 	if discoveredFn, rType, discovered := f.discover(nil, function); discovered {
 		aFunc := &Func{
 			Name:       name,
@@ -215,7 +238,6 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 }
 
 func (f *Functions) Method(rType reflect.Type, id string) (*Func, error) {
-	id = utils.UpperCaseFirstLetter(id)
 	if method, ok := rType.MethodByName(id); ok {
 		return f.asFunc(rType, id, method)
 	}
@@ -645,7 +667,6 @@ func (f *Functions) discover(receiverType reflect.Type, function interface{}) (F
 
 func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) error {
 	receiver := f.ensureReceiver(t)
-	id = utils.UpperCaseFirstLetter(id)
 	_, ok := receiver.index[id]
 	if ok {
 		return fmt.Errorf("function %v and receiver %v is already defined", id, t.String())

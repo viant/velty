@@ -9,7 +9,7 @@ type Execution struct {
 func (e *Execution) Exec(stat *State) error {
 	e.compute(stat)
 	if len(stat.Errors) > 0 {
-		return fmt.Errorf("invalid template due to: %w", stat.Errors[0])
+		return fmt.Errorf("error occured while processing template: %w", stat.Errors[0])
 	}
 
 	return nil

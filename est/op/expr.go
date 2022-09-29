@@ -11,10 +11,13 @@ type Expression struct {
 	Type       reflect.Type
 	*Selector
 	est.New
+	Unify func(pointer unsafe.Pointer) unsafe.Pointer
 }
 
 func (e *Expression) Operand(control est.Control) (*Operand, error) {
-	operand := &Operand{}
+	operand := &Operand{
+		unify: e.Unify,
+	}
 
 	if e.LiteralPtr != nil {
 		operand.LiteralPtr = e.LiteralPtr
@@ -32,6 +35,10 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 		operand.Comp = e.funcCall()
 		return operand, nil
 	}
+
+	//if e.Selector != nil && e.Selector.Slice != nil {
+	//	operand.SetType(e.Type)
+	//}
 
 	if e.Selector != nil {
 		if e.Selector != nil && e.Selector.Indirect {

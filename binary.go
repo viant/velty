@@ -4,6 +4,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 	eexpr "github.com/viant/velty/est/expr"
 	"github.com/viant/velty/est/op"
+	"github.com/viant/velty/types"
 	"reflect"
 )
 
@@ -12,12 +13,20 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	y, err := p.compileExpr(actual.Y)
 	if err != nil {
 		return nil, err
 	}
 
-	resultType := nonEmptyType(actual.Type(), x.Type, y.Type)
+	unify, err := types.Unify(x.Type, y.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	x.Unify = unify.X
+	y.Unify = unify.Y
+	resultType := notNilType(types.NormalizeType(actual.Type()), unify.RType)
 	acc := p.accumulator(resultType)
 	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
 
@@ -32,10 +41,10 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 	}, nil
 }
 
-func nonEmptyType(types ...reflect.Type) reflect.Type {
-	for _, r := range types {
-		if r != nil {
-			return r
+func notNilType(types ...reflect.Type) reflect.Type {
+	for _, rType := range types {
+		if rType != nil {
+			return rType
 		}
 	}
 

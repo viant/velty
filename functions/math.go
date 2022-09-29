@@ -1,8 +1,28 @@
 package functions
 
-import "math"
+import (
+	"fmt"
+	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/op"
+	"math"
+	"reflect"
+)
 
-type Math struct {
+type Math struct{}
+
+func (m Math) Discover(aFunc interface{}) (func(operands []*op.Operand, state *est.State) (interface{}, error), reflect.Type, bool) {
+	switch actual := aFunc.(type) {
+	case func(_ Math, arg float64) float64:
+		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+			if len(operands) != 1 {
+				return nil, fmt.Errorf("unexpected number of operands, expected 1, got %v", len(operands))
+			}
+
+			return actual(m, *(*float64)(operands[0].Exec(state))), nil
+		}, floatType, true
+	}
+
+	return nil, nil, false
 }
 
 func (m Math) Round(f float64) float64 {

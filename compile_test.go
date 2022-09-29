@@ -228,7 +228,7 @@ func TestPlanner_Compile(t *testing.T) {
 		{
 			description: "if statement #5",
 			template: `
-#if($var1 =!= $var2)
+#if($var1 != $var2)
 	variables are not equal
 	#if($var1 > $var2)
 		var1 is bigger than var2
@@ -248,7 +248,7 @@ func TestPlanner_Compile(t *testing.T) {
 		{
 			description: "if statement #6",
 			template: `
-#if($var1 =! $var2)
+#if($var1 != $var2)
 	variables are not equal
 	#if($var1 > $var2)
 		var1 is bigger than var2
@@ -449,7 +449,7 @@ $abc
 			},
 		},
 		{
-			description: "tags #1",
+			description: "tags #2",
 			template:    `$Tagged.ID`,
 			expectError: true,
 			definedVars: map[string]interface{}{
@@ -824,8 +824,30 @@ $lastColumnName`,
 			template:    `$time.Now()`,
 			expect:      `2014-11-12 11:45:26 +0000 UTC`,
 		},
+		{
+			description: `slices`,
+			template:    `$values[2]`,
+			expect:      `second value`,
+			definedVars: map[string]interface{}{
+				"values": []string{"zero value", "first value", "second value", "third value"},
+			},
+		},
+		{
+			description: `types difference`,
+			template:    `#set($value = 2.5 + $anInt)$value`,
+			expect:      `3.5`,
+			definedVars: map[string]interface{}{
+				"anInt": 1,
+			},
+		},
+		{
+			description: `types difference #2`,
+			template:    `#set($value = ("Values: " + 1) + (" another one: " + 5.21))$value`,
+			expect:      `Values: 1 another one: 5.21`,
+		},
 	}
 
+	//for i, testCase := range testCases[:len(testCases)-1] {
 	//for i, testCase := range testCases[len(testCases)-1:] {
 	for i, testCase := range testCases {
 		fmt.Printf("Running testcase: %v\n", i)

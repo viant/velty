@@ -260,7 +260,7 @@ func TestService_Parse(t *testing.T) {
 		{
 			description: "!$",
 			input:       `#if(${abc} && !("$!{def}"=="")) abc #end`,
-			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "abc" }, "Token": "&&", "Y": { "Token": "!", "X": { "X": { "ID": "def" }, "Token": "==", "Y": { "Value": "" } } } }, "Body": { "Stmt": [ { "Append": " abc "} ] } } ] }`,
+			output:      `{ "Stmt": [ { "Body": { "Stmt": [ { "Append": " abc " } ] }, "Condition": { "Token": "&&", "X": { "FullName": "${abc}", "ID": "abc" }, "Y": { "Token": "!", "X": { "P": { "Token": "==", "X": { "FullName": "${def}", "ID": "def" }, "Y": { "Value": "" } } } } } } ] }`,
 		},
 		{
 			description: "$ before selector",
@@ -291,6 +291,16 @@ func TestService_Parse(t *testing.T) {
 			input:       `$Columns[$i].Values[$j].Value`,
 			output:      ` { "Stmt": [ { "ID": "Columns", "X": { "X": { "ID": "i", "FullName": "$i" }, "Y": { "ID": "Values", "X": { "X": { "ID": "j", "FullName": "$j" }, "Y": { "ID": "Value", "FullName": "$Value" } }, "FullName": "$Values[$j].Value" } }, "FullName": "$Columns[$i].Values[$j].Value" } ] }`,
 		},
+		{
+			description: `assign in If`,
+			input:       `#set($aValue = 1 ) #if($aValue = 1) abc #end def`,
+			expectError: true,
+		},
+		{
+			description: `multiple parentheses`,
+			input:       `#set($value = ("Values: " + 1) + (" another one: " + 5.21))$value`,
+			output:      `{ "Stmt": [ { "X": { "ID": "value", "FullName": "" }, "Op": "=", "Y": { "X": { "P": { "X": { "Value": "Values: " }, "Token": "+", "Y": { "Value": "1" } } }, "Token": "+", "Y": { "P": { "X": { "Value": " another one: " }, "Token": "+", "Y": { "Value": "5.21" } } } } }, { "ID": "value", "FullName": "$value" } ] }`,
+		},
 	}
 
 	//for i, useCase := range useCases[len(useCases)-1:] {
@@ -302,6 +312,7 @@ func TestService_Parse(t *testing.T) {
 			assert.NotNil(t, err, useCase.description)
 			continue
 		}
+
 		assert.Nil(t, err, useCase.description)
 		if !assertly.AssertValues(t, useCase.output, node, useCase.description) {
 			toolbox.DumpIndent(node, true)

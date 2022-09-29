@@ -2,13 +2,11 @@ package est
 
 import (
 	"fmt"
-	"github.com/viant/velty/utils"
 	"reflect"
 	"strings"
 	"unsafe"
 )
 
-//TODO all privte p;easr
 type State struct {
 	Mem       interface{}
 	MemPtr    unsafe.Pointer
@@ -17,13 +15,7 @@ type State struct {
 	Errors    []error
 }
 
-//func (s *State) Pointer(offset uintptr) unsafe.Pointer {
-//	return unsafe.Pointer(uintptr(s.MemPtr) + offset)
-//}
-
 func (s *State) SetValue(k string, v interface{}) error {
-	k = utils.UpperCaseFirstLetter(k)
-
 	xField, ok := s.StateType.ValueAccessor(k)
 	if !ok {
 		return fmt.Errorf("undefined: %v", k)
@@ -41,7 +33,6 @@ func (s *State) SetValue(k string, v interface{}) error {
 
 func (s *State) EmbedValue(v interface{}) error {
 	k := strings.Split(reflect.TypeOf(v).String(), ".")[1]
-	k = utils.UpperCaseFirstLetter(k)
 
 	xField, ok := s.StateType.ValueAccessor(k)
 	if !ok {
@@ -61,4 +52,12 @@ func (s *State) EmbedValue(v interface{}) error {
 func (s *State) Reset() {
 	s.Buffer.Reset()
 	s.Errors = nil
+}
+
+func (s *State) IsValid() bool {
+	return len(s.Errors) == 0
+}
+
+func (s *State) AddError(err error) {
+	s.Errors = append(s.Errors, err)
 }

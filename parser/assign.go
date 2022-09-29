@@ -28,6 +28,10 @@ func matchAssign(cursor *parsly.Cursor) (*stmt.Statement, error) {
 		return nil, err
 	}
 
+	if err = addEquationIfNeeded(cursor, &expression); err != nil {
+		return nil, err
+	}
+
 	return &stmt.Statement{
 		X:  variable,
 		Op: token,

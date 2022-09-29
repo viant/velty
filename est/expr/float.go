@@ -87,7 +87,9 @@ func (b *binaryExpr) indirectFloatAdd(state *est.State) unsafe.Pointer {
 	x := b.x.Exec(state)
 	y := b.y.Exec(state)
 	z := b.z.Pointer(state)
-	*(*float64)(z) = *(*float64)(x) + *(*float64)(y)
+	f := (*float64)(x)
+	f2 := (*float64)(y)
+	*(*float64)(z) = *f + *f2
 
 	return z
 }

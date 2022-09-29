@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/viant/parsly"
 	ast2 "github.com/viant/velty/ast"
 	aexpr "github.com/viant/velty/ast/expr"
@@ -30,6 +31,8 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		if err != nil {
 			return nil, nil, err
 		}
+
+		expr = &aexpr.Parentheses{P: expr}
 
 		if hasNegation {
 			expr = &aexpr.Unary{
@@ -103,7 +106,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 
 func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) error {
 	for {
-		candidates := []*parsly.Token{Add, Sub, Multiply, Quo, NotEqual, Negation, Equal, And, Or, GreaterEqual, Greater, LessEqual, Less}
+		candidates := []*parsly.Token{Add, Sub, Multiply, Quo, NotEqual, Negation, Equal, And, Or, GreaterEqual, Greater, LessEqual, Less, Assign}
 		matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
 		switch matched.Code {
@@ -112,6 +115,9 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) err
 		}
 
 		token := matchToken(matched)
+		if token == ast2.ASSIGN {
+			return fmt.Errorf("assignment in expression is not allowed")
+		}
 
 		eprCursor, err := matchExpressionBlock(cursor)
 

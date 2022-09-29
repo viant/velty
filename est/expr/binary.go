@@ -33,6 +33,7 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 		if rType == nil {
 			rType = exprs[1].Type
 		}
+
 		switch rType.Kind() {
 		case reflect.Int:
 			return computeBinaryInt(token, binary, indirect)
