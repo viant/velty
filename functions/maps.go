@@ -98,3 +98,15 @@ func (m Maps) GetString(aMap interface{}, key interface{}) (string, error) {
 
 	return i, nil
 }
+
+var HasKeyFunc = &StaticKindFunc{
+	kind: reflect.Map,
+	handler: func(args ...interface{}) (bool, error) {
+		if len(args) != 2 {
+			return false, fmt.Errorf("unexpected number of args, expected %v got %v", 2, len(args))
+		}
+
+		return reflect.ValueOf(args[0]).MapIndex(reflect.ValueOf(args[1])).IsValid(), nil
+	},
+	resultType: reflect.TypeOf(true),
+}

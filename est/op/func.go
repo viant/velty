@@ -21,8 +21,10 @@ type Funeexpression = func(operands []*Operand, state *est.State) (interface{}, 
 
 type (
 	Functions struct {
-		index map[string]int
-		funcs []*Func
+		index         map[string]int
+		kindIndex     *KindIndex
+		kindFunctions []KindFunction
+		funcs         []*Func
 
 		receivers map[string]*Receiver
 	}
@@ -30,10 +32,6 @@ type (
 	Receiver struct {
 		index map[string]int
 		funcs []*Func
-	}
-
-	Method struct {
-		ReceiverType reflect.Type
 	}
 
 	Func struct {
@@ -44,6 +42,26 @@ type (
 		maxArgs    int
 		isVariadic bool
 		Name       string
+		XType      *xunsafe.Type
+	}
+
+	KindFunction interface {
+		Kind() reflect.Kind
+		Handler() interface{}
+	}
+
+	ResultTyper interface {
+		ResultType(receiver reflect.Type) (reflect.Type, error)
+	}
+
+	KindIndex struct {
+		index            map[reflect.Kind]int
+		functionsIndexes []*FunctionsIndex
+	}
+
+	FunctionsIndex struct {
+		index   map[string]int
+		methods []KindFunction
 	}
 )
 
@@ -55,18 +73,22 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 
 	if anIface != nil {
 		accumulator.SetValue(state.MemPtr, anIface)
+		if f.XType.Type().Kind() == reflect.Map {
+			return unsafe.Pointer(reflect.ValueOf(f.XType.Ref(anIface)).Pointer())
+		}
+
 		return xunsafe.AsPointer(anIface)
 	}
 
 	return nil
 }
 
-func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, error) {
+func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, error) {
 	if len(operands) == 0 {
 		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
 	}
 
-	receiverIface := AsInterface(operands[0], operands[0].Exec(state))
+	receiverIface := operands[0].AsInterface(state)
 	receiverValue := reflect.ValueOf(receiverIface)
 	if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
 		return handler()
@@ -75,15 +97,12 @@ func (f *Func) funcCall(operands []*Operand, state *est.State) (interface{}, err
 	values := make([]reflect.Value, len(operands))
 	values[0] = receiverValue
 
-	for i := 0; i < len(values); i++ {
-		valuePtr := operands[i].Exec(state)
-
+	for i := 1; i < len(values); i++ {
 		if i >= f.maxArgs && !f.isVariadic {
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
-		anInterface := AsInterface(operands[i], valuePtr)
-
+		anInterface := operands[i].AsInterface(state)
 		if anInterface == nil {
 			values[i] = reflect.Zero(operands[i].Type)
 		} else {
@@ -132,7 +151,7 @@ func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, st
 				ifaces := make([]interface{}, len(operands))
 				ifaces[0] = receiver
 				for i := 1; i < len(operands); i++ {
-					ifaces[i] = AsInterface(operands[i], operands[i].Exec(state))
+					ifaces[i] = operands[i].AsInterface(state)
 				}
 
 				return handler(ifaces...)
@@ -143,20 +162,12 @@ func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, st
 	return nil, false
 }
 
-func AsInterface(operand *Operand, valuePtr unsafe.Pointer) interface{} {
-	var anInterface interface{}
-	if operand.XType.Kind() != reflect.Interface {
-		anInterface = operand.XType.Interface(valuePtr)
-	} else {
-		anInterface = xunsafe.AsInterface(valuePtr)
-	}
-
-	return anInterface
-}
-
 func NewFunctions() *Functions {
 	return &Functions{
-		index:     map[string]int{},
+		index: map[string]int{},
+		kindIndex: &KindIndex{
+			index: map[reflect.Kind]int{},
+		},
 		funcs:     make([]*Func, 0),
 		receivers: map[string]*Receiver{},
 	}
@@ -168,6 +179,7 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 			Name:       name,
 			Function:   discoveredFn,
 			ResultType: rType,
+			XType:      xunsafe.NewType(rType),
 		}
 
 		return f.RegisterFunc(name, aFunc)
@@ -185,7 +197,7 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 		return fmt.Errorf("expected func, got %v", function)
 	}
 
-	aFunc, err := f.reflectFunc(name, function, fType)
+	aFunc, err := f.reflectFunc(name, function, fType, nil)
 	if err != nil {
 		return err
 	}
@@ -196,20 +208,19 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	return nil
 }
 
-func (f *Functions) reflectFunc(name string, function interface{}, fType reflect.Type) (*Func, error) {
+func (f *Functions) reflectFunc(name string, function interface{}, funcType reflect.Type, resultType reflect.Type) (*Func, error) {
 	caller := reflect.ValueOf(function)
 
-	var outType reflect.Type
-	if fType.NumOut() != 0 {
-		outType = fType.Out(0)
+	if resultType == nil && funcType.NumOut() != 0 {
+		resultType = funcType.Out(0)
 	}
 
-	if fType.NumOut() > 2 || fType.NumOut() == 0 {
+	if funcType.NumOut() > 2 || funcType.NumOut() == 0 {
 		return nil, fmt.Errorf("function has to return one or two results ")
 	}
 
-	if fType.NumOut() == 2 {
-		if _, found := fType.Out(1).MethodByName("Error"); !found {
+	if funcType.NumOut() == 2 {
+		if _, found := funcType.Out(1).MethodByName("Error"); !found {
 			return nil, fmt.Errorf("2nd return has to be an error if specified")
 		}
 	}
@@ -217,12 +228,13 @@ func (f *Functions) reflectFunc(name string, function interface{}, fType reflect
 	aFunc := &Func{
 		Name:       name,
 		caller:     caller,
-		ResultType: outType,
+		ResultType: resultType,
+		XType:      xunsafe.NewType(resultType),
 		isVariadic: caller.Type().IsVariadic(),
 		maxArgs:    caller.Type().NumIn() + 1, //reflect.Method.Call require to pass a receiver as first Arg.
 	}
 
-	aFunc.Function = aFunc.funcCall
+	aFunc.Function = aFunc.callFunc
 	return aFunc, nil
 }
 
@@ -242,13 +254,17 @@ func (f *Functions) Method(rType reflect.Type, id string) (*Func, error) {
 		return f.asFunc(rType, id, method)
 	}
 
+	if method, err := f.functionByKind(id, rType); method != nil || err != nil {
+		return method, err
+	}
+
 	return f.funcByName(id)
 }
 
 func (f *Functions) funcByName(id string) (*Func, error) {
 	index, ok := f.index[id]
 	if !ok {
-		return nil, fmt.Errorf("not found function %v", id)
+		return nil, fmt.Errorf("no such function %v", id)
 	}
 
 	return f.funcs[index], nil
@@ -269,7 +285,7 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 		aFunc.ResultType = resultType
 	} else {
 		var err error
-		aFunc, err = f.reflectFunc(id, methodSignature, method.Type)
+		aFunc, err = f.reflectFunc(id, methodSignature, method.Type, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -699,4 +715,85 @@ func asMapKey(receiverType reflect.Type) string {
 
 func incorrectArgumentsError(wanted string, got []*Operand) error {
 	return fmt.Errorf("expected to got %v but got %v", wanted, len(got))
+}
+
+func (f *Functions) RegisterFunctionKind(methodName string, funcDetails KindFunction) error {
+	handler := funcDetails.Handler()
+	if reflect.TypeOf(handler).Kind() != reflect.Func {
+		return fmt.Errorf("unexpected function handler type, expected Function, got %T", handler)
+	}
+
+	f.kindIndex.Add(methodName, funcDetails)
+	return nil
+}
+
+func (f *Functions) functionByKind(id string, rType reflect.Type) (*Func, error) {
+	kind := rType.Kind()
+	kindFunction, ok := f.kindIndex.KindFunction(kind, id)
+	if !ok {
+		return nil, nil
+	}
+
+	typer, ok := kindFunction.(ResultTyper)
+	var resultType reflect.Type
+	if ok {
+		var err error
+		resultType, err = typer.ResultType(rType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	handler := kindFunction.Handler()
+	reflectFunc, err := f.reflectFunc(id, handler, reflect.TypeOf(handler), resultType)
+	return reflectFunc, err
+}
+
+func (i *KindIndex) Add(name string, details KindFunction) {
+	functionsIndex := i.GetOrCreate(details.Kind())
+	functionsIndex.Add(name, details)
+}
+
+func (i *KindIndex) GetOrCreate(kind reflect.Kind) *FunctionsIndex {
+	functionsIndex, done := i.Get(kind)
+	if done {
+		return functionsIndex
+	}
+
+	result := &FunctionsIndex{index: map[string]int{}}
+	i.index[kind] = len(i.functionsIndexes)
+	i.functionsIndexes = append(i.functionsIndexes, result)
+
+	return result
+}
+
+func (i *KindIndex) Get(kind reflect.Kind) (*FunctionsIndex, bool) {
+	index, ok := i.index[kind]
+	if ok {
+		return i.functionsIndexes[index], true
+	}
+	return nil, false
+}
+
+func (i *KindIndex) KindFunction(kind reflect.Kind, id string) (KindFunction, bool) {
+	functionsIndex, ok := i.Get(kind)
+	if !ok {
+		return nil, false
+	}
+
+	return functionsIndex.Get(id)
+}
+
+func (i *FunctionsIndex) Add(name string, details KindFunction) {
+	i.index[name] = len(i.methods)
+	i.methods = append(i.methods, details)
+}
+
+func (i *FunctionsIndex) Get(id string) (KindFunction, bool) {
+	index, ok := i.index[id]
+	if !ok {
+		return nil, false
+	}
+
+	return i.methods[index], true
 }

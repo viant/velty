@@ -845,6 +845,81 @@ $lastColumnName`,
 			template:    `#set($value = ("Values: " + 1) + (" another one: " + 5.21))$value`,
 			expect:      `Values: 1 another one: 5.21`,
 		},
+		{
+			description: `map get | exported`,
+			template:    `$Data["key"]`,
+			expect:      `value`,
+			definedVars: map[string]interface{}{
+				"Data": map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		{
+			description: `map get | unexported`,
+			template:    `$data["key"]`,
+			expect:      `value`,
+			definedVars: map[string]interface{}{
+				"data": map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		{
+			description: `map get | has true`,
+			template:    `$data.HasKey("key")`,
+			expect:      `true`,
+			definedVars: map[string]interface{}{
+				"data": map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		{
+			description: `map get | has false`,
+			template:    `$data.HasKey("abc")`,
+			expect:      `false`,
+			definedVars: map[string]interface{}{
+				"data": map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		{
+			description: `map get | has false`,
+			template:    `$data.HasKey("abc")`,
+			expect:      `false`,
+			definedVars: map[string]interface{}{
+				"data": map[string]interface{}{
+					"key": "value",
+				},
+			},
+		},
+		{
+			description: `slice | index by`,
+			template:    `#set($index = $Values.IndexBy("StringValue")) $index.HasKey("key - 1")  $index.HasKey("")  $index.HasKey("key - 3")`,
+			expect:      ` true  false  true`,
+			definedVars: map[string]interface{}{
+				"Values": []*Values{
+					{
+						StringValue: "key - 1",
+					},
+					{
+						StringValue: "key - 2",
+					},
+					{
+						StringValue: "key - 3",
+					},
+				},
+			},
+		},
+		{
+			description:       `slice | index by`,
+			template:          `$strconv.Atoi("adewqdsa") abcdef`,
+			expect:            ``,
+			options:           []velty.Option{velty.PanicOnError(true)},
+			expectTemplateErr: true,
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {

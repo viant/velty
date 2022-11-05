@@ -2,6 +2,8 @@ package functions
 
 import (
 	"fmt"
+	"github.com/viant/velty/est/op"
+	"github.com/viant/xunsafe"
 	"reflect"
 )
 
@@ -81,4 +83,92 @@ func (s Slices) ReverseInts(slice interface{}) ([]int, error) {
 	}
 
 	return newSlice, nil
+}
+
+var SliceIndexByFunc op.KindFunction = &indexSliceByFunc{}
+
+type indexSliceByFunc struct{}
+
+func (in *indexSliceByFunc) Kind() reflect.Kind {
+	return reflect.Slice
+}
+
+func (in *indexSliceByFunc) Handler() interface{} {
+	return func(slice interface{}, field string) (interface{}, error) {
+		sliceType := reflect.TypeOf(slice)
+		if sliceType.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("unsupported IndexBy receiver, got %T", slice)
+		}
+
+		elemType := sliceType.Elem()
+		upstream := in.upstream(elemType)
+		xField, err := in.Field(upstream, elemType, field)
+		if err != nil {
+			return nil, err
+		}
+
+		mapType, err := in.ResultType(sliceType)
+		if err != nil {
+			return nil, err
+		}
+
+		resultMap := reflect.MakeMap(mapType)
+		if slice == nil {
+			return resultMap.Interface(), nil
+		}
+
+		xSlice := xunsafe.NewSlice(sliceType)
+		slicePtr := xunsafe.AsPointer(slice)
+
+		sliceLen := xSlice.Len(slicePtr)
+		for i := 0; i < sliceLen; i++ {
+			sliceValueAt := xSlice.ValueAt(slicePtr, i)
+			fieldValue := sliceValueAt
+			for _, upstreamType := range upstream {
+				fieldValue = upstreamType.Deref(fieldValue)
+			}
+
+			fieldValue = xField.Value(xunsafe.AsPointer(fieldValue))
+			resultMap.SetMapIndex(reflect.ValueOf(fieldValue), reflect.ValueOf(sliceValueAt))
+		}
+		resultMapIface := resultMap.Interface()
+		if err != nil {
+			return nil, err
+		}
+
+		return resultMapIface, nil
+	}
+}
+
+func (in *indexSliceByFunc) ResultType(receiver reflect.Type) (reflect.Type, error) {
+	if receiver.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("unsupported IndexBy receiver type %s", receiver.String())
+	}
+
+	return reflect.MapOf(interfaceType, receiver.Elem()), nil
+}
+
+func (in *indexSliceByFunc) upstream(sliceType reflect.Type) []*xunsafe.Type {
+	var types []*xunsafe.Type
+	for sliceType.Kind() == reflect.Ptr {
+		sliceType = sliceType.Elem()
+		types = append(types, xunsafe.NewType(sliceType))
+	}
+
+	return types
+}
+
+func (in *indexSliceByFunc) Field(upstream []*xunsafe.Type, elemType reflect.Type, field string) (*xunsafe.Field, error) {
+	var xField *xunsafe.Field
+	if len(upstream) > 0 {
+		xField = xunsafe.FieldByName(upstream[len(upstream)-1].Type(), field)
+	} else {
+		xField = xunsafe.FieldByName(elemType, field)
+	}
+
+	if xField == nil {
+		return nil, fmt.Errorf("not found field %v at struct %v", field, elemType.String())
+	}
+
+	return xField, nil
 }

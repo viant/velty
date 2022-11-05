@@ -9,4 +9,8 @@ const (
 	MathFunc    = "math"
 	StringsFunc = "strings"
 	MapsFunc    = "maps"
+
+	MapHasKey = "HasKey"
+
+	SliceIndexBy = "IndexBy"
 )

@@ -7,12 +7,14 @@ import (
 	"unsafe"
 )
 
+type TemplateError error
 type State struct {
-	Mem       interface{}
-	MemPtr    unsafe.Pointer
-	StateType *Type
-	Buffer    *Buffer
-	Errors    []error
+	Mem          interface{}
+	MemPtr       unsafe.Pointer
+	StateType    *Type
+	Buffer       *Buffer
+	Errors       []error
+	PanicOnError bool
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
@@ -22,7 +24,7 @@ func (s *State) SetValue(k string, v interface{}) error {
 	}
 
 	switch xField.Kind() {
-	case reflect.Ptr, reflect.Struct, reflect.Slice:
+	case reflect.Ptr, reflect.Struct, reflect.Slice, reflect.Map:
 		xField.SetValue(s.MemPtr, v)
 	default:
 		xField.Set(s.MemPtr, v)
@@ -59,5 +61,10 @@ func (s *State) IsValid() bool {
 }
 
 func (s *State) AddError(err error) {
+	err = TemplateError(err)
+
 	s.Errors = append(s.Errors, err)
+	if s.PanicOnError {
+		panic(err)
+	}
 }

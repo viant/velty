@@ -19,6 +19,7 @@ type Selector struct {
 	Args         []*Operand
 	Placeholder  string
 	ParentOffset uintptr
+	Map          *Map
 }
 
 //NewSelector create a selector
@@ -85,5 +86,20 @@ func SliceSelector(id string, placeholder string, sliceOperand, indexOperand *Op
 			XSlice:       xunsafe.NewSlice(parent.Type),
 		},
 		Placeholder: placeholder,
+	}, nil
+}
+
+func NewMapSelector(id string, placeholder string, mapOperand, indexOperand *Operand, parent *Selector) (*Selector, error) {
+	return &Selector{
+		Type:        parent.Type.Elem(),
+		ID:          id,
+		Indirect:    true,
+		Parent:      parent,
+		Placeholder: placeholder,
+		Map: &Map{
+			mapOperand:   mapOperand,
+			indexOperand: indexOperand,
+			isValueIface: mapOperand.Type.Elem().Kind() == reflect.Interface,
+		},
 	}, nil
 }

@@ -21,17 +21,18 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 	}
 
 	newState := p.stateProvider()
-	return exec, newState, nil
+	return exec, newState, err
 }
 
 func (p *Planner) stateProvider() func() *est.State {
 	return func() *est.State {
 		mem := reflect.New(p.Type.Type).Interface()
 		state := &est.State{
-			Mem:       mem,
-			MemPtr:    xunsafe.AsPointer(mem),
-			Buffer:    est.NewBuffer(p.bufferSize, p.escapeHTML),
-			StateType: p.Type,
+			Mem:          mem,
+			MemPtr:       xunsafe.AsPointer(mem),
+			Buffer:       est.NewBuffer(p.bufferSize, p.escapeHTML),
+			StateType:    p.Type,
+			PanicOnError: p.panicOnError,
 		}
 		return state
 	}
@@ -44,6 +45,7 @@ func (p *Planner) newExecution(root *stmt.Block) (*est.Execution, error) {
 	}
 
 	exec := est.NewExecution(compute)
+	exec.PanicOnError = p.panicOnError
 	return exec, nil
 }
 

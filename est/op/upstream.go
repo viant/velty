@@ -62,6 +62,8 @@ func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.
 				ptr = callers[i](parents[i], parents[i].Args, state)
 			} else if parents[i].Slice != nil {
 				ptr = parents[i].Slice.Exec(state)
+			} else if parents[i].Map != nil {
+				ptr = parents[i].Map.Exec(state)
 			} else {
 				if (derefLast && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
 					ptr = parents[i].Pointer(ptr)

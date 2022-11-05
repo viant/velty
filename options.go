@@ -11,3 +11,6 @@ type CacheSize int
 
 //EscapeHTML escapes HTML in passed variables.
 type EscapeHTML bool
+
+//PanicOnError panics and recover when first error returned.
+type PanicOnError bool

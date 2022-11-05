@@ -29,7 +29,7 @@ func (e Errors) Discover(aFunc interface{}) (func(operands []*op.Operand, state 
 				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(operands))
 			}
 
-			anArg := op.AsInterface(operands[0], operands[0].Exec(state))
+			anArg := operands[0].AsInterface(state)
 			result, err := actual(e, anArg)
 			return result, err
 		}, stringType, true

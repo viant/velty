@@ -1,7 +1,6 @@
 package assign
 
 import (
-	"fmt"
 	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
@@ -30,20 +29,21 @@ func Assign(expressions ...*op2.Expression) (est.New, error) {
 		if err != nil {
 			return nil, err
 		}
-		assign := &assign{x: operands[op2.X], y: operands[op2.Y]}
+		assginer := &assign{x: operands[op2.X], y: operands[op2.Y]}
 
 		switch expressions[op2.Y].Type.Kind() {
 		case reflect.Int:
-			return assign.assignAsInt(), nil
+			return assginer.assignAsInt(), nil
 		case reflect.String:
-			return assign.assignAsString(), nil
+			return assginer.assignAsString(), nil
 		case reflect.Float64:
-			return assign.assignAsFloat(), nil
+			return assginer.assignAsFloat(), nil
 		case reflect.Bool:
-			return assign.assignAsBool(), nil
+			return assginer.assignAsBool(), nil
+		case reflect.Map:
+			return assginer.assignAsMap(), nil
 		default:
-			return assign.assignValue(), nil
-			return nil, fmt.Errorf("unsupported assign type: %s", expressions[op2.Y].Type.String())
+			return assginer.assignValue(), nil
 		}
 
 	}, nil

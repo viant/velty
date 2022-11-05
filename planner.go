@@ -26,8 +26,9 @@ type (
 		selectors *op.Selectors
 		constants *constants
 		*op.Functions
-		cache      *cache
-		escapeHTML bool
+		cache        *cache
+		escapeHTML   bool
+		panicOnError bool
 	}
 )
 
@@ -332,6 +333,7 @@ func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Op
 func New(options ...Option) *Planner {
 	transients := 0
 	ctl := est.Control(0)
+
 	planner := &Planner{
 		transients: &transients,
 		Control:    &ctl,
@@ -372,6 +374,8 @@ func (p *Planner) apply(options []Option) {
 			p.cache = newCache(int(actual))
 		case EscapeHTML:
 			p.escapeHTML = bool(actual)
+		case PanicOnError:
+			p.panicOnError = bool(actual)
 		}
 	}
 }
@@ -391,6 +395,8 @@ func (p *Planner) init(options []Option) {
 	_ = p.DefineVariable(functions.ErrorsFunc, functions.Errors{})
 	_ = p.DefineVariable(functions.TimeFunc, functions.Time{})
 	_ = p.DefineVariable(functions.MapsFunc, functions.Maps{})
+	_ = p.Functions.RegisterFunctionKind(functions.MapHasKey, functions.HasKeyFunc)
+	_ = p.Functions.RegisterFunctionKind(functions.SliceIndexBy, functions.SliceIndexByFunc)
 }
 
 func (p *Planner) isMethod(parentType reflect.Type, id string) bool {
@@ -412,12 +418,22 @@ func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID st
 
 		return callSelector, actual.X, nil
 	case *expr.SliceIndex:
-		sliceSelector, err := p.newSliceSelector(ID, actual, selector)
-		if err != nil {
-			return nil, nil, nil
-		}
+		switch selector.Type.Kind() {
+		case reflect.Map:
+			mapSelector, err := p.newMapSelector(ID, actual, selector)
+			if err != nil {
+				return nil, nil, err
+			}
 
-		return sliceSelector, actual.Y, nil
+			return mapSelector, actual.Y, nil
+		default:
+			sliceSelector, err := p.newSliceSelector(ID, actual, selector)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return sliceSelector, actual.Y, nil
+		}
 	}
 
 	return nil, nil, nil
@@ -440,4 +456,23 @@ func (p *Planner) newSliceSelector(id string, actual *expr.SliceIndex, selector 
 	}
 
 	return op.SliceSelector(id, "", sliceOperand, operandExpression, selector)
+}
+
+func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
+	keyExpr, err := p.compileExpr(actual.X)
+	if err != nil {
+		return nil, err
+	}
+
+	keyOperand, err := keyExpr.Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+
+	mapOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+
+	return op.NewMapSelector(id, "", mapOperand, keyOperand, selector)
 }

@@ -67,3 +67,17 @@ func (o *Operand) SetType(rType reflect.Type) {
 		o.XType = nil
 	}
 }
+
+func (o *Operand) AsInterface(state *est.State) interface{} {
+	valuePtr := o.Exec(state)
+
+	var anInterface interface{}
+	switch o.XType.Kind() {
+	case reflect.Interface:
+		anInterface = xunsafe.AsInterface(valuePtr)
+	default:
+		anInterface = o.XType.Interface(valuePtr)
+	}
+
+	return anInterface
+}
