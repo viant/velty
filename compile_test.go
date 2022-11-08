@@ -920,6 +920,74 @@ $lastColumnName`,
 			options:           []velty.Option{velty.PanicOnError(true)},
 			expectTemplateErr: true,
 		},
+		{
+			description: `slice | index by, type missmatch`,
+			template:    `#set($index = $Values.IndexBy("IntValue")) $index[$aKey].StringValue`,
+			expect:      ` key - 1`,
+			definedVars: map[string]interface{}{
+				"aKey": int16(123),
+				"Values": []*Values{
+					{
+						StringValue: "key - 1",
+						IntValue:    123,
+					},
+					{
+						StringValue: "key - 2",
+						IntValue:    246,
+					},
+					{
+						StringValue: "key - 3",
+						IntValue:    492,
+					},
+				},
+			},
+		},
+		{
+			description: `multimap | single value`,
+			template:    `$values[1][1]`,
+			expect:      `10`,
+			definedVars: map[string]interface{}{
+				"values": map[int]map[int]int{
+					1: {
+						1: 10,
+					},
+				},
+			},
+		},
+		{
+			description: `multimap | multivalues`,
+			template:    `$values[2][3]`,
+			expect:      `30`,
+			definedVars: map[string]interface{}{
+				"values": map[int]map[int]int{
+					1: {
+						1: 10,
+						2: 20,
+					},
+					2: {
+						3: 30,
+						4: 40,
+					},
+				},
+			},
+		},
+		{
+			description: `multimap | multivalues`,
+			template:    `${values[2][3]}`,
+			expect:      `30`,
+			definedVars: map[string]interface{}{
+				"values": map[interface{}]interface{}{
+					1: map[interface{}]interface{}{
+						1: 10,
+						2: 20,
+					},
+					2: map[interface{}]interface{}{
+						3: 30,
+						4: 40,
+					},
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {

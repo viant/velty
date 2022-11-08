@@ -14,12 +14,13 @@ type Selector struct {
 	Indirect bool
 	Parent   *Selector
 
-	Func         *Func
-	Slice        *Slice
-	Args         []*Operand
-	Placeholder  string
-	ParentOffset uintptr
-	Map          *Map
+	Func          *Func
+	Slice         *Slice
+	Args          []*Operand
+	Placeholder   string
+	ParentOffset  uintptr
+	Map           *Map
+	InterfaceExec *Interface
 }
 
 //NewSelector create a selector
@@ -69,23 +70,32 @@ func FunctionSelector(id string, field *xunsafe.Field, aFunc *Func, parent *Sele
 }
 
 func SliceSelector(id string, placeholder string, sliceOperand, indexOperand *Operand, parent *Selector) (*Selector, error) {
-	toInt, err := types.ToInt(indexOperand.Type)
+	slice, err := newSlice(sliceOperand, indexOperand, parent)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Selector{
-		Type:     parent.Type.Elem(),
-		ID:       id,
-		Indirect: true,
-		Parent:   parent,
-		Slice: &Slice{
-			SliceOperand: sliceOperand,
-			IndexOperand: indexOperand,
-			ToInter:      toInt,
-			XSlice:       xunsafe.NewSlice(parent.Type),
-		},
+		Type:        parent.Type.Elem(),
+		ID:          id,
+		Indirect:    true,
+		Parent:      parent,
+		Slice:       slice,
 		Placeholder: placeholder,
+	}, nil
+}
+
+func newSlice(sliceOperand *Operand, indexOperand *Operand, parent *Selector) (*Slice, error) {
+	toInt, err := types.ToInt(indexOperand.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Slice{
+		SliceOperand: sliceOperand,
+		IndexOperand: indexOperand,
+		ToInter:      toInt,
+		XSlice:       xunsafe.NewSlice(parent.Type),
 	}, nil
 }
 
@@ -96,10 +106,42 @@ func NewMapSelector(id string, placeholder string, mapOperand, indexOperand *Ope
 		Indirect:    true,
 		Parent:      parent,
 		Placeholder: placeholder,
-		Map: &Map{
-			mapOperand:   mapOperand,
-			indexOperand: indexOperand,
-			isValueIface: mapOperand.Type.Elem().Kind() == reflect.Interface,
+		Map:         newMap(mapOperand, indexOperand, parent),
+	}, nil
+}
+
+func NewInterfaceSelector(id string, placeholder string, xOperand, indexOperand *Operand, parent *Selector) (*Selector, error) {
+	aSlice, err := newSlice(xOperand, indexOperand, parent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Selector{
+		Type:        parent.Type,
+		ID:          id,
+		Indirect:    true,
+		Parent:      parent,
+		Placeholder: placeholder,
+		InterfaceExec: &Interface{
+			xOperand: xOperand,
+			aMap:     newMap(xOperand, indexOperand, parent),
+			aSlice:   aSlice,
 		},
 	}, nil
+}
+
+func newMap(mapOperand *Operand, indexOperand *Operand, parent *Selector) *Map {
+	rType := mapOperand.Type
+	switch rType.Kind() {
+	case reflect.Map:
+		rType = rType.Elem()
+	}
+
+	elemKind := rType.Kind()
+	return &Map{
+		mapOperand:   mapOperand,
+		indexOperand: indexOperand,
+		isValueIface: elemKind == reflect.Interface,
+		elemKind:     elemKind,
+	}
 }

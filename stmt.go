@@ -50,6 +50,7 @@ func (p *Planner) computeAssignment(actual *stmt2.Statement) (est.New, error) {
 	if err = p.adjustSelector(x, y.Type); err != nil {
 		return nil, err
 	}
+
 	return assign.Assign(x, y)
 }
 

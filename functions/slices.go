@@ -128,7 +128,8 @@ func (in *indexSliceByFunc) Handler() interface{} {
 				fieldValue = upstreamType.Deref(fieldValue)
 			}
 
-			fieldValue = xField.Value(xunsafe.AsPointer(fieldValue))
+			key := op.NormalizeKey(fieldValue)
+			fieldValue = xField.Value(xunsafe.AsPointer(key))
 			resultMap.SetMapIndex(reflect.ValueOf(fieldValue), reflect.ValueOf(sliceValueAt))
 		}
 		resultMapIface := resultMap.Interface()

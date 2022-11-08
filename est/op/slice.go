@@ -14,8 +14,7 @@ type Slice struct {
 	ToInter      func(pointer unsafe.Pointer) int
 }
 
-func (s *Slice) Exec(state *est.State) unsafe.Pointer {
-	slicePtr := s.SliceOperand.Exec(state)
+func (s *Slice) Exec(slicePtr unsafe.Pointer, state *est.State) unsafe.Pointer {
 	sliceLen := s.XSlice.Len(slicePtr)
 
 	indexPtr := s.IndexOperand.Exec(state)

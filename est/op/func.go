@@ -88,7 +88,7 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
 	}
 
-	receiverIface := operands[0].AsInterface(state)
+	receiverIface := operands[0].ExecInterface(state)
 	receiverValue := reflect.ValueOf(receiverIface)
 	if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
 		return handler()
@@ -102,7 +102,7 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
-		anInterface := operands[i].AsInterface(state)
+		anInterface := operands[i].ExecInterface(state)
 		if anInterface == nil {
 			values[i] = reflect.Zero(operands[i].Type)
 		} else {
@@ -151,7 +151,7 @@ func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, st
 				ifaces := make([]interface{}, len(operands))
 				ifaces[0] = receiver
 				for i := 1; i < len(operands); i++ {
-					ifaces[i] = operands[i].AsInterface(state)
+					ifaces[i] = operands[i].ExecInterface(state)
 				}
 
 				return handler(ifaces...)

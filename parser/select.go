@@ -107,7 +107,6 @@ func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 
 func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 	candidates := []*parsly.Token{Parentheses, Dot, SquareBrackets}
-
 	matched := cursor.MatchAny(candidates...)
 	switch matched.Code {
 	case dotToken:

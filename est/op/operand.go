@@ -14,6 +14,7 @@ type Operand struct {
 	Type       reflect.Type
 	XType      *xunsafe.Type
 	unify      func(pointer unsafe.Pointer) unsafe.Pointer
+	Repeat     bool
 }
 
 func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
@@ -68,9 +69,12 @@ func (o *Operand) SetType(rType reflect.Type) {
 	}
 }
 
-func (o *Operand) AsInterface(state *est.State) interface{} {
+func (o *Operand) ExecInterface(state *est.State) interface{} {
 	valuePtr := o.Exec(state)
+	return o.AsInterface(valuePtr)
+}
 
+func (o *Operand) AsInterface(valuePtr unsafe.Pointer) interface{} {
 	var anInterface interface{}
 	switch o.XType.Kind() {
 	case reflect.Interface:

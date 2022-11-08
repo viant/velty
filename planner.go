@@ -69,23 +69,26 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		initialOffset = 0
 	}
 
-	rType, _ := dereference(field)
+	return p.addChildrenSelectors(prefix, vTag.Prefix, field, offsetSoFar, initialOffset, indirect)
+}
+
+func (p *Planner) addChildrenSelectors(holderPrefix, fieldTagPrefix string, field reflect.StructField, offsetSoFar uintptr, initialOffset uintptr, indirect bool) error {
+	rType, elemed := elemIfNeeded(field)
 	if rType.Kind() == reflect.Struct {
 		for i := 0; i < rType.NumField(); i++ {
-			actualParent := p.ensureStructSelector(field, prefix)
+			actualParent := p.ensureStructSelector(field, holderPrefix)
 
-			childPrefix := vTag.Prefix
+			childPrefix := fieldTagPrefix
 			if !field.Anonymous {
 				childPrefix = field.Name + fieldSeparator
 			}
 
-			err := p.createSelectors(prefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, indirect)
+			err := p.createSelectors(holderPrefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, indirect || elemed)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -112,13 +115,14 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 	return nil
 }
 
-func dereference(field reflect.StructField) (reflect.Type, bool) {
+func elemIfNeeded(field reflect.StructField) (reflect.Type, bool) {
 	rType := field.Type
 	wasPtr := false
-	if rType.Kind() == reflect.Ptr {
+	for rType.Kind() == reflect.Ptr || rType.Kind() == reflect.Slice || rType.Kind() == reflect.Map {
 		wasPtr = true
 		rType = rType.Elem()
 	}
+
 	return rType, wasPtr
 }
 
@@ -160,6 +164,8 @@ func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 
 	parentType := resultSelector.Type
 	selectorId := selector.ID
+
+	upstreamSelector := p.copyWithParent(resultSelector, resultSelector.Parent)
 	var err error
 	for call != nil {
 		parentType = deref(parentType)
@@ -167,20 +173,24 @@ func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		parentType = resultSelector.Type
 		selectorId = resultSelector.ID
+		upstreamSelector = p.copyWithParent(resultSelector, upstreamSelector)
 	}
 
-	return resultSelector, nil
+	return upstreamSelector, nil
+}
+
+func (p *Planner) copyWithParent(dest, parent *op.Selector) *op.Selector {
+	selCopy := *dest
+	selCopy.Parent = parent
+	return &selCopy
 }
 
 func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector, selectorId string, parentType reflect.Type) (*op.Selector, ast.Expression, error) {
 	selector, next, err := p.tryMatchCall(call, resultSelector, selectorId)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if selector != nil {
+	if err != nil || selector != nil {
 		return selector, next, err
 	}
 
@@ -409,6 +419,15 @@ func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID st
 		return nil, nil, nil
 	}
 
+	matchCall, expression, err := p.matchCall(call, selector, ID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return matchCall, expression, err
+}
+
+func (p *Planner) matchCall(call ast.Expression, selector *op.Selector, ID string) (*op.Selector, ast.Expression, error) {
 	switch actual := call.(type) {
 	case *expr.Call:
 		callSelector, err := p.newFuncSelector(ID, ID, actual, selector)
@@ -426,6 +445,14 @@ func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID st
 			}
 
 			return mapSelector, actual.Y, nil
+		case reflect.Interface:
+			interfaceSelector, err := p.newInterfaceSelector(ID, actual, selector)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			return interfaceSelector, actual.Y, nil
+
 		default:
 			sliceSelector, err := p.newSliceSelector(ID, actual, selector)
 			if err != nil {
@@ -459,12 +486,7 @@ func (p *Planner) newSliceSelector(id string, actual *expr.SliceIndex, selector 
 }
 
 func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
-	keyExpr, err := p.compileExpr(actual.X)
-	if err != nil {
-		return nil, err
-	}
-
-	keyOperand, err := keyExpr.Operand(*p.Control)
+	keyOperand, err := p.compileOperand(actual.X)
 	if err != nil {
 		return nil, err
 	}
@@ -475,4 +497,35 @@ func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *o
 	}
 
 	return op.NewMapSelector(id, "", mapOperand, keyOperand, selector)
+}
+
+func (p *Planner) newInterfaceSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
+	xOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+
+	yOperand, err := p.compileOperand(actual.X)
+	if err != nil {
+		return nil, err
+	}
+
+	return op.NewInterfaceSelector(id, "", xOperand, yOperand, selector)
+}
+
+func (p *Planner) compileOperand(actual ast.Expression) (*op.Operand, error) {
+	if actual == nil {
+		return nil, nil
+	}
+
+	xExpr, err := p.compileExpr(actual)
+	if err != nil {
+		return nil, err
+	}
+
+	xOperand, err := xExpr.Operand(*p.Control)
+	if err != nil {
+		return nil, err
+	}
+	return xOperand, nil
 }
