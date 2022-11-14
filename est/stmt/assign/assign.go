@@ -29,9 +29,13 @@ func Assign(expressions ...*op2.Expression) (est.New, error) {
 		if err != nil {
 			return nil, err
 		}
-		assginer := &assign{x: operands[op2.X], y: operands[op2.Y]}
 
-		switch expressions[op2.Y].Type.Kind() {
+		assginer := &assign{x: operands[op2.X], y: operands[op2.Y]}
+		if isIndirectOperand(operands[op2.X]) {
+			return assginer.assignValue(), nil
+		}
+
+		switch expressions[op2.X].Type.Kind() {
 		case reflect.Int:
 			return assginer.assignAsInt(), nil
 		case reflect.String:
@@ -47,4 +51,8 @@ func Assign(expressions ...*op2.Expression) (est.New, error) {
 		}
 
 	}, nil
+}
+
+func isIndirectOperand(operand *op2.Operand) bool {
+	return operand.Sel != nil && operand.Sel.Indirect
 }

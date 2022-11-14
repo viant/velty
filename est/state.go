@@ -34,11 +34,22 @@ func (s *State) SetValue(k string, v interface{}) error {
 }
 
 func (s *State) EmbedValue(v interface{}) error {
-	k := strings.Split(reflect.TypeOf(v).String(), ".")[1]
+	rValue := reflect.TypeOf(v)
 
-	xField, ok := s.StateType.ValueAccessor(k)
+	var holderName string
+	if rValue.Name() == "" {
+		var ok bool
+		holderName, ok = s.StateType.AnonymousHolder(rValue)
+		if !ok {
+			return fmt.Errorf("not found holder for %T", v)
+		}
+	} else {
+		holderName = strings.Split(rValue.String(), ".")[1]
+	}
+
+	xField, ok := s.StateType.ValueAccessor(holderName)
 	if !ok {
-		return fmt.Errorf("undefined: %v", k)
+		return fmt.Errorf("undefined: %v", holderName)
 	}
 
 	switch xField.Kind() {

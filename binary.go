@@ -19,13 +19,14 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 		return nil, err
 	}
 
-	unify, err := types.Unify(x.Type, y.Type)
+	unify, err := types.NormalizeAndUnify(x.Type, y.Type)
 	if err != nil {
 		return nil, err
 	}
 
 	x.Unify = unify.X
 	y.Unify = unify.Y
+
 	resultType := notNilType(types.NormalizeType(actual.Type()), unify.RType)
 	acc := p.accumulator(resultType)
 	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}

@@ -3,17 +3,24 @@ package est
 import (
 	"github.com/viant/xunsafe"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
-const defaultPkg = "github.com/viant/velty/est"
+const (
+	defaultPkg         = "github.com/viant/velty/est"
+	namespace          = "_velty_"
+	anonymousNamespace = "Velty_"
+)
 
 //Type represents scope type
 type Type struct {
 	reflect.Type
-	types   map[string]int
-	fields  []reflect.StructField
-	xFields []*xunsafe.Field
+	fieldsIndex     map[string]int
+	fields          []reflect.StructField
+	xFields         []*xunsafe.Field
+	transients      *int
+	anonymousFields map[string]string
 }
 
 func (t *Type) AddField(id string, name string, rType reflect.Type) reflect.StructField {
@@ -25,8 +32,13 @@ func (t *Type) ValueAccessors() []*xunsafe.Field {
 }
 
 func (t *Type) EmbedType(rType reflect.Type) reflect.StructField {
-	idSegments := strings.Split(rType.String(), ".")
-	id := idSegments[len(idSegments)-1]
+	var id string
+	if rType.Name() != "" {
+		idSegments := strings.Split(rType.String(), ".")
+		id = idSegments[len(idSegments)-1]
+	} else {
+
+	}
 
 	field := t.addField(id, id, rType, true)
 	return field
@@ -34,7 +46,17 @@ func (t *Type) EmbedType(rType reflect.Type) reflect.StructField {
 
 func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bool) reflect.StructField {
 	pkg := ""
-	if name[0] > 'Z' {
+	if name == "" {
+		if !anonymous {
+			name = t.ReserveNewName()
+		} else {
+			name = t.reserveNewName(anonymousNamespace)
+			t.anonymousFields[rType.String()] = name
+			id = name
+		}
+	}
+
+	if name[0] > 'Z' && !anonymous {
 		pkg = defaultPkg
 	}
 
@@ -45,12 +67,12 @@ func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bo
 	field = t.Type.Field(len(t.fields) - 1)
 	t.fields[len(t.fields)-1] = field
 	t.xFields = append(t.xFields, xunsafe.NewField(field))
-	t.types[id] = len(t.fields) - 1
+	t.fieldsIndex[id] = len(t.fields) - 1
 	return field
 }
 
 func (t *Type) ValueAccessor(id string) (*xunsafe.Field, bool) {
-	index, found := t.types[id]
+	index, found := t.fieldsIndex[id]
 	if !found {
 		return nil, false
 	}
@@ -62,6 +84,7 @@ func (t *Type) Snapshot() *Type {
 	xFields := make([]*xunsafe.Field, len(t.xFields))
 	fields := make([]reflect.StructField, len(t.fields))
 	types := map[string]int{}
+	anonymousFields := map[string]string{}
 	copy(xFields, t.xFields)
 	copy(fields, t.fields)
 	copy(fields, t.fields)
@@ -70,17 +93,42 @@ func (t *Type) Snapshot() *Type {
 		types[field.Name] = i
 	}
 
+	for key := range t.anonymousFields {
+		anonymousFields[key] = t.anonymousFields[key]
+	}
+
 	return &Type{
-		Type:    t.Type,
-		types:   types,
-		fields:  fields,
-		xFields: xFields,
+		Type:            t.Type,
+		fieldsIndex:     types,
+		fields:          fields,
+		xFields:         xFields,
+		transients:      t.transients,
+		anonymousFields: anonymousFields,
 	}
 }
 
+func (t *Type) ReserveNewName() string {
+	return t.reserveNewName(namespace)
+}
+
+func (t *Type) reserveNewName(ns string) string {
+	name := ns + "T" + strconv.Itoa(*t.transients)
+	*t.transients++
+	return name
+}
+
+func (t *Type) AnonymousHolder(rType reflect.Type) (string, bool) {
+	stringified := rType.String()
+	holder, ok := t.anonymousFields[stringified]
+	return holder, ok
+}
+
 func NewType() *Type {
+	transients := 0
 	return &Type{
-		Type:  reflect.StructOf([]reflect.StructField{}),
-		types: map[string]int{},
+		Type:            reflect.StructOf([]reflect.StructField{}),
+		fieldsIndex:     map[string]int{},
+		transients:      &transients,
+		anonymousFields: map[string]string{},
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/viant/velty/functions"
 	"github.com/viant/xunsafe"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -20,7 +19,6 @@ const (
 type (
 	Planner struct {
 		bufferSize int
-		transients *int
 		*est.Control
 		Type      *est.Type
 		selectors *op.Selectors
@@ -127,7 +125,15 @@ func elemIfNeeded(field reflect.StructField) (reflect.Type, bool) {
 }
 
 func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op.Selector {
-	sel, _ := p.selectors.ById(prefix + field.Name)
+	sel, ok := p.selectors.ById(prefix + field.Name)
+	if ok {
+		return sel
+	}
+
+	if field.Anonymous && field.Type.Kind() == reflect.Ptr {
+		return p.derefHolderSelector(field)
+	}
+
 	return sel
 }
 
@@ -249,14 +255,17 @@ func deref(rType reflect.Type) reflect.Type {
 }
 
 func (p *Planner) accumulator(t reflect.Type) *op.Selector {
-	name := "_T" + strconv.Itoa(*p.transients)
-	*p.transients++
+	name := p.newName()
 	sel := op.NewSelector(name, name, t, nil)
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
 	}
 	return sel
+}
+
+func (p *Planner) newName() string {
+	return p.Type.ReserveNewName()
 }
 
 func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
@@ -341,17 +350,15 @@ func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Op
 }
 
 func New(options ...Option) *Planner {
-	transients := 0
 	ctl := est.Control(0)
 
 	planner := &Planner{
-		transients: &transients,
-		Control:    &ctl,
-		Type:       est.NewType(),
-		selectors:  op.NewSelectors(),
-		cache:      newCache(0),
-		Functions:  op.NewFunctions(),
-		constants:  newConstants(),
+		Control:   &ctl,
+		Type:      est.NewType(),
+		selectors: op.NewSelectors(),
+		cache:     newCache(0),
+		Functions: op.NewFunctions(),
+		constants: newConstants(),
 	}
 
 	planner.init(options)
@@ -362,7 +369,6 @@ func New(options ...Option) *Planner {
 func (p *Planner) New() *Planner {
 	scope := &Planner{
 		bufferSize: p.bufferSize,
-		transients: p.transients,
 		Control:    p.Control,
 		Type:       p.Type.Snapshot(),
 		selectors:  p.selectors.Snapshot(),
@@ -528,4 +534,14 @@ func (p *Planner) compileOperand(actual ast.Expression) (*op.Operand, error) {
 		return nil, err
 	}
 	return xOperand, nil
+}
+
+func (p *Planner) derefHolderSelector(field reflect.StructField) *op.Selector {
+	return &op.Selector{
+		ID:           "",
+		Type:         field.Type,
+		Field:        xunsafe.NewField(field),
+		Indirect:     true,
+		ParentOffset: field.Offset,
+	}
 }

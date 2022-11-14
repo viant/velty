@@ -8,6 +8,7 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/est/stmt/assign"
+	"github.com/viant/velty/types"
 	"unsafe"
 )
 
@@ -50,6 +51,12 @@ func (p *Planner) computeAssignment(actual *stmt2.Statement) (est.New, error) {
 	if err = p.adjustSelector(x, y.Type); err != nil {
 		return nil, err
 	}
+
+	unify, err := types.Unify(x.Type, y.Type)
+	if err != nil {
+		return nil, err
+	}
+	y.Unify = unify.Y
 
 	return assign.Assign(x, y)
 }

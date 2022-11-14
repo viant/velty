@@ -11,7 +11,7 @@ type Unified struct {
 	RType reflect.Type
 }
 
-func Unify(x, y reflect.Type) (*Unified, error) {
+func NormalizeAndUnify(x, y reflect.Type) (*Unified, error) {
 	if x == y {
 		return &Unified{RType: x}, nil
 	}
@@ -22,6 +22,14 @@ func Unify(x, y reflect.Type) (*Unified, error) {
 	}
 
 	resultType := NormalizeType(toType)
+	return unify(x, y, resultType)
+}
+
+func Unify(x, y reflect.Type) (*Unified, error) {
+	return unify(x, y, x)
+}
+
+func unify(x reflect.Type, y reflect.Type, resultType reflect.Type) (*Unified, error) {
 	xNormalizer, err := normalizeTo(x, resultType)
 	if err != nil {
 		return nil, err
@@ -40,6 +48,12 @@ func Unify(x, y reflect.Type) (*Unified, error) {
 }
 
 func normalizeTo(from reflect.Type, to reflect.Type) (func(pointer unsafe.Pointer) unsafe.Pointer, error) {
+	if from == to {
+		return func(pointer unsafe.Pointer) unsafe.Pointer {
+			return pointer
+		}, nil
+	}
+
 	switch to.Kind() {
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return ToIntPtr(from)

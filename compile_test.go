@@ -6,6 +6,7 @@ import (
 	"github.com/viant/velty"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/functions"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +29,10 @@ func TestPlanner_Compile(t *testing.T) {
 		parse, _ := time.Parse("2006-01-02 15:04:05.000000000 -0700 MST", "2014-11-12 11:45:26.000000000 +0000 UTC")
 		return parse
 	}
+
+	defer func() {
+		functions.Now = time.Now
+	}()
 
 	type Boo struct {
 		UUID  string
@@ -97,6 +102,21 @@ func TestPlanner_Compile(t *testing.T) {
 		}
 		Id int
 	}
+
+	reflectStruct := reflect.StructOf([]reflect.StructField{
+		{
+			Name: "ID",
+			Type: reflect.TypeOf(0),
+		},
+		{
+			Name: "Name",
+			Type: reflect.TypeOf(""),
+		},
+		{
+			Name: "Active",
+			Type: reflect.TypeOf(true),
+		},
+	})
 
 	var testCases = []testdata{
 		{
@@ -988,6 +1008,30 @@ $lastColumnName`,
 				},
 			},
 		},
+		{
+			description: "autogen anonymous T",
+			template:    "$ID | $Name | $Active",
+			expect:      `0 |  | false`,
+			embeddedVars: map[string]interface{}{
+				"": reflect.New(reflectStruct).Elem().Interface(),
+			},
+		},
+		{
+			description: "autogen anonymous *T",
+			template:    "$ID | $Name | $Active",
+			expect:      `0 |  | false`,
+			embeddedVars: map[string]interface{}{
+				"": reflect.New(reflectStruct).Interface(),
+			},
+		},
+		{
+			description: "modify given struct",
+			template:    `#set($Foo.Name = "changed")$Foo.Name`,
+			expect:      `changed`,
+			definedVars: map[string]interface{}{
+				"Foo": &Foo{},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1026,6 +1070,7 @@ type testdata struct {
 	expect            string
 	options           []velty.Option
 	expectTemplateErr bool
+	setVariables      map[string]interface{}
 }
 
 type Variable struct {
@@ -1117,6 +1162,12 @@ func (d *testdata) populateState(t *testing.T, state *est.State) error {
 			if !assert.Nil(t, err, d.description) {
 				return err
 			}
+		}
+	}
+
+	for key := range d.setVariables {
+		if err := state.SetValue(key, d.setVariables[key]); err != nil {
+			return err
 		}
 	}
 
