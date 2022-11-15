@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+type Node struct {
+	DB *sql.DB
+}
+
 type bar struct {
 	Name string
 }
@@ -1039,6 +1043,14 @@ $lastColumnName`,
 			expect:      `123`,
 			definedVars: map[string]interface{}{
 				"DB": &sql.DB{},
+			},
+		},
+		{
+			description: `node | cyclic deps`,
+			template:    `123`,
+			expect:      `123`,
+			definedVars: map[string]interface{}{
+				"DB": &Node{},
 			},
 		},
 	}

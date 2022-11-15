@@ -11,6 +11,7 @@ type (
 		allTypes       map[reflect.Type]*MultiCycleDetector
 		parent         *CycleDetector
 		parentSelector *op.Selector
+		name           string
 	}
 
 	MultiCycleDetector struct {
@@ -34,6 +35,7 @@ func newCycleDetector(parent *CycleDetector, state map[reflect.Type]*MultiCycleD
 		parent:         parent,
 		rType:          rType,
 		parentSelector: parentSelector,
+		name:           rType.String(),
 	}
 }
 
@@ -81,7 +83,7 @@ func (c *CycleDetector) getChildrenCycleHolder(rType reflect.Type) *MultiCycleDe
 }
 
 func (c *CycleDetector) Has(parent *CycleDetector) bool {
-	curr := c.parent
+	curr := c
 	for curr != nil {
 		if curr.rType == parent.rType && curr.rType != nil {
 			return true
