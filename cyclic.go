@@ -10,7 +10,6 @@ type (
 		rType          reflect.Type
 		allTypes       map[reflect.Type]*MultiCycleDetector
 		parent         *CycleDetector
-		asString       string
 		parentSelector *op.Selector
 	}
 
@@ -34,7 +33,6 @@ func newCycleDetector(parent *CycleDetector, state map[reflect.Type]*MultiCycleD
 		allTypes:       state,
 		parent:         parent,
 		rType:          rType,
-		asString:       rType.String(),
 		parentSelector: parentSelector,
 	}
 }
