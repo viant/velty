@@ -1,6 +1,7 @@
 package velty_test
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
@@ -1030,6 +1031,14 @@ $lastColumnName`,
 			expect:      `changed`,
 			definedVars: map[string]interface{}{
 				"Foo": &Foo{},
+			},
+		},
+		{
+			description: `db | cyclic deps, interfaces`,
+			template:    `123`,
+			expect:      `123`,
+			definedVars: map[string]interface{}{
+				"DB": &sql.DB{},
 			},
 		},
 	}

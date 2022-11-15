@@ -21,6 +21,7 @@ type Selector struct {
 	ParentOffset  uintptr
 	Map           *Map
 	InterfaceExec *Interface
+	Cycle         *Selector
 }
 
 //NewSelector create a selector
@@ -48,6 +49,14 @@ func newXField(name string, sType reflect.Type) *xunsafe.Field {
 }
 
 func SelectorWithField(id string, field *xunsafe.Field, parent *Selector, indirect bool, offset uintptr) *Selector {
+	return newSelector(id, field, parent, indirect, offset, nil)
+}
+
+func NewCycleSelector(id string, field *xunsafe.Field, parent *Selector, indirect bool, offset uintptr, cycleSelector *Selector) *Selector {
+	return newSelector(id, field, parent, indirect, offset, cycleSelector)
+}
+
+func newSelector(id string, field *xunsafe.Field, parent *Selector, indirect bool, offset uintptr, cycleSelector *Selector) *Selector {
 	return &Selector{
 		Type:         field.Type,
 		ID:           id,
@@ -55,6 +64,7 @@ func SelectorWithField(id string, field *xunsafe.Field, parent *Selector, indire
 		Parent:       parent,
 		Indirect:     indirect,
 		ParentOffset: offset,
+		Cycle:        cycleSelector,
 	}
 }
 
