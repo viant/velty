@@ -2,6 +2,7 @@ package functions
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
 	"reflect"
@@ -89,8 +90,8 @@ var SliceIndexByFunc op.KindFunction = &indexSliceByFunc{}
 
 type indexSliceByFunc struct{}
 
-func (in *indexSliceByFunc) Kind() reflect.Kind {
-	return reflect.Slice
+func (in *indexSliceByFunc) Kind() []reflect.Kind {
+	return []reflect.Kind{reflect.Slice}
 }
 
 func (in *indexSliceByFunc) Handler() interface{} {
@@ -107,7 +108,7 @@ func (in *indexSliceByFunc) Handler() interface{} {
 			return nil, err
 		}
 
-		mapType, err := in.ResultType(sliceType)
+		mapType, err := in.ResultType(sliceType, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -141,7 +142,7 @@ func (in *indexSliceByFunc) Handler() interface{} {
 	}
 }
 
-func (in *indexSliceByFunc) ResultType(receiver reflect.Type) (reflect.Type, error) {
+func (in *indexSliceByFunc) ResultType(receiver reflect.Type, _ *expr.Call) (reflect.Type, error) {
 	if receiver.Kind() != reflect.Slice {
 		return nil, fmt.Errorf("unsupported IndexBy receiver type %s", receiver.String())
 	}

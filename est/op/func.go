@@ -2,6 +2,7 @@ package op
 
 import (
 	"fmt"
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
 	"reflect"
@@ -46,12 +47,12 @@ type (
 	}
 
 	KindFunction interface {
-		Kind() reflect.Kind
+		Kind() []reflect.Kind
 		Handler() interface{}
 	}
 
 	ResultTyper interface {
-		ResultType(receiver reflect.Type) (reflect.Type, error)
+		ResultType(receiver reflect.Type, call *expr.Call) (reflect.Type, error)
 	}
 
 	KindIndex struct {
@@ -249,12 +250,12 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 	return nil
 }
 
-func (f *Functions) Method(rType reflect.Type, id string) (*Func, error) {
+func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
 	if method, ok := rType.MethodByName(id); ok {
 		return f.asFunc(rType, id, method)
 	}
 
-	if method, err := f.functionByKind(id, rType); method != nil || err != nil {
+	if method, err := f.functionByKind(id, rType, call); method != nil || err != nil {
 		return method, err
 	}
 
@@ -727,7 +728,7 @@ func (f *Functions) RegisterFunctionKind(methodName string, funcDetails KindFunc
 	return nil
 }
 
-func (f *Functions) functionByKind(id string, rType reflect.Type) (*Func, error) {
+func (f *Functions) functionByKind(id string, rType reflect.Type, call *expr.Call) (*Func, error) {
 	kind := rType.Kind()
 	kindFunction, ok := f.kindIndex.KindFunction(kind, id)
 	if !ok {
@@ -738,7 +739,7 @@ func (f *Functions) functionByKind(id string, rType reflect.Type) (*Func, error)
 	var resultType reflect.Type
 	if ok {
 		var err error
-		resultType, err = typer.ResultType(rType)
+		resultType, err = typer.ResultType(rType, call)
 		if err != nil {
 			return nil, err
 		}
@@ -750,8 +751,11 @@ func (f *Functions) functionByKind(id string, rType reflect.Type) (*Func, error)
 }
 
 func (i *KindIndex) Add(name string, details KindFunction) {
-	functionsIndex := i.GetOrCreate(details.Kind())
-	functionsIndex.Add(name, details)
+	kinds := details.Kind()
+	for _, kind := range kinds {
+		functionsIndex := i.GetOrCreate(kind)
+		functionsIndex.Add(name, details)
+	}
 }
 
 func (i *KindIndex) GetOrCreate(kind reflect.Kind) *FunctionsIndex {

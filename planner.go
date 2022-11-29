@@ -322,7 +322,7 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 
 func (p *Planner) newFuncSelector(selectorId string, methodName string, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
-	aFunc, err := p.Functions.Method(prev.Type, methodName)
+	aFunc, err := p.Functions.Method(prev.Type, methodName, call)
 	if err != nil {
 		return nil, fmt.Errorf("not found function %v, due to: %w", methodName, err)
 	}
@@ -428,11 +428,6 @@ func (p *Planner) init(options []Option) {
 	_ = p.DefineVariable(functions.MapsFunc, functions.Maps{})
 	_ = p.Functions.RegisterFunctionKind(functions.MapHasKey, functions.HasKeyFunc)
 	_ = p.Functions.RegisterFunctionKind(functions.SliceIndexBy, functions.SliceIndexByFunc)
-}
-
-func (p *Planner) isMethod(parentType reflect.Type, id string) bool {
-	_, err := p.Method(parentType, id)
-	return err == nil
 }
 
 func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID string) (*op.Selector, ast.Expression, error) {

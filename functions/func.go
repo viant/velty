@@ -8,8 +8,8 @@ type StaticKindFunc struct {
 	resultType reflect.Type
 }
 
-func (a *StaticKindFunc) Kind() reflect.Kind {
-	return a.kind
+func (a *StaticKindFunc) Kind() []reflect.Kind {
+	return []reflect.Kind{a.kind}
 }
 
 func (a *StaticKindFunc) Handler() interface{} {
