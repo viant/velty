@@ -13,13 +13,26 @@ type assign struct {
 }
 
 func (a *assign) assignValue() est.Compute {
-	return func(state *est.State) unsafe.Pointer {
-		ptr := a.y.Exec(state)
-		if ptr != nil {
-			xunsafe.Copy(a.x.Exec(state), ptr, int(a.x.Type.Size()))
+	rType := a.x.Type
+	for rType.Kind() == reflect.Ptr {
+		rType = rType.Elem()
+	}
+
+	switch rType.Kind() {
+	case reflect.Struct, reflect.Slice:
+		return func(state *est.State) unsafe.Pointer {
+			ptr := a.y.Exec(state)
+			if ptr != nil {
+				xunsafe.Copy(a.x.Exec(state), ptr, int(a.x.Type.Size()))
+			}
+			return ptr
 		}
 
-		return ptr
+	default:
+		return func(state *est.State) unsafe.Pointer {
+			a.x.Sel.Field.SetValue(a.x.Exec(state), a.y.ExecInterface(state))
+			return a.y.Exec(state)
+		}
 	}
 }
 

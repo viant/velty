@@ -1053,6 +1053,14 @@ $lastColumnName`,
 				"DB": &Node{},
 			},
 		},
+		{
+			description: "assign pointers",
+			template:    "#set($assigned = $ptrValue)$assigned",
+			expect:      `10`,
+			definedVars: map[string]interface{}{
+				"ptrValue": intPtr(10),
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1244,4 +1252,8 @@ type column struct {
 	values  []interface{}
 	aBool   bool
 	aString string
+}
+
+func intPtr(value int) *int {
+	return &value
 }
