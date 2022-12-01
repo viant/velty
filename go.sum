@@ -125,8 +125,8 @@ github.com/viant/parsly v0.0.0-20220309230857-3a8c3e9c4030 h1:7TLk28ufpms90ncSjd
 github.com/viant/parsly v0.0.0-20220309230857-3a8c3e9c4030/go.mod h1:4PKQzioRT9R99ceIhZ6tCD3tp0H0n2dEoIOaLulVvrg=
 github.com/viant/toolbox v0.34.5 h1:szWNPiGHjo8Dd4v2a59saEhG31DRL2Xf3aJ0ZtTSuqc=
 github.com/viant/toolbox v0.34.5/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
-github.com/viant/xunsafe v0.8.1-0.20221201042518-bf6ea38dfc8a h1:g8IV3401CmYBaqJ2Ind3voYCzx8KROEOdRP/SiooNgo=
-github.com/viant/xunsafe v0.8.1-0.20221201042518-bf6ea38dfc8a/go.mod h1:niyYv07oGkqPJirAda2yz+yqt5G+eM275y179yVaS3s=
+github.com/viant/xunsafe v0.8.1-0.20221201184033-61078df343a7 h1:uIdPYsAU/ihFxDbnJoXAFhIMwXFUQLx5wi+y+7j4BlA=
+github.com/viant/xunsafe v0.8.1-0.20221201184033-61078df343a7/go.mod h1:niyYv07oGkqPJirAda2yz+yqt5G+eM275y179yVaS3s=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
