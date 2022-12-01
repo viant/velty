@@ -123,6 +123,23 @@ func TestPlanner_Compile(t *testing.T) {
 		},
 	})
 
+	type PtrsWrapper struct {
+		Int     *int
+		Int8    *int8
+		Int16   *int16
+		Int32   *int32
+		Int64   *int64
+		UInt    *uint
+		UInt8   *uint8
+		UInt16  *uint16
+		UInt32  *uint32
+		UInt64  *uint64
+		Float64 *float64
+		Float32 *float32
+		String  *string
+		Bool    *bool
+	}
+
 	var testCases = []testdata{
 		{
 			description: "assign int",
@@ -715,7 +732,7 @@ $abc
 		{
 			description: `foreach over interfaces`,
 			template:    `$values`,
-			expect:      `[1 abc true 2]`,
+			expect:      `[1,"abc",true,2]`,
 			definedVars: map[string]interface{}{
 				"values": []interface{}{1, "abc", true, 2.0},
 			},
@@ -847,7 +864,7 @@ $lastColumnName`,
 		{
 			description: `time now`,
 			template:    `$time.Now()`,
-			expect:      `2014-11-12 11:45:26 +0000 UTC`,
+			expect:      `"2014-11-12T11:45:26Z"`,
 		},
 		{
 			description: `slices`,
@@ -1059,6 +1076,21 @@ $lastColumnName`,
 			expect:      `10`,
 			definedVars: map[string]interface{}{
 				"ptrValue": intPtr(10),
+			},
+		},
+		{
+			description: "indirect assign",
+			template: `
+			#set($ptrWrapper.Int = ${int8})
+			$ptrWrapper.Int
+`,
+			expect: `
+			
+			1
+`,
+			definedVars: map[string]interface{}{
+				"ptrWrapper": &PtrsWrapper{},
+				"int8":       int8(1),
 			},
 		},
 	}

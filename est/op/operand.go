@@ -49,10 +49,6 @@ func (o *Operand) exec(state *est.State) unsafe.Pointer {
 		return *o.LiteralPtr
 	}
 
-	if o.Sel != nil {
-		return o.Pointer(state)
-	}
-
 	return o.pointer(state)
 }
 
@@ -63,7 +59,7 @@ func (o *Operand) IsIndirect() bool {
 func (o *Operand) SetType(rType reflect.Type) {
 	o.Type = rType
 	if rType != nil {
-		o.XType = xunsafe.NewType(rType)
+		o.XType = xunsafe.NewType(o.getXType(rType))
 	} else {
 		o.XType = nil
 	}
@@ -84,4 +80,14 @@ func (o *Operand) AsInterface(valuePtr unsafe.Pointer) interface{} {
 	}
 
 	return anInterface
+}
+
+func (o *Operand) trySetType(rType reflect.Type) {
+	if o.Type == nil {
+		o.SetType(rType)
+	}
+}
+
+func (o *Operand) getXType(rType reflect.Type) reflect.Type {
+	return rType
 }

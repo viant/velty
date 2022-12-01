@@ -7,7 +7,7 @@ require (
 	github.com/viant/assertly v0.9.1-0.20220308232634-4242424ccaf5
 	github.com/viant/parsly v0.0.0-20220309230857-3a8c3e9c4030
 	github.com/viant/toolbox v0.34.5
-	github.com/viant/xunsafe v0.8.1-0.20221104195713-fd8483040428
+	github.com/viant/xunsafe v0.8.1-0.20221201042518-bf6ea38dfc8a
 )
 
 require (

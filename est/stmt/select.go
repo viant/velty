@@ -1,6 +1,7 @@
 package stmt
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
@@ -109,15 +110,11 @@ func (a *directAppender) newInterfaceAppender() est.Compute {
 func (a *directAppender) newGenericAppender() est.Compute {
 	return func(state *est.State) unsafe.Pointer {
 		exec := a.x.Exec(state)
-		iface := a.x.Sel.Interface(exec)
-		rValue := reflect.ValueOf(iface)
-		for rValue.Kind() == reflect.Ptr {
-			rValue = rValue.Elem()
-		}
-
-		iface = rValue.Interface()
-		state.Buffer.AppendString(fmt.Sprintf("%v", iface))
-		return exec
+		iface := a.x.AsInterface(exec)
+		marshal, _ := json.Marshal(iface)
+		asString := string(marshal)
+		state.Buffer.AppendString(asString)
+		return unsafe.Pointer(&asString)
 	}
 }
 

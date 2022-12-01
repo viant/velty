@@ -8,7 +8,7 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/est/stmt/assign"
-	"github.com/viant/velty/types"
+	"github.com/viant/xunsafe/converter"
 	"unsafe"
 )
 
@@ -52,11 +52,13 @@ func (p *Planner) computeAssignment(actual *stmt2.Statement) (est.New, error) {
 		return nil, err
 	}
 
-	unify, err := types.Unify(x.Type, y.Type)
+	unify, err := converter.Unify(x.Type, y.Type)
 	if err != nil {
 		return nil, err
 	}
+
 	y.Unify = unify.Y
+	y.Type = unify.RType
 
 	return assign.Assign(x, y)
 }

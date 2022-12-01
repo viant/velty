@@ -2,6 +2,7 @@ package op
 
 import (
 	est "github.com/viant/velty/est"
+	"github.com/viant/xunsafe/converter"
 	"reflect"
 	"unsafe"
 )
@@ -11,27 +12,37 @@ type Expression struct {
 	Type       reflect.Type
 	*Selector
 	est.New
-	Unify func(pointer unsafe.Pointer) unsafe.Pointer
+	Unify converter.UnifyFn
 }
 
 func (e *Expression) Operand(control est.Control) (*Operand, error) {
+	var unify func(pointer unsafe.Pointer) unsafe.Pointer
+	if e.Unify != nil {
+		unify = func(pointer unsafe.Pointer) unsafe.Pointer {
+			ptr, _ := e.Unify(pointer)
+			return ptr
+		}
+	}
 	operand := &Operand{
-		unify: e.Unify,
+		unify: unify,
+	}
+
+	if e.Type != nil {
+		operand.SetType(e.Type)
 	}
 
 	if e.LiteralPtr != nil {
 		operand.LiteralPtr = e.LiteralPtr
-		operand.SetType(e.Type)
 		return operand, nil
 	}
 
 	if e.Selector != nil {
 		operand.Sel = e.Selector
-		operand.SetType(e.Selector.Type)
+		operand.trySetType(e.Selector.Type)
 	}
 
 	if e.Selector != nil && e.Selector.Func != nil {
-		operand.SetType(e.Func.ResultType)
+		operand.trySetType(e.Func.ResultType)
 		operand.Comp = e.funcCall()
 		return operand, nil
 	}

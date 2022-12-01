@@ -1,8 +1,8 @@
 package op
 
 import (
-	"github.com/viant/velty/types"
 	"github.com/viant/xunsafe"
+	types "github.com/viant/xunsafe/converter"
 	"reflect"
 )
 
@@ -96,7 +96,7 @@ func SliceSelector(id string, placeholder string, sliceOperand, indexOperand *Op
 }
 
 func newSlice(sliceOperand *Operand, indexOperand *Operand, parent *Selector) (*Slice, error) {
-	toInt, err := types.ToInt(indexOperand.Type)
+	toInt, err := types.Unify(indexOperand.Type, intType)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func newSlice(sliceOperand *Operand, indexOperand *Operand, parent *Selector) (*
 	return &Slice{
 		SliceOperand: sliceOperand,
 		IndexOperand: indexOperand,
-		ToInter:      toInt,
+		ToInter:      toInt.Y,
 		XSlice:       xunsafe.NewSlice(parent.Type),
 	}, nil
 }
