@@ -216,14 +216,8 @@ func (f *Functions) reflectFunc(name string, function interface{}, funcType refl
 		resultType = funcType.Out(0)
 	}
 
-	if funcType.NumOut() > 2 || funcType.NumOut() == 0 {
-		return nil, fmt.Errorf("function has to return one or two results ")
-	}
-
-	if funcType.NumOut() == 2 {
-		if _, found := funcType.Out(1).MethodByName("Error"); !found {
-			return nil, fmt.Errorf("2nd return has to be an error if specified")
-		}
+	if err := validateMethodSignature(funcType, resultType != nil); err != nil {
+		return nil, err
 	}
 
 	aFunc := &Func{
@@ -237,6 +231,23 @@ func (f *Functions) reflectFunc(name string, function interface{}, funcType refl
 
 	aFunc.Function = aFunc.callFunc
 	return aFunc, nil
+}
+
+func validateMethodSignature(funcType reflect.Type, resultTypeSpecified bool) error {
+	if funcType.NumOut() > 2 || funcType.NumOut() == 0 {
+		return fmt.Errorf("function has to return one or two results ")
+	}
+
+	if funcType.Out(0).Kind() == reflect.Interface && !resultTypeSpecified {
+		return fmt.Errorf("if method retunrns interface, the result type has to be specified with op.ResultTyper")
+	}
+
+	if funcType.NumOut() == 2 {
+		if _, found := funcType.Out(1).MethodByName("Error"); !found {
+			return fmt.Errorf("2nd return has to be an error if specified")
+		}
+	}
+	return nil
 }
 
 func (f *Functions) RegisterFunc(name string, function *Func) error {
@@ -724,8 +735,7 @@ func (f *Functions) RegisterFunctionKind(methodName string, funcDetails KindFunc
 		return fmt.Errorf("unexpected function handler type, expected Function, got %T", handler)
 	}
 
-	f.kindIndex.Add(methodName, funcDetails)
-	return nil
+	return f.kindIndex.Add(methodName, funcDetails)
 }
 
 func (f *Functions) functionByKind(id string, rType reflect.Type, call *expr.Call) (*Func, error) {
@@ -750,12 +760,26 @@ func (f *Functions) functionByKind(id string, rType reflect.Type, call *expr.Cal
 	return reflectFunc, err
 }
 
-func (i *KindIndex) Add(name string, details KindFunction) {
+func (i *KindIndex) Add(name string, details KindFunction) error {
+	rType := reflect.TypeOf(details.Handler())
+	if _, ok := details.(ResultTyper); ok {
+		if err := validateMethodSignature(rType, true); err != nil {
+			return err
+		}
+	} else {
+		if err := validateMethodSignature(rType, false); err != nil {
+			return err
+		}
+	}
+
 	kinds := details.Kind()
+
 	for _, kind := range kinds {
 		functionsIndex := i.GetOrCreate(kind)
 		functionsIndex.Add(name, details)
 	}
+
+	return nil
 }
 
 func (i *KindIndex) GetOrCreate(kind reflect.Kind) *FunctionsIndex {

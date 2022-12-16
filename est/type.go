@@ -24,7 +24,11 @@ type Type struct {
 }
 
 func (t *Type) AddField(id string, name string, rType reflect.Type) reflect.StructField {
-	return t.addField(id, name, rType, false)
+	return t.addField(id, name, rType, false, "")
+}
+
+func (t *Type) AddFieldWithTag(id string, name, tag string, rType reflect.Type) reflect.StructField {
+	return t.addField(id, name, rType, false, tag)
 }
 
 func (t *Type) ValueAccessors() []*xunsafe.Field {
@@ -40,11 +44,11 @@ func (t *Type) EmbedType(rType reflect.Type) reflect.StructField {
 
 	}
 
-	field := t.addField(id, id, rType, true)
+	field := t.addField(id, id, rType, true, "")
 	return field
 }
 
-func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bool) reflect.StructField {
+func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bool, defaultTag string) reflect.StructField {
 	pkg := ""
 	if name == "" {
 		if !anonymous {

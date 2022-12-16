@@ -274,7 +274,7 @@ func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	sel := op.NewSelector(name, name, t, nil)
 	if t != nil {
 		_ = p.selectors.Append(sel)
-		sel.Field = xunsafe.NewField(p.Type.AddField(name, name, t))
+		sel.Field = xunsafe.NewField(p.Type.AddFieldWithTag(name, name, "", t))
 	}
 	return sel
 }
