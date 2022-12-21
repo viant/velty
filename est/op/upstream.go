@@ -58,7 +58,9 @@ func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.
 		}
 
 		for i := 0; i < parentLen; i++ {
-			if parents[i].Func != nil {
+			if parents[i].Literal != nil {
+				ptr = parents[i].Literal
+			} else if parents[i].Func != nil {
 				ptr = callers[i](parents[i], parents[i].Args, state)
 			} else if parents[i].Slice != nil {
 				ptr = parents[i].Slice.Exec(ptr, state)

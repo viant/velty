@@ -1,8 +1,6 @@
 package functions
 
 import (
-	"github.com/viant/velty/est"
-	"github.com/viant/velty/est/op"
 	"reflect"
 	"time"
 )
@@ -15,17 +13,17 @@ var (
 type Time struct {
 }
 
-func (t Time) Discover(aFunc interface{}) (func(operands []*op.Operand, state *est.State) (interface{}, error), reflect.Type, bool) {
+func (t Time) DiscoverInterfaces(aFunc interface{}) (func(args ...interface{}) (interface{}, error), reflect.Type, bool) {
 	switch actual := aFunc.(type) {
 	case func(_ Time) time.Time:
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+		return func(operands ...interface{}) (interface{}, error) {
 			aTime := actual(t)
 
 			return aTime, nil
 		}, timeType, true
 
 	case func() time.Time:
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+		return func(operands ...interface{}) (interface{}, error) {
 			aTime := actual()
 
 			return aTime, nil

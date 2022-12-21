@@ -1,6 +1,6 @@
-package op
+package keys
 
-func NormalizeKey(key interface{}) interface{} {
+func Normalize(key interface{}) interface{} {
 	if key == nil {
 		return nil
 	}

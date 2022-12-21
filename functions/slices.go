@@ -3,7 +3,7 @@ package functions
 import (
 	"fmt"
 	"github.com/viant/velty/ast/expr"
-	"github.com/viant/velty/est/op"
+	"github.com/viant/velty/keys"
 	"github.com/viant/xunsafe"
 	"reflect"
 )
@@ -86,7 +86,7 @@ func (s Slices) ReverseInts(slice interface{}) ([]int, error) {
 	return newSlice, nil
 }
 
-var SliceIndexByFunc op.KindFunction = &indexSliceByFunc{}
+var SliceIndexByFunc = &indexSliceByFunc{}
 
 type indexSliceByFunc struct{}
 
@@ -129,7 +129,7 @@ func (in *indexSliceByFunc) Handler() interface{} {
 				fieldValue = upstreamType.Deref(fieldValue)
 			}
 
-			key := op.NormalizeKey(fieldValue)
+			key := keys.Normalize(fieldValue)
 			fieldValue = xField.Value(xunsafe.AsPointer(key))
 			resultMap.SetMapIndex(reflect.ValueOf(fieldValue), reflect.ValueOf(sliceValueAt))
 		}

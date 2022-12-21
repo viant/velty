@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/functions"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
@@ -28,6 +29,7 @@ type (
 		funcs         []*Func
 
 		receivers map[string]*Receiver
+		ns        map[string]interface{}
 	}
 
 	Receiver struct {
@@ -164,14 +166,32 @@ func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, st
 }
 
 func NewFunctions() *Functions {
-	return &Functions{
+	result := EmptyFunctions()
+	_ = result.RegisterFuncNs(functions.FuncStrings, functions.Strings{})
+	_ = result.RegisterFuncNs(functions.FuncMath, functions.Math{})
+	_ = result.RegisterFuncNs(functions.FuncStrconv, functions.Strconv{})
+	_ = result.RegisterFuncNs(functions.FuncSlices, functions.Slices{})
+	_ = result.RegisterFuncNs(functions.FuncTypes, functions.Types{})
+	_ = result.RegisterFuncNs(functions.FuncErrors, functions.Errors{})
+	_ = result.RegisterFuncNs(functions.FuncTime, functions.Time{})
+	_ = result.RegisterFuncNs(functions.FuncMaps, functions.Maps{})
+	_ = result.RegisterFunctionKind(functions.MapHasKey, functions.HasKeyFunc)
+	_ = result.RegisterFunctionKind(functions.SliceIndexBy, functions.SliceIndexByFunc)
+
+	return result
+}
+
+func EmptyFunctions() *Functions {
+	result := &Functions{
 		index: map[string]int{},
 		kindIndex: &KindIndex{
 			index: map[reflect.Kind]int{},
 		},
 		funcs:     make([]*Func, 0),
 		receivers: map[string]*Receiver{},
+		ns:        map[string]interface{}{},
 	}
+	return result
 }
 
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
@@ -259,6 +279,11 @@ func (f *Functions) RegisterFunc(name string, function *Func) error {
 	f.funcs = append(f.funcs, function)
 
 	return nil
+}
+
+func (f *Functions) IsFuncNs(ns string) bool {
+	_, ok := f.ns[ns]
+	return ok
 }
 
 func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
@@ -758,6 +783,25 @@ func (f *Functions) functionByKind(id string, rType reflect.Type, call *expr.Cal
 	handler := kindFunction.Handler()
 	reflectFunc, err := f.reflectFunc(id, handler, reflect.TypeOf(handler), resultType)
 	return reflectFunc, err
+}
+
+func (f *Functions) RegisterFuncNs(ns string, funcs interface{}) error {
+	_, ok := f.ns[ns]
+	if ok {
+		return fmt.Errorf("%v already exists in Functions", ns)
+	}
+
+	f.ns[ns] = funcs
+	return nil
+}
+
+func (f *Functions) FuncSelector(name string, parent *Selector) (*Selector, bool) {
+	funcs, ok := f.ns[name]
+	if !ok {
+		return nil, false
+	}
+
+	return NewLiteralSelector(name, reflect.TypeOf(funcs), funcs, parent), true
 }
 
 func (i *KindIndex) Add(name string, details KindFunction) error {

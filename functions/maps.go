@@ -2,7 +2,7 @@ package functions
 
 import (
 	"fmt"
-	"github.com/viant/velty/est/op"
+	"github.com/viant/velty/keys"
 	"reflect"
 )
 
@@ -103,7 +103,7 @@ func (m Maps) GetString(aMap interface{}, key interface{}) (string, error) {
 var HasKeyFunc = &StaticKindFunc{
 	kind: reflect.Map,
 	handler: func(aMap, aKey interface{}) (bool, error) {
-		return reflect.ValueOf(aMap).MapIndex(reflect.ValueOf(op.NormalizeKey(aKey))).IsValid(), nil
+		return reflect.ValueOf(aMap).MapIndex(reflect.ValueOf(keys.Normalize(aKey))).IsValid(), nil
 	},
 	resultType: reflect.TypeOf(true),
 }

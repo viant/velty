@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/viant/velty"
+	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/functions"
 	"reflect"
 	"strings"
@@ -27,6 +29,48 @@ func (b *bar) UpperCase() string {
 
 func (b *bar) Concat(values ...string) string {
 	return strings.Join(append([]string{b.Name}, values...), " ")
+}
+
+type (
+	barAggregator struct{}
+	barAggregates struct {
+		Names []string
+	}
+
+	sliceLength struct{}
+)
+
+func (s *sliceLength) ResultType(receiver reflect.Type, call *expr.Call) (reflect.Type, error) {
+	return reflect.TypeOf(0), nil
+}
+
+func (s *sliceLength) Kind() []reflect.Kind {
+	return []reflect.Kind{reflect.Slice}
+}
+
+func (s *sliceLength) Handler() interface{} {
+	return func(aSlice interface{}) interface{} {
+		return reflect.ValueOf(aSlice).Len()
+	}
+}
+
+func (b *barAggregator) ResultType(receiver reflect.Type, call *expr.Call) (reflect.Type, error) {
+	return reflect.TypeOf(&barAggregates{}), nil
+}
+
+func (b *barAggregator) Kind() []reflect.Kind {
+	return []reflect.Kind{reflect.Slice}
+}
+
+func (b *barAggregator) Handler() interface{} {
+	return func(data []*bar) interface{} {
+		result := &barAggregates{}
+		for _, datum := range data {
+			result.Names = append(result.Names, datum.Name)
+		}
+
+		return result
+	}
 }
 
 func TestPlanner_Compile(t *testing.T) {
@@ -1093,6 +1137,18 @@ $lastColumnName`,
 				"int8":       int8(1),
 			},
 		},
+		{
+			description: "result typer",
+			template:    `#set($aggregated = $bars.Aggregates()) ${aggregated.Names.Length()}`,
+			expect:      ` 3`,
+			definedVars: map[string]interface{}{
+				"bars": []*bar{{Name: "abc"}, {Name: "def"}, {Name: "ghi"}},
+			},
+			KindFunctions: map[string]op.KindFunction{
+				"Aggregates": &barAggregator{},
+				"Length":     &sliceLength{},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1132,6 +1188,7 @@ type testdata struct {
 	options           []velty.Option
 	expectTemplateErr bool
 	setVariables      map[string]interface{}
+	KindFunctions     map[string]op.KindFunction
 }
 
 type Variable struct {
@@ -1183,6 +1240,11 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 		}
 	}
 
+	for name, function := range d.KindFunctions {
+		if err := planner.RegisterFunctionKind(name, function); err != nil {
+			return nil, nil, err
+		}
+	}
 	exec, newState, err := planner.Compile([]byte(d.template))
 
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
-	"github.com/viant/velty/functions"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strings"
@@ -317,6 +316,11 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 	if idx, ok := p.selectors.Index[name]; ok {
 		return p.selectors.Selector(idx)
 	}
+
+	if funcSelector, ok := p.Functions.FuncSelector(name, nil); ok {
+		return funcSelector
+	}
+
 	return nil
 }
 
@@ -372,7 +376,6 @@ func New(options ...Option) *Planner {
 		Type:      est.NewType(),
 		selectors: op.NewSelectors(),
 		cache:     newCache(0),
-		Functions: op.NewFunctions(),
 		constants: newConstants(),
 	}
 
@@ -396,7 +399,8 @@ func (p *Planner) New() *Planner {
 	return scope
 }
 
-func (p *Planner) apply(options []Option) {
+func (p *Planner) apply(options []Option) *op.Func {
+	var aFunc *op.Func
 	for _, option := range options {
 		switch actual := option.(type) {
 		case BufferSize:
@@ -407,8 +411,12 @@ func (p *Planner) apply(options []Option) {
 			p.escapeHTML = bool(actual)
 		case PanicOnError:
 			p.panicOnError = bool(actual)
+		case *op.Func:
+			aFunc = actual
 		}
 	}
+
+	return aFunc
 }
 
 func (p *Planner) registerConst(i *[]int) {
@@ -416,18 +424,11 @@ func (p *Planner) registerConst(i *[]int) {
 }
 
 func (p *Planner) init(options []Option) {
-	p.apply(options)
+	aFunc := p.apply(options)
 
-	_ = p.DefineVariable(functions.StringsFunc, functions.Strings{})
-	_ = p.DefineVariable(functions.MathFunc, functions.Math{})
-	_ = p.DefineVariable(functions.StrconvFunc, functions.Strconv{})
-	_ = p.DefineVariable(functions.SlicesFunc, functions.Slices{})
-	_ = p.DefineVariable(functions.TypesFunc, functions.Types{})
-	_ = p.DefineVariable(functions.ErrorsFunc, functions.Errors{})
-	_ = p.DefineVariable(functions.TimeFunc, functions.Time{})
-	_ = p.DefineVariable(functions.MapsFunc, functions.Maps{})
-	_ = p.Functions.RegisterFunctionKind(functions.MapHasKey, functions.HasKeyFunc)
-	_ = p.Functions.RegisterFunctionKind(functions.SliceIndexBy, functions.SliceIndexByFunc)
+	if aFunc == nil {
+		p.Functions = op.NewFunctions()
+	}
 }
 
 func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID string) (*op.Selector, ast.Expression, error) {

@@ -2,6 +2,7 @@ package op
 
 import (
 	"github.com/viant/velty/est"
+	"github.com/viant/velty/keys"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"unsafe"
@@ -21,7 +22,7 @@ func (m *Map) Exec(mapPtr unsafe.Pointer, state *est.State) unsafe.Pointer {
 	}
 
 	execInterface := m.indexOperand.ExecInterface(state)
-	anIndex := NormalizeKey(execInterface)
+	anIndex := keys.Normalize(execInterface)
 	mapValue := reflect.ValueOf(aMap)
 	if mapValue.Kind() != reflect.Map {
 		return nil

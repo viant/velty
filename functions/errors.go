@@ -2,57 +2,55 @@ package functions
 
 import (
 	"fmt"
-	"github.com/viant/velty/est"
-	"github.com/viant/velty/est/op"
 	"reflect"
 )
 
 type Errors struct {
 }
 
-func (e Errors) Discover(aFunc interface{}) (func(operands []*op.Operand, state *est.State) (interface{}, error), reflect.Type, bool) {
+func (e Errors) DiscoverInterfaces(aFunc interface{}) (func(args ...interface{}) (interface{}, error), reflect.Type, bool) {
 	switch actual := aFunc.(type) {
 	case func(_ Errors, message string) (string, error):
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
-			if len(operands) != 1 {
-				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(operands))
+		return func(args ...interface{}) (interface{}, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(args))
 			}
 
-			asMessage := *(*string)(operands[0].Exec(state))
+			asMessage := args[0].(string)
 			result, err := actual(e, asMessage)
 			return result, err
 		}, stringType, true
 
 	case func(_ Errors, anArg interface{}) (string, error):
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+		return func(operands ...interface{}) (interface{}, error) {
 			if len(operands) != 1 {
 				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(operands))
 			}
 
-			anArg := operands[0].ExecInterface(state)
+			anArg := operands[0]
 			result, err := actual(e, anArg)
 			return result, err
 		}, stringType, true
 
 	case func(_ Errors, value interface{}) (bool, error):
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+		return func(operands ...interface{}) (interface{}, error) {
 			if len(operands) != 1 {
 				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(operands))
 			}
 
-			anArg := *(*bool)(operands[0].Exec(state))
+			anArg := operands[0].(bool)
 			result, err := actual(e, anArg)
 			return result, err
 		}, boolType, true
 
 	case func(_ Errors, value bool, message string) (bool, error):
-		return func(operands []*op.Operand, state *est.State) (interface{}, error) {
+		return func(operands ...interface{}) (interface{}, error) {
 			if len(operands) != 2 {
 				return nil, fmt.Errorf("unexpected arguments number, expected 1 got %v", len(operands))
 			}
 
-			valueArg := *(*bool)(operands[0].Exec(state))
-			messageArg := *(*string)(operands[1].Exec(state))
+			valueArg := operands[0].(bool)
+			messageArg := operands[1].(string)
 			result, err := actual(e, valueArg, messageArg)
 			return result, err
 		}, boolType, true

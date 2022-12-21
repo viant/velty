@@ -4,6 +4,7 @@ import (
 	"github.com/viant/xunsafe"
 	types "github.com/viant/xunsafe/converter"
 	"reflect"
+	"unsafe"
 )
 
 //Selector represent data selector
@@ -13,6 +14,7 @@ type Selector struct {
 	*xunsafe.Field
 	Indirect bool
 	Parent   *Selector
+	Literal  unsafe.Pointer
 
 	Func          *Func
 	Slice         *Slice
@@ -33,6 +35,16 @@ func NewSelector(id, name string, sType reflect.Type, parent *Selector) *Selecto
 		Field:    xField,
 		Parent:   parent,
 		Indirect: sType != nil && (sType.Kind() == reflect.Ptr || sType.Kind() == reflect.Slice),
+	}
+}
+
+func NewLiteralSelector(id string, sType reflect.Type, value interface{}, parent *Selector) *Selector {
+	return &Selector{
+		ID:       id,
+		Type:     sType,
+		Literal:  xunsafe.AsPointer(value),
+		Parent:   parent,
+		Indirect: true,
 	}
 }
 
