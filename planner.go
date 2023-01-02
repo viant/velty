@@ -43,15 +43,15 @@ func (p *Planner) EmbedVariable(val interface{}) error {
 	field := p.Type.EmbedType(rType)
 	vTag := Parse(field.Tag.Get(velty))
 
-	return p.addSelectors(vTag.Prefix, field)
+	return p.addSelectors(vTag.Prefix, field, field.Name)
 }
 
-func (p *Planner) addSelectors(prefix string, field reflect.StructField) error {
+func (p *Planner) addSelectors(prefix string, field reflect.StructField, fieldName string) error {
 	detector := NewCycleDetector(field.Type)
-	return p.createSelectors(prefix, field, nil, 0, 0, false, detector)
+	return p.createSelectors(prefix, field, nil, 0, 0, false, detector, fieldName)
 }
 
-func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, initialOffset uintptr, indirect bool, cycleDetector *CycleDetector) error {
+func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, initialOffset uintptr, indirect bool, cycleDetector *CycleDetector, fieldName string) error {
 	cycleNode, cycleSelector := p.cycle(cycleDetector, field, parent)
 
 	if field.Anonymous {
@@ -60,16 +60,28 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 
 	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 	vTag := Parse(field.Tag.Get(velty))
-	if err := p.indexSelectorIfNeeded(prefix, field, parent, vTag, offsetSoFar, initialOffset, indirect, cycleSelector); err != nil || cycleSelector != nil {
+
+	parent, err := p.indexSelectorIfNeeded(prefix, field, parent, offsetSoFar, initialOffset, indirect, cycleSelector, fieldName)
+	if err != nil || cycleSelector != nil {
 		return err
 	}
 
 	if !field.Anonymous {
 		offsetSoFar += field.Offset
 		initialOffset = 0
+
+		if prefix == "" {
+			prefix = fieldName + fieldSeparator
+		} else {
+			prefix = prefix + fieldName + fieldSeparator
+		}
+	} else {
+		if vTag.Prefix != "" {
+			prefix += vTag.Prefix
+		}
 	}
 
-	return p.addChildrenSelectors(prefix, vTag.Prefix, field, offsetSoFar, initialOffset, indirect, cycleNode)
+	return p.addChildrenSelectors(prefix, field, offsetSoFar, initialOffset, indirect, cycleNode, parent)
 }
 
 func (p *Planner) cycle(cycleDetector *CycleDetector, field reflect.StructField, parent *op.Selector) (*CycleDetector, *op.Selector) {
@@ -80,52 +92,52 @@ func (p *Planner) cycle(cycleDetector *CycleDetector, field reflect.StructField,
 	return child, nil
 }
 
-func (p *Planner) addChildrenSelectors(holderPrefix, fieldTagPrefix string, field reflect.StructField, offsetSoFar, initialOffset uintptr, indirect bool, detector *CycleDetector) error {
+func (p *Planner) addChildrenSelectors(holderPrefix string, field reflect.StructField, offsetSoFar, initialOffset uintptr, indirect bool, detector *CycleDetector, parent *op.Selector) error {
 	rType, elemed := elemIfNeeded(field.Type)
 	if rType.Kind() == reflect.Struct {
 		for i := 0; i < rType.NumField(); i++ {
-			actualParent := p.ensureStructSelector(field, holderPrefix)
 
-			childPrefix := fieldTagPrefix
-			if !field.Anonymous {
-				childPrefix = field.Name + fieldSeparator
+			structField := rType.Field(i)
+			vTag := Parse(structField.Tag.Get(velty))
+			fieldNames := []string{structField.Name}
+			if len(vTag.Names) != 0 {
+				fieldNames = vTag.Names
 			}
 
-			err := p.createSelectors(holderPrefix+childPrefix, rType.Field(i), actualParent, offsetSoFar, initialOffset, indirect || elemed, detector)
-			if err != nil {
-				return err
+			for _, name := range fieldNames {
+				if err := p.createSelectors(holderPrefix, structField, parent, offsetSoFar, initialOffset, indirect || elemed, detector, name); err != nil {
+					return err
+				}
 			}
 		}
 	}
 	return nil
 }
 
-func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, vTag *Tag, offset uintptr, anonymousOffset uintptr, indirect bool, cycleSelector *op.Selector) error {
-	if field.Anonymous {
-		return nil
-	}
-
-	fieldNames := []string{field.Name}
-	if len(vTag.Names) != 0 {
-		fieldNames = vTag.Names
+func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, offset uintptr, anonymousOffset uintptr, indirect bool, cycleSelector *op.Selector, name string) (*op.Selector, error) {
+	if field.Anonymous && field.Type.Kind() != reflect.Ptr {
+		return parent, nil
 	}
 
 	newField := xunsafe.NewField(field)
 	newField.Offset += anonymousOffset
 	var err error
-	for _, name := range fieldNames {
-		var fieldSelector *op.Selector
-		if cycleSelector != nil {
-			fieldSelector = op.NewCycleSelector(prefix+name, newField, parent, indirect, offset, cycleSelector)
-		} else {
-			fieldSelector = op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
-		}
-		if err = p.selectors.Append(fieldSelector); err != nil {
-			return fmt.Errorf("%w, prefix is required, if parent field is an Anonymous, and any other parent field has the same name", err)
-		}
+	var fieldSelector *op.Selector
+	if cycleSelector != nil {
+		fieldSelector = op.NewCycleSelector(prefix+name, newField, parent, indirect, offset, cycleSelector)
+	} else {
+		fieldSelector = op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 	}
 
-	return nil
+	if field.Anonymous {
+		return fieldSelector, nil
+	}
+
+	if err = p.selectors.Append(fieldSelector); err != nil {
+		return nil, fmt.Errorf("%w, prefix is required, if parent field is an Anonymous, and any other parent field has the same name", err)
+	}
+
+	return fieldSelector, nil
 }
 
 func elemIfNeeded(rType reflect.Type) (reflect.Type, bool) {
@@ -138,22 +150,9 @@ func elemIfNeeded(rType reflect.Type) (reflect.Type, bool) {
 	return rType, wasPtr
 }
 
-func (p *Planner) ensureStructSelector(field reflect.StructField, prefix string) *op.Selector {
-	sel, ok := p.selectors.ById(prefix + field.Name)
-	if ok {
-		return sel
-	}
-
-	if field.Anonymous && field.Type.Kind() == reflect.Ptr {
-		return p.derefHolderSelector(field)
-	}
-
-	return sel
-}
-
 //DefineVariable enrich the Type by adding field with given name.
 //val can be either of the reflect.Type or regular type (i.e. Foo)
-func (p *Planner) DefineVariable(name string, v interface{}) error {
+func (p *Planner) DefineVariable(name string, v interface{}, names ...string) error {
 	if p.selectorByName(name) != nil {
 		return nil
 	}
@@ -167,7 +166,17 @@ func (p *Planner) DefineVariable(name string, v interface{}) error {
 	}
 
 	field := p.Type.AddField(name, name, sType)
-	return p.addSelectors("", field)
+	if err := p.addSelectors("", field, name); err != nil {
+		return err
+	}
+
+	for _, additionalFieldName := range names {
+		if err := p.addSelectors("", field, additionalFieldName); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
