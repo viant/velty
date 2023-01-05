@@ -33,6 +33,7 @@ type (
 	}
 
 	Receiver struct {
+		rType reflect.Type
 		index map[string]int
 		funcs []*Func
 	}
@@ -66,7 +67,33 @@ type (
 		index   map[string]int
 		methods []KindFunction
 	}
+
+	TypeFunc struct {
+		Name       string
+		Handler    interface{}
+		ResultType reflect.Type
+	}
 )
+
+func (r *Receiver) registerFunc(aFunc *Func) error {
+	if _, ok := r.index[aFunc.Name]; ok {
+		return fmt.Errorf("func %v already is defined on %v", aFunc.Name, r.rType.String())
+	}
+
+	r.index[aFunc.Name] = len(r.funcs)
+	r.funcs = append(r.funcs, aFunc)
+
+	return nil
+}
+
+func (r *Receiver) aFunc(id string) (*Func, bool) {
+	i, ok := r.index[id]
+	if !ok {
+		return nil, false
+	}
+
+	return r.funcs[i], true
+}
 
 func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.State) unsafe.Pointer {
 	anIface, err := f.Function(operands, state)
@@ -195,15 +222,22 @@ func EmptyFunctions() *Functions {
 }
 
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
+	aFunc, err := f.newFunc(name, function, nil)
+	if err != nil {
+		return err
+	}
+
+	return f.registerFunc(name, aFunc)
+}
+
+func (f *Functions) newFunc(name string, function interface{}, resultType reflect.Type) (*Func, error) {
 	if discoveredFn, rType, discovered := f.discover(nil, function); discovered {
-		aFunc := &Func{
+		return &Func{
 			Name:       name,
 			Function:   discoveredFn,
 			ResultType: rType,
 			XType:      xunsafe.NewType(rType),
-		}
-
-		return f.RegisterFunc(name, aFunc)
+		}, nil
 	}
 
 	var fType reflect.Type
@@ -215,18 +249,10 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	}
 
 	if fType.Kind() != reflect.Func {
-		return fmt.Errorf("expected func, got %v", function)
+		return nil, fmt.Errorf("expected func, got %v", function)
 	}
 
-	aFunc, err := f.reflectFunc(name, function, fType, nil)
-	if err != nil {
-		return err
-	}
-
-	f.index[name] = len(f.funcs) - 1
-	f.funcs = append(f.funcs, aFunc)
-
-	return nil
+	return f.reflectFunc(name, function, fType, resultType)
 }
 
 func (f *Functions) reflectFunc(name string, function interface{}, funcType reflect.Type, resultType reflect.Type) (*Func, error) {
@@ -270,7 +296,7 @@ func validateMethodSignature(funcType reflect.Type, resultTypeSpecified bool) er
 	return nil
 }
 
-func (f *Functions) RegisterFunc(name string, function *Func) error {
+func (f *Functions) registerFunc(name string, function *Func) error {
 	if function.Function == nil {
 		return fmt.Errorf("function not specified")
 	}
@@ -295,16 +321,21 @@ func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Fun
 		return method, err
 	}
 
-	return f.funcByName(id)
+	return f.funcByName(rType, id)
 }
 
-func (f *Functions) funcByName(id string) (*Func, error) {
+func (f *Functions) funcByName(rType reflect.Type, id string) (*Func, error) {
 	index, ok := f.index[id]
-	if !ok {
-		return nil, fmt.Errorf("no such function %v", id)
+	if ok {
+		return f.funcs[index], nil
 	}
 
-	return f.funcs[index], nil
+	receiver := f.ensureReceiver(rType)
+	if aFunc, ok := receiver.aFunc(id); ok {
+		return aFunc, nil
+	}
+
+	return nil, fmt.Errorf("not found function %v for type %v", id, rType.String())
 }
 
 func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.Method) (*Func, error) {
@@ -718,17 +749,19 @@ func (f *Functions) discover(receiverType reflect.Type, function interface{}) (F
 	return nil, nil, false
 }
 
-func (f *Functions) RegisterTypeFunc(t reflect.Type, id string, function *Func) error {
-	receiver := f.ensureReceiver(t)
-	_, ok := receiver.index[id]
+func (f *Functions) RegisterTypeFunc(receiverType reflect.Type, typeFunc *TypeFunc) error {
+	receiver := f.ensureReceiver(receiverType)
+	_, ok := receiver.index[typeFunc.Name]
 	if ok {
-		return fmt.Errorf("function %v and receiver %v is already defined", id, t.String())
+		return fmt.Errorf("function %v and receiver %v is already defined", typeFunc.Name, receiverType.String())
 	}
 
-	receiver.index[id] = len(receiver.funcs)
-	receiver.funcs = append(receiver.funcs, function)
+	aFunc, err := f.newFunc(typeFunc.Name, typeFunc.Handler, typeFunc.ResultType)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	return receiver.registerFunc(aFunc)
 }
 
 func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
@@ -740,6 +773,7 @@ func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
 	receiver = &Receiver{
 		index: map[string]int{},
 		funcs: make([]*Func, 0),
+		rType: receiverType,
 	}
 
 	f.receivers[asMapKey(receiverType)] = receiver

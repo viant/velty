@@ -1149,6 +1149,24 @@ $lastColumnName`,
 				"Length":     &sliceLength{},
 			},
 		},
+		{
+			description: "register type func",
+			template:    `$sizeable.Size()`,
+			expect:      `4`,
+			definedVars: map[string]interface{}{
+				"sizeable": []int{1, 2, 3, 4},
+			},
+			typeFunc: map[reflect.Type][]*op.TypeFunc{
+				reflect.TypeOf([]int{}): {
+					{
+						Name: "Size",
+						Handler: func(data []int) int {
+							return len(data)
+						},
+					},
+				},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1189,6 +1207,7 @@ type testdata struct {
 	expectTemplateErr bool
 	setVariables      map[string]interface{}
 	KindFunctions     map[string]op.KindFunction
+	typeFunc          map[reflect.Type][]*op.TypeFunc
 }
 
 type Variable struct {
@@ -1245,6 +1264,15 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 			return nil, nil, err
 		}
 	}
+
+	for rType, funcs := range d.typeFunc {
+		for _, aFunc := range funcs {
+			if err := planner.RegisterTypeFunc(rType, aFunc); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+
 	exec, newState, err := planner.Compile([]byte(d.template))
 
 	if err != nil {
