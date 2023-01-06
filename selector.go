@@ -32,5 +32,5 @@ func (p *Planner) compileStmtSelector(actual *expr.Select) (est.New, error) {
 	}
 
 	p.Type.ValueAccessor(actual.ID)
-	return stmt.Selector(selExpr), nil
+	return stmt.Selector(selExpr, false), nil
 }

@@ -1139,7 +1139,7 @@ $lastColumnName`,
 		},
 		{
 			description: "result typer",
-			template:    `#set($aggregated = $bars.Aggregates()) ${aggregated.Names.Length()}`,
+			template:    `#set($Aggregated = $bars.Aggregates()) ${Aggregated.Names.Length()}`,
 			expect:      ` 3`,
 			definedVars: map[string]interface{}{
 				"bars": []*bar{{Name: "abc"}, {Name: "def"}, {Name: "ghi"}},

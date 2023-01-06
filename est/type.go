@@ -9,7 +9,7 @@ import (
 
 const (
 	defaultPkg         = "github.com/viant/velty/est"
-	namespace          = "_velty_"
+	namespace          = "A_velty_"
 	anonymousNamespace = "Velty_"
 )
 

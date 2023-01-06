@@ -118,9 +118,9 @@ func (a *directAppender) newGenericAppender() est.Compute {
 	}
 }
 
-func Selector(expr *op.Expression) est.New {
+func Selector(expr *op.Expression, derefLast bool) est.New {
 	return func(control est.Control) (est.Compute, error) {
-		x, err := expr.Operand(control)
+		x, err := expr.Operand(control, derefLast)
 		if err != nil {
 			return nil, err
 		}

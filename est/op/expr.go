@@ -15,7 +15,7 @@ type Expression struct {
 	Unify converter.UnifyFn
 }
 
-func (e *Expression) Operand(control est.Control) (*Operand, error) {
+func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operand, error) {
 	var unify func(pointer unsafe.Pointer) unsafe.Pointer
 	if e.Unify != nil {
 		unify = func(pointer unsafe.Pointer) unsafe.Pointer {
@@ -43,7 +43,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 
 	if e.Selector != nil && e.Selector.Func != nil {
 		operand.trySetType(e.Func.ResultType)
-		operand.Comp = e.funcCall()
+		operand.Comp = e.funcCall(shouldDerefLast)
 		return operand, nil
 	}
 
@@ -53,7 +53,7 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 
 	if e.Selector != nil {
 		if e.Selector != nil && e.Selector.Indirect {
-			operand.Comp = e.newIndirectSelector()
+			operand.Comp = e.newIndirectSelector(shouldDerefLast)
 		}
 
 		return operand, nil
@@ -69,8 +69,8 @@ func (e *Expression) Operand(control est.Control) (*Operand, error) {
 	return operand, nil
 }
 
-func (e *Expression) funcCall() est.Compute {
-	upstream := Upstream(e.Selector, false)
+func (e *Expression) funcCall(derefLast bool) est.Compute {
+	upstream := Upstream(e.Selector, derefLast)
 	return func(state *est.State) unsafe.Pointer {
 		return upstream(state)
 	}
@@ -78,19 +78,19 @@ func (e *Expression) funcCall() est.Compute {
 
 type Expressions []*Expression
 
-func (e Expressions) Operands(control est.Control) ([]*Operand, error) {
+func (e Expressions) Operands(control est.Control, shouldDerefLast bool) ([]*Operand, error) {
 	var result = make([]*Operand, len(e))
 	var err error
 	for i, item := range e {
-		if result[i], err = item.Operand(control); err != nil {
+		if result[i], err = item.Operand(control, shouldDerefLast); err != nil {
 			return nil, err
 		}
 	}
 	return result, nil
 }
 
-func (e *Expression) newIndirectSelector() est.Compute {
-	upstream := Upstream(e.Selector, true)
+func (e *Expression) newIndirectSelector(shouldDerefLast bool) est.Compute {
+	upstream := Upstream(e.Selector, shouldDerefLast)
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state)
 		return ret

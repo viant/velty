@@ -69,7 +69,7 @@ func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.
 			} else if parents[i].InterfaceExec != nil {
 				ptr = parents[i].InterfaceExec.Exec(ptr, state)
 			} else {
-				if (derefLast && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
+				if (!derefLast && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
 					ptr = parents[i].Pointer(ptr)
 				} else {
 					ptr = parents[i].ValuePointer(ptr)

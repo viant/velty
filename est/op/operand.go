@@ -82,6 +82,18 @@ func (o *Operand) AsInterface(valuePtr unsafe.Pointer) interface{} {
 	return anInterface
 }
 
+func (o *Operand) AsValue(valuePtr unsafe.Pointer) interface{} {
+	var anInterface interface{}
+	switch o.XType.Kind() {
+	case reflect.Interface:
+		anInterface = xunsafe.AsInterface(valuePtr)
+	default:
+		anInterface = o.XType.Value(valuePtr)
+	}
+
+	return anInterface
+}
+
 func (o *Operand) trySetType(rType reflect.Type) {
 	if o.Type == nil {
 		o.SetType(rType)

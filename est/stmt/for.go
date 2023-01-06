@@ -30,7 +30,7 @@ func ForLoop(init, post est.New, condition *op.Expression, block est.Compute) (e
 		forLoop := &For{}
 		var err error
 
-		forLoop.Condition, err = condition.Operand(control)
+		forLoop.Condition, err = condition.Operand(control, false)
 		if err != nil {
 			return nil, err
 		}

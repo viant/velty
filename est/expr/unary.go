@@ -17,10 +17,10 @@ type unaryExpr struct {
 func Unary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
 		if exprs[0].Type == nil {
-			return stmt.Selector(exprs[0])(control)
+			return stmt.Selector(exprs[0], false)(control)
 		}
 
-		oprands, err := op.Expressions(exprs).Operands(control)
+		oprands, err := op.Expressions(exprs).Operands(control, false)
 		if err != nil {
 			return nil, err
 		}

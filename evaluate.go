@@ -51,7 +51,7 @@ func (e *evaluator) newState(planner *Planner, state *est.State) *est.State {
 
 func evaluate(expr *op.Expression, cache *cache, parent *Planner) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
-		x, err := expr.Operand(control)
+		x, err := expr.Operand(control, false)
 		if err != nil {
 			return nil, err
 		}

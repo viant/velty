@@ -356,7 +356,7 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Operand, error) {
 	var err error
 	operands := make([]*op.Operand, len(call.Args)+1)
-	operands[0], err = op.NewExpression(prev).Operand(*p.Control)
+	operands[0], err = op.NewExpression(prev).Operand(*p.Control, false)
 
 	if err != nil {
 		return nil, err
@@ -368,7 +368,7 @@ func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Op
 			return nil, err
 		}
 
-		operand, err := expression.Operand(*p.Control)
+		operand, err := expression.Operand(*p.Control, false)
 		if err != nil {
 			return nil, err
 		}
@@ -498,12 +498,12 @@ func (p *Planner) newSliceSelector(id string, actual *expr.SliceIndex, selector 
 		return nil, err
 	}
 
-	operandExpression, err := indexEpression.Operand(*p.Control)
+	operandExpression, err := indexEpression.Operand(*p.Control, false)
 	if err != nil {
 		return nil, err
 	}
 
-	sliceOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	sliceOperand, err := op.NewExpression(selector).Operand(*p.Control, false)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +517,7 @@ func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *o
 		return nil, err
 	}
 
-	mapOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	mapOperand, err := op.NewExpression(selector).Operand(*p.Control, false)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +526,7 @@ func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *o
 }
 
 func (p *Planner) newInterfaceSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
-	xOperand, err := op.NewExpression(selector).Operand(*p.Control)
+	xOperand, err := op.NewExpression(selector).Operand(*p.Control, false)
 	if err != nil {
 		return nil, err
 	}
@@ -549,7 +549,7 @@ func (p *Planner) compileOperand(actual ast.Expression) (*op.Operand, error) {
 		return nil, err
 	}
 
-	xOperand, err := xExpr.Operand(*p.Control)
+	xOperand, err := xExpr.Operand(*p.Control, false)
 	if err != nil {
 		return nil, err
 	}
