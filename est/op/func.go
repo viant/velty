@@ -163,6 +163,10 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 }
 
 func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, state *est.State, receiverValue reflect.Value) (func() (interface{}, error), bool) {
+	if operands[0].LiteralPtr != nil {
+		return nil, false
+	}
+
 	if actual, ok := receiver.(Discoveryable); ok {
 		method := receiverValue.MethodByName(f.Name)
 		handler, _, ok := actual.Discover(method.Interface())
