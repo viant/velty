@@ -2,7 +2,6 @@ package stmt
 
 import (
 	"fmt"
-	"github.com/viant/toolbox"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
@@ -70,7 +69,13 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 		if r != nil {
 			raw := reflect.NewAt(e.Slice.Type, xPtr).Interface()
 			fmt.Printf("recover: %T %v len:%v\n", raw, raw, l)
-			toolbox.DumpIndent(state.Mem, false)
+			v := reflect.ValueOf(state.Mem)
+			tt := v.Type()
+			for i := 0; i < v.NumField(); i++ {
+				f := v.Field(i)
+				fmt.Printf("[%v] %T %v\n", tt.Field(i).Name, f.Interface(), f.Interface())
+			}
+
 			panic(r)
 		}
 	}()
