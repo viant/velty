@@ -98,9 +98,9 @@ func TestPlanner_Compile(t *testing.T) {
 		IntValue     int `velty:"name=Int"`
 		StringValue  string
 		BooleanValue bool
+		Values       []string
 		FloatValue   float64
 		Index        int
-		Values       []string
 	}
 
 	type employee struct {
@@ -1176,6 +1176,17 @@ $lastColumnName`,
 					Items []string
 					_tmp  int
 				}{},
+			},
+		},
+		{
+			description: `embeded pointer`,
+			template:    `${StringValue} |#foreach($aStr in $Values) ${aStr} #end`,
+			expect:      `a value | 1  2  3 `,
+			embeddedVars: map[string]interface{}{
+				"bar": &Values{
+					StringValue: "a value",
+					Values:      []string{"1", "2", "3"},
+				},
 			},
 		},
 	}

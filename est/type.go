@@ -36,16 +36,25 @@ func (t *Type) ValueAccessors() []*xunsafe.Field {
 }
 
 func (t *Type) EmbedType(rType reflect.Type) reflect.StructField {
-	var id string
-	if rType.Name() != "" {
-		idSegments := strings.Split(rType.String(), ".")
-		id = idSegments[len(idSegments)-1]
-	} else {
-
-	}
+	id := t.typeName(rType)
 
 	field := t.addField(id, id, rType, true, "")
 	return field
+}
+
+func (t *Type) typeName(rType reflect.Type) string {
+	var id string
+
+	for rType.Kind() == reflect.Ptr {
+		rType = rType.Elem()
+	}
+
+	if rType.Name() != "" {
+		idSegments := strings.Split(rType.String(), ".")
+		id = idSegments[len(idSegments)-1]
+	}
+
+	return id
 }
 
 func (t *Type) addField(id string, name string, rType reflect.Type, anonymous bool, defaultTag string) reflect.StructField {
