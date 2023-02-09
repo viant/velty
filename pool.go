@@ -17,14 +17,20 @@ type (
 
 func (p *Pool) State() *est.State {
 	atomic.AddInt64(&p.counter, 1)
-	return p.statePool.Get().(*est.State)
 
+	for {
+		state := p.statePool.Get().(*est.State)
+		if state.Take() {
+			return state
+		}
+	}
 }
 
 func (p *Pool) Put(state *est.State) {
 	if atomic.AddInt64(&p.counter, -1) > p.size-1 {
 		return
 	}
+
 	state.Reset()
 	p.statePool.Put(state)
 }
