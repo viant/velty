@@ -1,7 +1,6 @@
 package est
 
 import (
-	"fmt"
 	"github.com/viant/velty/utils"
 	"html"
 	"strconv"
@@ -58,9 +57,6 @@ func (b *Buffer) AppendStringWithoutEscaping(s string) {
 }
 
 func (b *Buffer) growIfNeeded(sLen int) {
-	if sLen > 10*1024*1024 {
-		panic(fmt.Sprintf("to large to big %v\n", sLen))
-	}
 	if sLen+b.index >= len(b.buf) {
 		size := len(b.buf) + b.poolSize
 		if size < sLen {
