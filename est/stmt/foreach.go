@@ -71,6 +71,7 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 			raw := reflect.NewAt(e.Slice.Type, xPtr).Interface()
 			fmt.Printf("recover: %T %v len:%v\n", raw, raw, l)
 			toolbox.DumpIndent(state.Mem, false)
+			panic(r)
 		}
 	}()
 
