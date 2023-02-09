@@ -1167,6 +1167,17 @@ $lastColumnName`,
 				},
 			},
 		},
+		{
+			description: "iterate over nil slice",
+			template:    `#foreach($item in $Foos.Items) $item #end`,
+			expect:      ``,
+			definedVars: map[string]interface{}{
+				"Foos": &struct {
+					Items []string
+					_tmp  int
+				}{},
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {

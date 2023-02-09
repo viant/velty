@@ -1,6 +1,8 @@
 package stmt
 
 import (
+	"fmt"
+	"github.com/viant/toolbox"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
@@ -62,6 +64,15 @@ func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
 func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 	xPtr := e.X.Exec(state)
 	l := e.Slice.Len(xPtr)
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			raw := reflect.NewAt(e.Slice.Type, xPtr).Interface()
+			fmt.Printf("recover: %T %v\n", raw, raw)
+			toolbox.DumpIndent(state, false)
+		}
+	}()
 
 	var resultPtr unsafe.Pointer
 	for i := 0; i < l; i++ {
