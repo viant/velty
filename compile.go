@@ -34,6 +34,7 @@ func (p *Planner) stateProvider() func() *est.State {
 			StateType:    p.Type,
 			PanicOnError: p.panicOnError,
 		}
+
 		return state
 	}
 }

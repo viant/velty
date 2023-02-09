@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
 type TemplateError error
 type State struct {
+	sync.Mutex
 	Mem          interface{}
 	MemPtr       unsafe.Pointer
 	StateType    *Type
 	Buffer       *Buffer
 	Errors       []error
 	PanicOnError bool
+	isTaken      bool
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
@@ -65,8 +68,12 @@ func (s *State) EmbedValue(v interface{}) error {
 }
 
 func (s *State) Reset() {
+	s.Lock()
+	defer s.Unlock()
+
 	s.Buffer.Reset()
 	s.Errors = nil
+	s.isTaken = true
 }
 
 func (s *State) IsValid() bool {
@@ -80,4 +87,16 @@ func (s *State) AddError(err error) {
 	if s.PanicOnError {
 		panic(err)
 	}
+}
+
+func (s *State) Take() bool {
+	s.Mutex.Lock()
+	defer s.Mutex.Unlock()
+
+	if s.isTaken {
+		return false
+	}
+
+	s.isTaken = true
+	return true
 }
