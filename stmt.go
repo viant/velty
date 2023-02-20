@@ -9,6 +9,7 @@ import (
 	"github.com/viant/velty/est/stmt"
 	"github.com/viant/velty/est/stmt/assign"
 	"github.com/viant/xunsafe/converter"
+	"reflect"
 	"unsafe"
 )
 
@@ -118,6 +119,10 @@ func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 
 	if sliceSelector.Type == nil {
 		return nop(), nil
+	}
+
+	if sliceSelector.Type.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("unsupported ForEach set type: %v", sliceSelector.Type.String())
 	}
 
 	itemType := sliceSelector.Type.Elem()

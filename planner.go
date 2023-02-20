@@ -9,11 +9,14 @@ import (
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
 	fieldSeparator = "___"
 )
+
+var TimeType = reflect.TypeOf(time.Time{})
 
 type (
 	Planner struct {
@@ -79,6 +82,11 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		if vTag.Prefix != "" {
 			prefix += vTag.Prefix
 		}
+	}
+
+	fieldType, _ := elemIfNeeded(field.Type)
+	if fieldType == TimeType {
+		return nil
 	}
 
 	return p.addChildrenSelectors(prefix, field, offsetSoFar, initialOffset, indirect, cycleNode, parent)

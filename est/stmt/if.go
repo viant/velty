@@ -4,6 +4,7 @@ import (
 	"fmt"
 	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
+	"github.com/viant/xunsafe/converter"
 	"reflect"
 	"unsafe"
 )
@@ -72,8 +73,12 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 	}
 
 	if rType == nil {
-		//If type is empty it means that placeholder/function was not registered
-		rType = reflect.TypeOf("")
+		return nil, fmt.Errorf("couldn't determine type of the %v\n", condition.Selector.Name)
+	}
+
+	unify, err := converter.Unify(reflect.TypeOf(true), rType)
+	if err != nil {
+		return nil, err
 	}
 
 	if err != nil || rType.Kind() == reflect.Bool {
@@ -81,6 +86,10 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 	}
 
 	newOperand := &op2.Operand{}
+	if unify.Y != nil {
+		newOperand.SetUnifier(unify.Y)
+		rType = reflect.TypeOf(true)
+	}
 
 	switch rType.Kind() {
 	case reflect.Slice:
@@ -130,6 +139,12 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 				return est.TrueValuePtr
 			}
 			return est.FalseValuePtr
+		}
+
+	case reflect.Bool:
+		newOperand.Comp = func(state *est.State) unsafe.Pointer {
+			anPtr := anOperand.Exec(state)
+			return anPtr
 		}
 
 	default:

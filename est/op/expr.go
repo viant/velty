@@ -16,16 +16,8 @@ type Expression struct {
 }
 
 func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operand, error) {
-	var unify func(pointer unsafe.Pointer) unsafe.Pointer
-	if e.Unify != nil {
-		unify = func(pointer unsafe.Pointer) unsafe.Pointer {
-			ptr, _ := e.Unify(pointer)
-			return ptr
-		}
-	}
-	operand := &Operand{
-		unify: unify,
-	}
+	operand := &Operand{}
+	operand.SetUnifier(e.Unify)
 
 	if e.Type != nil {
 		operand.SetType(e.Type)
@@ -46,10 +38,6 @@ func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operan
 		operand.Comp = e.funcCall(shouldDerefLast)
 		return operand, nil
 	}
-
-	//if e.Selector != nil && e.Selector.Slice != nil {
-	//	operand.SetType(e.Type)
-	//}
 
 	if e.Selector != nil {
 		if e.Selector != nil && e.Selector.Indirect {

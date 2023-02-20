@@ -3,6 +3,7 @@ package op
 import (
 	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
+	"github.com/viant/xunsafe/converter"
 	"reflect"
 	"unsafe"
 )
@@ -102,4 +103,16 @@ func (o *Operand) trySetType(rType reflect.Type) {
 
 func (o *Operand) getXType(rType reflect.Type) reflect.Type {
 	return rType
+}
+
+func (o *Operand) SetUnifier(x converter.UnifyFn) {
+	var unify func(pointer unsafe.Pointer) unsafe.Pointer
+	if x != nil {
+		unify = func(pointer unsafe.Pointer) unsafe.Pointer {
+			ptr, _ := x(pointer)
+			return ptr
+		}
+	}
+
+	o.unify = unify
 }

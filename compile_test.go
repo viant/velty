@@ -152,6 +152,7 @@ func TestPlanner_Compile(t *testing.T) {
 		Id int
 	}
 
+	dep := &Department{}
 	reflectStruct := reflect.StructOf([]reflect.StructField{
 		{
 			Name: "ID",
@@ -1187,6 +1188,22 @@ $lastColumnName`,
 					StringValue: "a value",
 					Values:      []string{"1", "2", "3"},
 				},
+			},
+		},
+		{
+			description: `if struct not nil`,
+			template:    `#if($foo)foo was set#else unset foo#end`,
+			expect:      "foo was set",
+			definedVars: map[string]interface{}{
+				"foo": &Foo{},
+			},
+		},
+		{
+			description: `if struct not nil`,
+			template:    `#if($foo)foo was set#else unset foo#end`,
+			expect:      " unset foo",
+			definedVars: map[string]interface{}{
+				"foo": dep.Address,
 			},
 		},
 	}

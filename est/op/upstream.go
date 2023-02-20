@@ -3,11 +3,13 @@ package op
 import (
 	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
+	"github.com/viant/xunsafe/converter"
 	"reflect"
 	"unsafe"
 )
 
 func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.Pointer {
+	derefLast = derefLast || converter.IsPrimitive(selector.Type)
 	sel := selector.Parent
 	counter := -1
 	for sel != nil {
