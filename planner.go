@@ -188,22 +188,15 @@ func (p *Planner) DefineVariable(name string, v interface{}, names ...string) er
 }
 
 func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
-	resultSelector := p.selectorByName(selector.ID)
-	if resultSelector == nil {
-		return nil, nil
+	resultSelector, call, err := p.matchFirstSelector(selector)
+	if err != nil || call == nil {
+		return resultSelector, err
 	}
-
-	if selector.X == nil {
-		return resultSelector, nil
-	}
-
-	call := selector.X
 
 	parentType := resultSelector.Type
 	selectorId := selector.ID
 
 	upstreamSelector := p.copyWithParent(resultSelector, resultSelector.Parent)
-	var err error
 	for call != nil {
 		parentType = deref(parentType)
 		resultSelector, call, err = p.matchSelector(call, resultSelector, selectorId, parentType)
@@ -217,6 +210,20 @@ func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 	}
 
 	return upstreamSelector, nil
+}
+
+func (p *Planner) matchFirstSelector(selector *expr.Select) (*op.Selector, ast.Expression, error) {
+	opSelector, next, err := p.tryMatchFunc(selector.ID, selector.X)
+	if err == nil && opSelector != nil {
+		return opSelector, next, nil
+	}
+
+	resultSelector := p.selectorByName(selector.ID)
+	if resultSelector != nil {
+		return resultSelector, selector.X, nil
+	}
+
+	return nil, nil, nil
 }
 
 func (p *Planner) copyWithParent(dest, parent *op.Selector) *op.Selector {
@@ -343,9 +350,13 @@ func (p *Planner) selectorByName(name string) *op.Selector {
 
 func (p *Planner) newFuncSelector(selectorId string, methodName string, call *expr.Call, prev *op.Selector) (*op.Selector, error) {
 	var err error
-	aFunc, err := p.Functions.Method(prev.Type, methodName, call)
+	aFunc, err := p.Func(prev, methodName, call)
 	if err != nil {
-		return nil, fmt.Errorf("not found function %v, due to: %w", methodName, err)
+		return nil, err
+	}
+
+	if aFunc.Literal != nil && prev == nil {
+		prev = op.NewLiteralSelector(selectorId, nil, aFunc.Literal, nil)
 	}
 
 	operands, err := p.selectorOperands(call, prev)
@@ -359,6 +370,20 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 	newSelector.Type = aFunc.ResultType
 
 	return newSelector, nil
+}
+
+func (p *Planner) Func(prev *op.Selector, methodName string, call *expr.Call) (*op.Func, error) {
+	var receiver reflect.Type
+	if prev != nil {
+		receiver = prev.Type
+	}
+
+	aFunc, err := p.Functions.Method(receiver, methodName, call)
+	if err == nil {
+		return aFunc, nil
+	}
+
+	return nil, fmt.Errorf("not found function %v", methodName)
 }
 
 func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Operand, error) {
@@ -464,12 +489,7 @@ func (p *Planner) tryMatchCall(call ast.Expression, selector *op.Selector, ID st
 func (p *Planner) matchCall(call ast.Expression, selector *op.Selector, ID string) (*op.Selector, ast.Expression, error) {
 	switch actual := call.(type) {
 	case *expr.Call:
-		callSelector, err := p.newFuncSelector(ID, ID, actual, selector)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return callSelector, actual.X, nil
+		return p.matchFunc(ID, actual, selector)
 	case *expr.SliceIndex:
 		switch selector.Type.Kind() {
 		case reflect.Map:
@@ -572,4 +592,22 @@ func (p *Planner) derefHolderSelector(field reflect.StructField) *op.Selector {
 		Indirect:     true,
 		ParentOffset: field.Offset,
 	}
+}
+
+func (p *Planner) tryMatchFunc(ID string, x ast.Expression) (*op.Selector, ast.Expression, error) {
+	call, ok := x.(*expr.Call)
+	if !ok {
+		return nil, nil, nil
+	}
+
+	return p.matchFunc(ID, call, nil)
+}
+
+func (p *Planner) matchFunc(ID string, actual *expr.Call, selector *op.Selector) (*op.Selector, ast.Expression, error) {
+	callSelector, err := p.newFuncSelector(ID, ID, actual, selector)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return callSelector, actual.X, nil
 }

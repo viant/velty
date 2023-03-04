@@ -39,12 +39,16 @@ func NewSelector(id, name string, sType reflect.Type, parent *Selector) *Selecto
 }
 
 func NewLiteralSelector(id string, sType reflect.Type, value interface{}, parent *Selector) *Selector {
+	ptr, ok := value.(unsafe.Pointer)
+	if !ok {
+		ptr = xunsafe.AsPointer(value)
+	}
 	return &Selector{
 		ID:       id,
 		Type:     sType,
-		Literal:  xunsafe.AsPointer(value),
+		Literal:  ptr,
 		Parent:   parent,
-		Indirect: true,
+		Indirect: false,
 	}
 }
 

@@ -39,14 +39,15 @@ type (
 	}
 
 	Func struct {
-		caller     reflect.Value
+		Name       string
+		XType      *xunsafe.Type
+		Literal    unsafe.Pointer
 		ResultType reflect.Type
 		Function   Funeexpression
 
 		maxArgs    int
 		isVariadic bool
-		Name       string
-		XType      *xunsafe.Type
+		caller     reflect.Value
 	}
 
 	KindFunction interface {
@@ -118,25 +119,27 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
 	}
 
+	values := make([]reflect.Value, 0, len(operands))
 	receiverIface := operands[0].ExecInterface(state)
-	receiverValue := reflect.ValueOf(receiverIface)
-	if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
-		return handler()
+	if receiverIface != nil {
+		receiverValue := reflect.ValueOf(receiverIface)
+		if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
+			return handler()
+		}
+
+		values = append(values, receiverValue)
 	}
 
-	values := make([]reflect.Value, len(operands))
-	values[0] = receiverValue
-
-	for i := 1; i < len(values); i++ {
+	for i := 1; i < len(operands); i++ {
 		if i >= f.maxArgs && !f.isVariadic {
 			return nil, fmt.Errorf("too many non-variadic function arguments")
 		}
 
 		anInterface := operands[i].ExecInterface(state)
 		if anInterface == nil {
-			values[i] = reflect.Zero(operands[i].Type)
+			values = append(values, reflect.Zero(operands[i].Type))
 		} else {
-			values[i] = reflect.ValueOf(anInterface)
+			values = append(values, reflect.ValueOf(anInterface))
 		}
 	}
 
@@ -226,7 +229,7 @@ func EmptyFunctions() *Functions {
 }
 
 func (f *Functions) RegisterFunction(name string, function interface{}) error {
-	aFunc, err := f.newFunc(name, function, nil)
+	aFunc, err := f.NewFunc(name, function, nil)
 	if err != nil {
 		return err
 	}
@@ -234,13 +237,14 @@ func (f *Functions) RegisterFunction(name string, function interface{}) error {
 	return f.registerFunc(name, aFunc)
 }
 
-func (f *Functions) newFunc(name string, function interface{}, resultType reflect.Type) (*Func, error) {
+func (f *Functions) NewFunc(name string, function interface{}, resultType reflect.Type) (*Func, error) {
 	if discoveredFn, rType, discovered := f.discover(nil, function); discovered {
 		return &Func{
 			Name:       name,
 			Function:   discoveredFn,
 			ResultType: rType,
 			XType:      xunsafe.NewType(rType),
+			Literal:    xunsafe.AsPointer(function),
 		}, nil
 	}
 
@@ -277,6 +281,7 @@ func (f *Functions) reflectFunc(name string, function interface{}, funcType refl
 		XType:      xunsafe.NewType(resultType),
 		isVariadic: caller.Type().IsVariadic(),
 		maxArgs:    caller.Type().NumIn() + 1, //reflect.Method.Call require to pass a receiver as first Arg.
+		Literal:    xunsafe.AsPointer(function),
 	}
 
 	aFunc.Function = aFunc.callFunc
@@ -317,6 +322,15 @@ func (f *Functions) IsFuncNs(ns string) bool {
 }
 
 func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
+	if rType == nil {
+		funcIndex, ok := f.index[id]
+		if !ok {
+			return nil, fmt.Errorf("not found function %v", id)
+		}
+
+		return f.funcs[funcIndex], nil
+	}
+
 	if method, ok := rType.MethodByName(id); ok {
 		return f.asFunc(rType, id, method)
 	}
@@ -760,7 +774,7 @@ func (f *Functions) RegisterTypeFunc(receiverType reflect.Type, typeFunc *TypeFu
 		return fmt.Errorf("function %v and receiver %v is already defined", typeFunc.Name, receiverType.String())
 	}
 
-	aFunc, err := f.newFunc(typeFunc.Name, typeFunc.Handler, typeFunc.ResultType)
+	aFunc, err := f.NewFunc(typeFunc.Name, typeFunc.Handler, typeFunc.ResultType)
 	if err != nil {
 		return err
 	}

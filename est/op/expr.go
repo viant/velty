@@ -23,14 +23,14 @@ func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operan
 		operand.SetType(e.Type)
 	}
 
-	if e.LiteralPtr != nil {
-		operand.LiteralPtr = e.LiteralPtr
-		return operand, nil
-	}
-
 	if e.Selector != nil {
 		operand.Sel = e.Selector
 		operand.trySetType(e.Selector.Type)
+	}
+
+	if e.LiteralPtr != nil {
+		operand.LiteralPtr = e.LiteralPtr
+		return operand, nil
 	}
 
 	if e.Selector != nil && e.Selector.Func != nil {
@@ -86,7 +86,13 @@ func (e *Expression) newIndirectSelector(shouldDerefLast bool) est.Compute {
 }
 
 func NewExpression(selector *Selector) *Expression {
+	var litPtr *unsafe.Pointer
+	if selector.Literal != nil {
+		litPtr = &selector.Literal
+	}
+
 	return &Expression{
-		Selector: selector,
+		Selector:   selector,
+		LiteralPtr: litPtr,
 	}
 }

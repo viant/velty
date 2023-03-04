@@ -13,6 +13,8 @@ type assign struct {
 }
 
 func (a *assign) assignValue() est.Compute {
+	a.x.Sel.Field.MustBeAssignable(a.y.Type)
+
 	rType := a.x.Type
 	wasPtr := false
 	for rType.Kind() == reflect.Ptr {
@@ -201,22 +203,20 @@ func (a *assign) assignValue() est.Compute {
 				return ptr
 			}
 		}
-	}
 
-	//if wasPtr {
-	//	return func(state *est.State) unsafe.Pointer {
-	//		destPtr := a.x.Exec(state)
-	//		ptr := a.y.Exec(state)
-	//		toolbox.Dump(state.Mem)
-	//
-	//		if ptr != nil {
-	//			*(*unsafe.Pointer)(destPtr) = *(*unsafe.Pointer)(ptr)
-	//		}
-	//
-	//
-	//		return ptr
-	//	}
-	//}
+	case reflect.Func:
+		return func(state *est.State) unsafe.Pointer {
+			dest := a.x.Exec(state)
+			src := a.y.Exec(state)
+
+			if dest == nil || src == nil {
+				return nil
+			}
+
+			a.x.Sel.Field.SetFuncAt(dest, a.y.AsInterface(src))
+			return dest
+		}
+	}
 
 	if wasPtr {
 		return func(state *est.State) unsafe.Pointer {
