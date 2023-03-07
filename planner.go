@@ -103,10 +103,15 @@ func (p *Planner) cycle(cycleDetector *CycleDetector, field reflect.StructField,
 func (p *Planner) addChildrenSelectors(holderPrefix string, field reflect.StructField, offsetSoFar, initialOffset uintptr, indirect bool, detector *CycleDetector, parent *op.Selector) error {
 	rType, elemed := elemIfNeeded(field.Type)
 	if rType.Kind() == reflect.Struct {
-		for i := 0; i < rType.NumField(); i++ {
+		fieldsLen := rType.NumField()
+		for i := 0; i < fieldsLen; i++ {
 
 			structField := rType.Field(i)
 			vTag := Parse(structField.Tag.Get(velty))
+			if vTag.Omit {
+				continue
+			}
+
 			fieldNames := []string{structField.Name}
 			if len(vTag.Names) != 0 {
 				fieldNames = vTag.Names

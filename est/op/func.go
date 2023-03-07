@@ -122,12 +122,7 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 	values := make([]reflect.Value, 0, len(operands))
 	receiverIface := operands[0].ExecInterface(state)
 	if receiverIface != nil {
-		receiverValue := reflect.ValueOf(receiverIface)
-		if handler, ok := f.tryDiscoverReceiver(receiverIface, operands, state, receiverValue); ok {
-			return handler()
-		}
-
-		values = append(values, receiverValue)
+		values = append(values, reflect.ValueOf(receiverIface))
 	}
 
 	for i := 1; i < len(operands); i++ {
