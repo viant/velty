@@ -1,38 +1,53 @@
 package functions
 
-const (
-	FuncErrors = "errors"
-	//Deprecated: use FuncErrors
-	ErrorsFunc = "errors"
+import "reflect"
 
-	FuncTime = "time"
-	//Deprecated: use FuncTime
-	TimeFunc = "time"
+var FuncErrors = registryInstance.DefineNs("errors", NewEntry(
+	&Errors{},
+	NewFunctionNamespace(reflect.TypeOf(&Errors{})),
+))
 
-	FuncTypes = "types"
-	//Deprecated: use FuncTypes
-	TypesFunc = "types"
+var FuncTime = registryInstance.DefineNs("time", NewEntry(
+	&Time{},
+	NewFunctionNamespace(reflect.TypeOf(&Time{})),
+))
 
-	FuncSlices = "slices"
-	//Deprecated: use FuncSlices
-	SlicesFunc = "slices"
+var FuncTypes = registryInstance.DefineNs("types", NewEntry(
+	&Types{},
+	NewFunctionNamespace(reflect.TypeOf(&Types{})),
+))
 
-	FuncStrconv = "strconv"
-	//Deprecated: use FuncStrconv
-	StrconvFunc = "strconv"
+var FuncSlices = registryInstance.DefineNs("slices", NewEntry(
+	&Slices{},
+	NewFunctionNamespace(reflect.TypeOf(&Slices{})),
+))
 
-	FuncMath = "math"
-	//Deprecated: use FuncMath
-	MathFunc = "math"
+var FuncStrconv = registryInstance.DefineNs("strconv", NewEntry(
+	&Strconv{},
+	NewFunctionNamespace(reflect.TypeOf(&Strconv{})),
+))
 
-	FuncStrings = "strings"
-	//Deprecated: use FuncStrings
-	StringsFunc = "strings"
+var FuncMath = registryInstance.DefineNs("math", NewEntry(
+	&Math{},
+	NewFunctionNamespace(reflect.TypeOf(&Math{})),
+))
 
-	FuncMaps = "maps"
-	//Deprecated: use FuncMaps
-	MapsFunc = "maps"
+var FuncStrings = registryInstance.DefineNs("strings", NewEntry(
+	&Strings{},
+	NewFunctionNamespace(reflect.TypeOf(&Strings{})),
+))
 
-	MapHasKey    = "HasKey"
-	SliceIndexBy = "IndexBy"
-)
+var FuncMaps = registryInstance.DefineNs("maps", NewEntry(
+	&Maps{},
+	NewFunctionNamespace(reflect.TypeOf(&Maps{})),
+))
+
+var MapHasKey = registryInstance.DefineNs("HasKey", NewEntry(
+	HasKeyFunc.handler,
+	NewFunctionKind([]reflect.Kind{HasKeyFunc.kind}),
+))
+
+var SliceIndexBy = registryInstance.DefineNs("IndexBy", NewEntry(
+	SliceIndexByFunc.Handler(),
+	NewFunctionKind(SliceIndexByFunc.Kind()),
+))
