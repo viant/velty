@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/keys"
+	"github.com/viant/xreflect"
 	"github.com/viant/xunsafe"
 	"reflect"
 )
@@ -147,7 +148,7 @@ func (in *indexSliceByFunc) ResultType(receiver reflect.Type, _ *expr.Call) (ref
 		return nil, fmt.Errorf("unsupported IndexBy receiver type %s", receiver.String())
 	}
 
-	return reflect.MapOf(interfaceType, receiver.Elem()), nil
+	return reflect.MapOf(xreflect.InterfaceType, receiver.Elem()), nil
 }
 
 func (in *indexSliceByFunc) upstream(sliceType reflect.Type) []*xunsafe.Type {

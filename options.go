@@ -1,5 +1,9 @@
 package velty
 
+import (
+	"github.com/viant/velty/functions"
+)
+
 //Option represents Planner generic option
 type Option interface{}
 
@@ -14,3 +18,6 @@ type EscapeHTML bool
 
 //PanicOnError panics and recover when first error returned.
 type PanicOnError bool
+
+//TypeParser parses type string representation into reflect.Type
+type TypeParser = functions.TypeParser

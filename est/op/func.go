@@ -194,7 +194,15 @@ func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, st
 	return nil, false
 }
 
-func NewFunctions() *Functions {
+func NewFunctions(options ...interface{}) *Functions {
+	var typeLookup functions.TypeParser
+	for _, option := range options {
+		switch actual := option.(type) {
+		case functions.TypeParser:
+			typeLookup = actual
+		}
+	}
+
 	result := EmptyFunctions()
 	_ = result.RegisterFuncNs(functions.FuncStrings, functions.Strings{})
 	_ = result.RegisterFuncNs(functions.FuncMath, functions.Math{})
@@ -204,6 +212,7 @@ func NewFunctions() *Functions {
 	_ = result.RegisterFuncNs(functions.FuncErrors, functions.Errors{})
 	_ = result.RegisterFuncNs(functions.FuncTime, functions.Time{})
 	_ = result.RegisterFuncNs(functions.FuncMaps, functions.Maps{})
+	_ = result.RegisterFuncNs(functions.FuncJSON, functions.NewJSON(typeLookup))
 	_ = result.RegisterFunctionKind(functions.MapHasKey, functions.HasKeyFunc)
 	_ = result.RegisterFunctionKind(functions.SliceIndexBy, functions.SliceIndexByFunc)
 
@@ -849,6 +858,23 @@ func (f *Functions) FuncSelector(name string, parent *Selector) (*Selector, bool
 	}
 
 	return NewLiteralSelector(name, reflect.TypeOf(funcs), funcs, parent), true
+}
+
+func (f *Functions) TryDetectResultType(prev *Selector, methodName string, call *expr.Call) (reflect.Type, error) {
+	if prev == nil {
+		return nil, nil
+	}
+
+	receiver, ok := f.ns[prev.ID]
+	if !ok {
+		return nil, nil
+	}
+
+	typer, ok := receiver.(MethodResultTyper)
+	if ok {
+		return typer.MethodResultType(methodName, call)
+	}
+	return nil, nil
 }
 
 func (i *KindIndex) Add(name string, details KindFunction) error {

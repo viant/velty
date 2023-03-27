@@ -79,6 +79,10 @@ func (o *Operand) AsInterface(valuePtr unsafe.Pointer) interface{} {
 	case reflect.Func:
 		anInterface = o.XType.Value(valuePtr)
 	default:
+		if o.LiteralPtr != nil {
+			return o.XType.Value(valuePtr)
+		}
+
 		anInterface = o.XType.Interface(valuePtr)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
+	"github.com/viant/xreflect"
 	"github.com/viant/xunsafe"
 	"reflect"
 	"strings"
@@ -316,6 +317,10 @@ func (p *Planner) adjustSelector(expr *op.Expression, t reflect.Type) error {
 		return nil
 	}
 
+	if t == nil {
+		return fmt.Errorf("couldn't determine %v type", expr.Name)
+	}
+
 	if err := p.DefineVariable(expr.Name, t); err != nil {
 		return err
 	}
@@ -373,6 +378,16 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
 	newSelector.Args = operands
 	newSelector.Type = aFunc.ResultType
+	if newSelector.Type == xreflect.InterfaceType && prev != nil {
+		actualType, err := p.Functions.TryDetectResultType(prev, methodName, call)
+		if err != nil {
+			return nil, err
+		}
+
+		if actualType != nil {
+			newSelector.Type = actualType
+		}
+	}
 
 	return newSelector, nil
 }
@@ -446,8 +461,7 @@ func (p *Planner) New() *Planner {
 	return scope
 }
 
-func (p *Planner) apply(options []Option) *op.Func {
-	var aFunc *op.Func
+func (p *Planner) apply(options []Option) {
 	for _, option := range options {
 		switch actual := option.(type) {
 		case BufferSize:
@@ -458,12 +472,12 @@ func (p *Planner) apply(options []Option) *op.Func {
 			p.escapeHTML = bool(actual)
 		case PanicOnError:
 			p.panicOnError = bool(actual)
-		case *op.Func:
-			aFunc = actual
+		case *op.Functions:
+			if p.Functions == nil {
+				p.Functions = actual
+			}
 		}
 	}
-
-	return aFunc
 }
 
 func (p *Planner) registerConst(i *[]int) {
@@ -471,10 +485,15 @@ func (p *Planner) registerConst(i *[]int) {
 }
 
 func (p *Planner) init(options []Option) {
-	aFunc := p.apply(options)
+	p.apply(options)
 
-	if aFunc == nil {
-		p.Functions = op.NewFunctions()
+	if p.Functions == nil {
+		ifaces := make([]interface{}, 0, len(options))
+		for _, option := range options {
+			ifaces = append(ifaces, option)
+		}
+
+		p.Functions = op.NewFunctions(ifaces...)
 	}
 }
 

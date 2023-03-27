@@ -32,6 +32,11 @@ var FuncMath = registryInstance.DefineNs("math", NewEntry(
 	NewFunctionNamespace(reflect.TypeOf(&Math{})),
 ))
 
+var FuncJSON = registryInstance.DefineNs("json", NewEntry(
+	NewJSON(nil),
+	NewFunctionNamespace(reflect.TypeOf(NewJSON(nil))),
+))
+
 var FuncStrings = registryInstance.DefineNs("strings", NewEntry(
 	&Strings{},
 	NewFunctionNamespace(reflect.TypeOf(&Strings{})),

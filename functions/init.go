@@ -82,13 +82,3 @@ func (r *Registry) IsDefined(ns string) bool {
 	_, ok := r.Entries[ns]
 	return ok
 }
-
-var interfaceType reflect.Type
-
-func init() {
-	type foo struct {
-		aField interface{}
-	}
-
-	interfaceType = reflect.ValueOf(foo{}).Field(0).Type()
-}

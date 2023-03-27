@@ -1206,6 +1206,25 @@ $lastColumnName`,
 				"foo": dep.Address,
 			},
 		},
+		{
+			description: `json`,
+			template:    `#set($aFoo = $json.UnmarshalInto($fooBody, "*Foo") )$aFoo.ID | $aFoo.Name | $aFoo.Price`,
+			expect:      `10 | Foo | 125.5`,
+			definedVars: map[string]interface{}{
+				"fooBody": `{"ID": 10, "Name": "Foo", "Price": 125.5}`,
+			},
+			options: []velty.Option{
+				velty.TypeParser(func(typeRepresentation string) (reflect.Type, error) {
+					type Foo struct {
+						ID    int
+						Name  string
+						Price float64
+					}
+
+					return reflect.TypeOf(&Foo{}), nil
+				}),
+			},
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
