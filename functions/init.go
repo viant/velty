@@ -58,8 +58,8 @@ func NewFunctionKind(kinds []reflect.Kind) *FunctionKindMetadata {
 
 func NewEntry(handler interface{}, metadata interface{}) *Entry {
 	return &Entry{
-		Metadata: handler,
-		Handler:  metadata,
+		Metadata: metadata,
+		Handler:  handler,
 	}
 }
 
