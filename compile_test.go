@@ -1225,6 +1225,20 @@ $lastColumnName`,
 				}),
 			},
 		},
+		{
+			template: `$ToUpperCase("value")`,
+			standaloneFunctions: map[string]*op.Function{
+				"ToUpperCase": {
+					ResultTyper: func(call *expr.Call) (reflect.Type, error) {
+						return reflect.TypeOf(""), nil
+					},
+					Handler: func(value string) interface{} {
+						return strings.ToUpper(value)
+					},
+				},
+			},
+			expect: "VALUE",
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1253,19 +1267,20 @@ $lastColumnName`,
 }
 
 type testdata struct {
-	description       string
-	template          string
-	definedVars       map[string]interface{}
-	embeddedVars      map[string]interface{}
-	functions         map[string]interface{}
-	variables         []Variable
-	expectError       bool
-	expect            string
-	options           []velty.Option
-	expectTemplateErr bool
-	setVariables      map[string]interface{}
-	KindFunctions     map[string]op.KindFunction
-	typeFunc          map[reflect.Type][]*op.TypeFunc
+	description         string
+	template            string
+	definedVars         map[string]interface{}
+	embeddedVars        map[string]interface{}
+	functions           map[string]interface{}
+	variables           []Variable
+	expectError         bool
+	expect              string
+	options             []velty.Option
+	expectTemplateErr   bool
+	setVariables        map[string]interface{}
+	KindFunctions       map[string]op.KindFunction
+	typeFunc            map[reflect.Type][]*op.TypeFunc
+	standaloneFunctions map[string]*op.Function
 }
 
 type Variable struct {
@@ -1328,6 +1343,12 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 			if err := planner.RegisterTypeFunc(rType, aFunc); err != nil {
 				return nil, nil, err
 			}
+		}
+	}
+
+	for fnName, functioner := range d.standaloneFunctions {
+		if err := planner.RegisterStandaloneFunction(fnName, functioner); err != nil {
+			return nil, nil, err
 		}
 	}
 

@@ -28,11 +28,12 @@ type (
 		kindFunctions []KindFunction
 		funcs         []*Func
 
-		receivers map[string]*Receiver
+		receivers map[string]*funcReceiver
+		functions map[string]*Function
 		ns        map[string]interface{}
 	}
 
-	Receiver struct {
+	funcReceiver struct {
 		rType reflect.Type
 		index map[string]int
 		funcs []*Func
@@ -48,6 +49,11 @@ type (
 		maxArgs    int
 		isVariadic bool
 		caller     reflect.Value
+	}
+
+	Function struct {
+		Handler     interface{}
+		ResultTyper func(call *expr.Call) (reflect.Type, error)
 	}
 
 	KindFunction interface {
@@ -76,7 +82,7 @@ type (
 	}
 )
 
-func (r *Receiver) registerFunc(aFunc *Func) error {
+func (r *funcReceiver) registerFunc(aFunc *Func) error {
 	if _, ok := r.index[aFunc.Name]; ok {
 		return fmt.Errorf("func %v already is defined on %v", aFunc.Name, r.rType.String())
 	}
@@ -87,7 +93,7 @@ func (r *Receiver) registerFunc(aFunc *Func) error {
 	return nil
 }
 
-func (r *Receiver) aFunc(id string) (*Func, bool) {
+func (r *funcReceiver) aFunc(id string) (*Func, bool) {
 	i, ok := r.index[id]
 	if !ok {
 		return nil, false
@@ -226,8 +232,9 @@ func EmptyFunctions() *Functions {
 			index: map[reflect.Kind]int{},
 		},
 		funcs:     make([]*Func, 0),
-		receivers: map[string]*Receiver{},
+		receivers: map[string]*funcReceiver{},
 		ns:        map[string]interface{}{},
+		functions: map[string]*Function{},
 	}
 	return result
 }
@@ -326,24 +333,35 @@ func (f *Functions) IsFuncNs(ns string) bool {
 }
 
 func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
-	if rType == nil {
+	return f.method(rType, id, call)
+}
+
+func (f *Functions) method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
+	switch rType {
+	case nil:
 		funcIndex, ok := f.index[id]
-		if !ok {
-			return nil, fmt.Errorf("not found function %v", id)
+		if ok {
+			return f.funcs[funcIndex], nil
 		}
 
-		return f.funcs[funcIndex], nil
-	}
+		function, ok := f.functions[id]
+		if ok {
+			return f.reflectFunc(id, function.Handler, reflect.TypeOf(function.Handler), nil)
+		}
 
-	if method, ok := rType.MethodByName(id); ok {
-		return f.asFunc(rType, id, method)
-	}
+		return nil, fmt.Errorf("not found function %v", id)
 
-	if method, err := f.functionByKind(id, rType, call); method != nil || err != nil {
-		return method, err
-	}
+	default:
+		if method, ok := rType.MethodByName(id); ok {
+			return f.asFunc(rType, id, method)
+		}
 
-	return f.funcByName(rType, id)
+		if method, err := f.functionByKind(id, rType, call); method != nil || err != nil {
+			return method, err
+		}
+
+		return f.funcByName(rType, id)
+	}
 }
 
 func (f *Functions) funcByName(rType reflect.Type, id string) (*Func, error) {
@@ -772,6 +790,20 @@ func (f *Functions) discover(receiverType reflect.Type, function interface{}) (F
 }
 
 func (f *Functions) RegisterTypeFunc(receiverType reflect.Type, typeFunc *TypeFunc) error {
+	return f.registerTypeFunc(receiverType, typeFunc)
+}
+
+func (f *Functions) RegisterStandaloneFunction(name string, function *Function) error {
+	_, ok := f.functions[name]
+	if ok {
+		return fmt.Errorf("function %v already exists", name)
+	}
+
+	f.functions[name] = function
+	return nil
+}
+
+func (f *Functions) registerTypeFunc(receiverType reflect.Type, typeFunc *TypeFunc) error {
 	receiver := f.ensureReceiver(receiverType)
 	_, ok := receiver.index[typeFunc.Name]
 	if ok {
@@ -786,13 +818,13 @@ func (f *Functions) RegisterTypeFunc(receiverType reflect.Type, typeFunc *TypeFu
 	return receiver.registerFunc(aFunc)
 }
 
-func (f *Functions) ensureReceiver(receiverType reflect.Type) *Receiver {
+func (f *Functions) ensureReceiver(receiverType reflect.Type) *funcReceiver {
 	receiver, ok := f.receivers[asMapKey(receiverType)]
 	if ok {
 		return receiver
 	}
 
-	receiver = &Receiver{
+	receiver = &funcReceiver{
 		index: map[string]int{},
 		funcs: make([]*Func, 0),
 		rType: receiverType,
@@ -862,6 +894,11 @@ func (f *Functions) FuncSelector(name string, parent *Selector) (*Selector, bool
 
 func (f *Functions) TryDetectResultType(prev *Selector, methodName string, call *expr.Call) (reflect.Type, error) {
 	if prev == nil {
+		function, ok := f.functions[methodName]
+		if ok && function.ResultTyper != nil {
+			return function.ResultTyper(call)
+		}
+
 		return nil, nil
 	}
 

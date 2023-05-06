@@ -365,10 +365,6 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 		return nil, err
 	}
 
-	if aFunc.Literal != nil && prev == nil {
-		prev = op.NewLiteralSelector(selectorId, nil, aFunc.Literal, nil)
-	}
-
 	operands, err := p.selectorOperands(call, prev)
 	if err != nil {
 		return nil, err
@@ -378,7 +374,7 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
 	newSelector.Args = operands
 	newSelector.Type = aFunc.ResultType
-	if newSelector.Type == xreflect.InterfaceType && prev != nil {
+	if newSelector.Type == xreflect.InterfaceType {
 		actualType, err := p.Functions.TryDetectResultType(prev, methodName, call)
 		if err != nil {
 			return nil, err
@@ -407,16 +403,18 @@ func (p *Planner) Func(prev *op.Selector, methodName string, call *expr.Call) (*
 }
 
 func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Operand, error) {
-	var err error
-	operands := make([]*op.Operand, len(call.Args)+1)
-	operands[0], err = op.NewExpression(prev).Operand(*p.Control, false)
+	operands := make([]*op.Operand, 0, len(call.Args)+1)
+	if prev != nil {
+		operand, err := op.NewExpression(prev).Operand(*p.Control, false)
+		if err != nil {
+			return nil, err
+		}
 
-	if err != nil {
-		return nil, err
+		operands = append(operands, operand)
 	}
 
-	for i := 1; i < len(operands); i++ {
-		expression, err := p.compileExpr(call.Args[i-1])
+	for i := 0; i < len(call.Args); i++ {
+		expression, err := p.compileExpr(call.Args[i])
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +423,7 @@ func (p *Planner) selectorOperands(call *expr.Call, prev *op.Selector) ([]*op.Op
 		if err != nil {
 			return nil, err
 		}
-		operands[i] = operand
+		operands = append(operands, operand)
 	}
 	return operands, nil
 }
