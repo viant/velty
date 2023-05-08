@@ -41,7 +41,7 @@ func (a *directAppender) appendFloat64(state *est.State) unsafe.Pointer {
 }
 
 func (a *directAppender) newAppendStringIndirect() est.Compute {
-	upstream := op.Upstream(a.x.Sel, true)
+	upstream := op.Upstream(a.x.Sel, true, false)
 
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state)
@@ -120,7 +120,7 @@ func (a *directAppender) newGenericAppender() est.Compute {
 
 func Selector(expr *op.Expression, derefLast bool) est.New {
 	return func(control est.Control) (est.Compute, error) {
-		x, err := expr.Operand(control, derefLast)
+		x, err := expr.Operand(control, op.ShouldDerefLast(derefLast))
 		if err != nil {
 			return nil, err
 		}

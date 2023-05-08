@@ -88,7 +88,7 @@ func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
 
 func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expression) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
-		aSlice, err := sliceExpr.Operand(control, false)
+		aSlice, err := sliceExpr.Operand(control)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expressio
 		loop.Slice = xunsafe.NewSlice(aSlice.Type)
 		loop.X = aSlice
 
-		loop.Item, err = itemExpr.Operand(control, false)
+		loop.Item, err = itemExpr.Operand(control)
 		if err != nil {
 			return nil, err
 		}

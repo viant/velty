@@ -7,6 +7,9 @@ import (
 	"unsafe"
 )
 
+type ShouldRefLast bool
+type ShouldDerefLast bool
+
 type Expression struct {
 	LiteralPtr *unsafe.Pointer
 	Type       reflect.Type
@@ -15,7 +18,19 @@ type Expression struct {
 	Unify converter.UnifyFn
 }
 
-func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operand, error) {
+func (e *Expression) Operand(control est.Control, options ...interface{}) (*Operand, error) {
+	var shouldDerefLast bool
+	var shouldRefLast bool
+
+	for _, option := range options {
+		switch actual := option.(type) {
+		case ShouldDerefLast:
+			shouldDerefLast = bool(actual)
+		case ShouldRefLast:
+			shouldRefLast = bool(actual)
+		}
+	}
+
 	operand := &Operand{}
 	operand.SetUnifier(e.Unify)
 
@@ -35,13 +50,13 @@ func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operan
 
 	if e.Selector != nil && e.Selector.Func != nil {
 		operand.trySetType(e.Func.ResultType)
-		operand.Comp = e.funcCall(shouldDerefLast)
+		operand.Comp = e.funcCall(shouldDerefLast, shouldRefLast)
 		return operand, nil
 	}
 
 	if e.Selector != nil {
 		if e.Selector != nil && e.Selector.Indirect {
-			operand.Comp = e.newIndirectSelector(shouldDerefLast)
+			operand.Comp = e.newIndirectSelector(shouldDerefLast, shouldRefLast)
 		}
 
 		return operand, nil
@@ -57,8 +72,8 @@ func (e *Expression) Operand(control est.Control, shouldDerefLast bool) (*Operan
 	return operand, nil
 }
 
-func (e *Expression) funcCall(derefLast bool) est.Compute {
-	upstream := Upstream(e.Selector, derefLast)
+func (e *Expression) funcCall(derefLast bool, refLast bool) est.Compute {
+	upstream := Upstream(e.Selector, derefLast, refLast)
 	return func(state *est.State) unsafe.Pointer {
 		return upstream(state)
 	}
@@ -70,15 +85,15 @@ func (e Expressions) Operands(control est.Control, shouldDerefLast bool) ([]*Ope
 	var result = make([]*Operand, len(e))
 	var err error
 	for i, item := range e {
-		if result[i], err = item.Operand(control, shouldDerefLast); err != nil {
+		if result[i], err = item.Operand(control); err != nil {
 			return nil, err
 		}
 	}
 	return result, nil
 }
 
-func (e *Expression) newIndirectSelector(shouldDerefLast bool) est.Compute {
-	upstream := Upstream(e.Selector, shouldDerefLast)
+func (e *Expression) newIndirectSelector(shouldDerefLast bool, refLast bool) est.Compute {
+	upstream := Upstream(e.Selector, shouldDerefLast, refLast)
 	return func(state *est.State) unsafe.Pointer {
 		ret := upstream(state)
 		return ret

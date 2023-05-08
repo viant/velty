@@ -185,6 +185,11 @@ func TestPlanner_Compile(t *testing.T) {
 		Bool    *bool
 	}
 
+	type BoolPtrValueWrapper struct {
+		ID     int
+		Values *PtrsWrapper
+	}
+
 	var testCases = []testdata{
 		{
 			description: "assign int",
@@ -1239,6 +1244,17 @@ $lastColumnName`,
 			},
 			expect: "VALUE",
 		},
+		{
+			template: `#set($Values = $wrapper.Values)#if($Values.Bool)is true#elseis false#end`,
+			definedVars: map[string]interface{}{
+				"wrapper": &BoolPtrValueWrapper{
+					Values: &PtrsWrapper{
+						Bool: boolPtr(true),
+					},
+				},
+			},
+			expect: "is true",
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1457,4 +1473,8 @@ type column struct {
 
 func intPtr(value int) *int {
 	return &value
+}
+
+func boolPtr(aBool bool) *bool {
+	return &aBool
 }

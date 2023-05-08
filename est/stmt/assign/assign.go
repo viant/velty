@@ -1,7 +1,7 @@
 package assign
 
 import (
-	est "github.com/viant/velty/est"
+	"github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
 	"github.com/viant/xunsafe"
 	"reflect"
@@ -223,8 +223,21 @@ func (a *assign) assignValue() est.Compute {
 			dest := a.x.Exec(state)
 			src := a.y.Exec(state)
 
-			if src != nil && dest != nil {
-				*(*unsafe.Pointer)(dest) = src
+			if dest != nil {
+				//if a.y.Type == a.x.Type {
+				*(*unsafe.Pointer)(dest) = *(*unsafe.Pointer)(src)
+				//*T = *T
+				//} else {
+				//	*(*unsafe.Pointer)(dest) = src
+				//**T = *T
+				//}
+				//d := reflect.NewAt(a.x.Type, dest).Elem().Interface()
+				//fmt.Printf("Dest: %v %T %v \n", a.x.Type.String(), d, d)
+
+				//if src != nil {
+				//	s := reflect.NewAt(a.y.Type, src).Elem().Interface()
+				//	fmt.Printf("Src:: %v %T %v \n", a.y.Type.String(), s, s)
+				//}
 			}
 
 			return src
@@ -243,19 +256,24 @@ func (a *assign) assignValue() est.Compute {
 	}
 }
 
-func Assign(expressions ...*op2.Expression) (est.New, error) {
+func Assign(xExpr, yExpr *op2.Expression) (est.New, error) {
 	return func(control est.Control) (est.Compute, error) {
-		operands, err := op2.Expressions(expressions).Operands(control, false)
+		x, err := xExpr.Operand(control)
 		if err != nil {
 			return nil, err
 		}
 
-		assginer := &assign{x: operands[op2.X], y: operands[op2.Y]}
-		if isIndirectOperand(operands[op2.X]) {
+		y, err := yExpr.Operand(control, op2.ShouldRefLast(yExpr.Type.Kind() == reflect.Ptr))
+		if err != nil {
+			return nil, err
+		}
+
+		assginer := &assign{x: x, y: y}
+		if isIndirectOperand(x) {
 			return assginer.assignValue(), nil
 		}
 
-		switch expressions[op2.X].Type.Kind() {
+		switch x.Type.Kind() {
 		case reflect.Int:
 			return assginer.assignAsInt(), nil
 		case reflect.String:

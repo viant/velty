@@ -125,26 +125,11 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 		return nil, fmt.Errorf("expected to got min 1 operand but got %v", len(operands))
 	}
 
-	values := make([]reflect.Value, 0, len(operands))
-	receiverIface := operands[0].ExecInterface(state)
-	if receiverIface != nil {
-		values = append(values, reflect.ValueOf(receiverIface))
+	result, err := f.execute(operands, state)
+	if err != nil {
+		return nil, err
 	}
 
-	for i := 1; i < len(operands); i++ {
-		if i >= f.maxArgs && !f.isVariadic {
-			return nil, fmt.Errorf("too many non-variadic function arguments")
-		}
-
-		anInterface := operands[i].ExecInterface(state)
-		if anInterface == nil {
-			values = append(values, reflect.Zero(operands[i].Type))
-		} else {
-			values = append(values, reflect.ValueOf(anInterface))
-		}
-	}
-
-	result := f.caller.Call(values)
 	if len(result) == 1 {
 		return result[0].Interface(), nil
 	} else if len(result) == 2 {
@@ -164,6 +149,62 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 	} else {
 		return nil, fmt.Errorf("unexpected number of returned values, expected <= 2, but got %v", len(result))
 	}
+}
+
+func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, error) {
+	if len(operands) >= f.maxArgs && !f.isVariadic {
+		return nil, fmt.Errorf("too many non-variadic function arguments")
+	}
+
+	switch len(operands) {
+	case 0:
+		return f.caller.Call([]reflect.Value{}), nil
+	case 1:
+		return f.caller.Call([]reflect.Value{
+			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
+		}), nil
+
+	case 2:
+		return f.caller.Call([]reflect.Value{
+			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
+			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
+		}), nil
+
+	case 3:
+		return f.caller.Call([]reflect.Value{
+			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
+			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
+			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
+		}), nil
+
+	case 4:
+		return f.caller.Call([]reflect.Value{
+			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
+			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
+			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
+			f.ensureValue(operands[3].ExecInterface(state), operands[3].Type),
+		}), nil
+
+	default:
+		values := make([]reflect.Value, 0, len(operands))
+		for i := 0; i < len(operands); i++ {
+			if i >= f.maxArgs && !f.isVariadic {
+				return nil, fmt.Errorf("too many non-variadic function arguments")
+			}
+
+			anInterface := operands[i].ExecInterface(state)
+			values = append(values, f.ensureValue(anInterface, operands[i].Type))
+		}
+	}
+	return nil, nil
+}
+
+func (f *Func) ensureValue(anInterface interface{}, t reflect.Type) reflect.Value {
+	if anInterface == nil {
+		return reflect.Zero(t)
+	}
+
+	return reflect.ValueOf(anInterface)
 }
 
 func (f *Func) tryDiscoverReceiver(receiver interface{}, operands []*Operand, state *est.State, receiverValue reflect.Value) (func() (interface{}, error), bool) {

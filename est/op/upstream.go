@@ -8,7 +8,7 @@ import (
 	"unsafe"
 )
 
-func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.Pointer {
+func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.State) unsafe.Pointer {
 	derefLast = derefLast || converter.IsPrimitive(selector.Type)
 	sel := selector.Parent
 	counter := -1
@@ -60,18 +60,19 @@ func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.
 		}
 
 		for i := 0; i < parentLen; i++ {
+			shouldRef := refLast && i == parentLen-1
 			if parents[i].Literal != nil {
-				ptr = parents[i].Literal
+				ptr = refIfNeeded(parents[i].Literal, shouldRef)
 			} else if parents[i].Func != nil {
-				ptr = callers[i](parents[i], parents[i].Args, state)
+				ptr = refIfNeeded(callers[i](parents[i], parents[i].Args, state), shouldRef)
 			} else if parents[i].Slice != nil {
-				ptr = parents[i].Slice.Exec(ptr, state)
+				ptr = refIfNeeded(parents[i].Slice.Exec(ptr, state), shouldRef)
 			} else if parents[i].Map != nil {
-				ptr = parents[i].Map.Exec(ptr, state)
+				ptr = refIfNeeded(parents[i].Map.Exec(ptr, state), shouldRef)
 			} else if parents[i].InterfaceExec != nil {
-				ptr = parents[i].InterfaceExec.Exec(ptr, state)
+				ptr = refIfNeeded(parents[i].InterfaceExec.Exec(ptr, state), shouldRef)
 			} else {
-				if (!derefLast && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
+				if ((!derefLast || shouldRef) && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
 					ptr = parents[i].Pointer(ptr)
 				} else {
 					ptr = parents[i].ValuePointer(ptr)
@@ -85,4 +86,12 @@ func Upstream(selector *Selector, derefLast bool) func(state *est.State) unsafe.
 
 		return ptr
 	}
+}
+
+func refIfNeeded(literal unsafe.Pointer, ref bool) unsafe.Pointer {
+	if ref {
+		literal = xunsafe.RefPointer(literal)
+	}
+
+	return literal
 }
