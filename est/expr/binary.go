@@ -43,6 +43,8 @@ func Binary(token ast.Token, exprs ...*op.Expression) (est.New, error) {
 			return computeBinaryString(token, binary, indirect)
 		case reflect.Bool:
 			return computeBinaryBool(token, binary, indirect)
+		case reflect.Ptr:
+			return computePtr(rType, token, binary, indirect)
 		}
 		return nil, fmt.Errorf("unsupported %v as binary expression", exprs[0].Type.String())
 	}, nil

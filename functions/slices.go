@@ -169,9 +169,21 @@ func (in *indexSliceByFunc) Field(upstream []*xunsafe.Type, elemType reflect.Typ
 		xField = xunsafe.FieldByName(elemType, field)
 	}
 
-	if xField == nil {
-		return nil, fmt.Errorf("not found field %v at struct %v", field, elemType.String())
+	if xField != nil {
+		return xField, nil
 	}
 
-	return xField, nil
+	for elemType.Kind() == reflect.Ptr {
+		elemType = elemType.Elem()
+	}
+
+	numField := elemType.NumField()
+	for i := 0; i < numField; i++ {
+		aField := elemType.Field(i)
+		if FieldChecker(aField, field) {
+			return xunsafe.FieldByIndex(elemType, i), nil
+		}
+	}
+
+	return nil, fmt.Errorf("not found field %v at struct %v", field, elemType.String())
 }

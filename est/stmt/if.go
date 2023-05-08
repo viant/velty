@@ -60,6 +60,9 @@ func NewIf(condition *op2.Expression, block, elseIf est.New) (est.New, error) {
 
 func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Operand, error) {
 	anOperand, err := condition.Operand(control, false)
+	if err != nil {
+		return nil, err
+	}
 
 	var rType reflect.Type
 	if condition.Type != nil {

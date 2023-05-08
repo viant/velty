@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"github.com/viant/velty/ast"
 	est "github.com/viant/velty/est"
 	"unsafe"
@@ -148,6 +149,7 @@ func (b *binaryExpr) indirectIntEq(state *est.State) unsafe.Pointer {
 	y := b.y.Exec(state)
 	z := est.FalseValuePtr
 
+	fmt.Println(*(*int)(x), *(*int)(y))
 	if *(*int)(x) == *(*int)(y) {
 		z = est.TrueValuePtr
 	}
