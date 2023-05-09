@@ -195,8 +195,9 @@ func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, 
 			anInterface := operands[i].ExecInterface(state)
 			values = append(values, f.ensureValue(anInterface, operands[i].Type))
 		}
+
+		return f.caller.Call(values), nil
 	}
-	return nil, nil
 }
 
 func (f *Func) ensureValue(anInterface interface{}, t reflect.Type) reflect.Value {

@@ -16,25 +16,27 @@ type Selector struct {
 	Parent   *Selector
 	Literal  unsafe.Pointer
 
-	Func          *Func
-	Slice         *Slice
-	Args          []*Operand
-	Placeholder   string
-	ParentOffset  uintptr
-	Map           *Map
-	InterfaceExec *Interface
-	Cycle         *Selector
+	Func            *Func
+	Slice           *Slice
+	Args            []*Operand
+	Placeholder     string
+	ParentOffset    uintptr
+	Map             *Map
+	InterfaceExec   *Interface
+	Cycle           *Selector
+	IsFieldSelector bool
 }
 
 //NewSelector create a selector
 func NewSelector(id, name string, sType reflect.Type, parent *Selector) *Selector {
 	xField := newXField(name, sType)
 	return &Selector{
-		Type:     sType,
-		ID:       id,
-		Field:    xField,
-		Parent:   parent,
-		Indirect: sType != nil && (sType.Kind() == reflect.Ptr || sType.Kind() == reflect.Slice),
+		Type:            sType,
+		ID:              id,
+		Field:           xField,
+		Parent:          parent,
+		Indirect:        sType != nil && (sType.Kind() == reflect.Ptr || sType.Kind() == reflect.Slice),
+		IsFieldSelector: true,
 	}
 }
 

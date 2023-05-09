@@ -45,13 +45,7 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 		zeroValuePtr = xunsafe.AsPointer(value)
 	}
 
-	callers := make([]func(accumulator *Selector, selectors []*Operand, state *est.State) unsafe.Pointer, parentLen)
-	for i := 0; i < parentLen; i++ {
-		if parents[i].Func == nil {
-			continue
-		}
-		callers[i] = parents[i].Func.CallFunc
-	}
+	shouldRefLast := selector.Type.Kind() == reflect.Ptr
 
 	return func(state *est.State) unsafe.Pointer {
 		ptr := state.MemPtr
@@ -60,11 +54,11 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 		}
 
 		for i := 0; i < parentLen; i++ {
-			shouldRef := refLast && i == parentLen-1
+			shouldRef := shouldRefLast && (len(parents)-1 < i && !(parents[i+1].IsFieldSelector)) || shouldRefLast
 			if parents[i].Literal != nil {
 				ptr = refIfNeeded(parents[i].Literal, shouldRef)
 			} else if parents[i].Func != nil {
-				ptr = refIfNeeded(callers[i](parents[i], parents[i].Args, state), shouldRef)
+				ptr = refIfNeeded(parents[i].Func.CallFunc(parents[i], parents[i].Args, state), shouldRef)
 			} else if parents[i].Slice != nil {
 				ptr = refIfNeeded(parents[i].Slice.Exec(ptr, state), shouldRef)
 			} else if parents[i].Map != nil {
@@ -72,7 +66,7 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 			} else if parents[i].InterfaceExec != nil {
 				ptr = refIfNeeded(parents[i].InterfaceExec.Exec(ptr, state), shouldRef)
 			} else {
-				if ((!derefLast || shouldRef) && i == parentLen-1) || (i < parentLen-1 && callers[i+1] != nil) {
+				if ((!derefLast || shouldRef) && i == parentLen-1) || (i < parentLen-1 && parents[i+1].Func != nil) {
 					ptr = parents[i].Pointer(ptr)
 				} else {
 					ptr = parents[i].ValuePointer(ptr)

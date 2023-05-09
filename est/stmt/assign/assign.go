@@ -224,20 +224,7 @@ func (a *assign) assignValue() est.Compute {
 			src := a.y.Exec(state)
 
 			if dest != nil {
-				//if a.y.Type == a.x.Type {
 				*(*unsafe.Pointer)(dest) = *(*unsafe.Pointer)(src)
-				//*T = *T
-				//} else {
-				//	*(*unsafe.Pointer)(dest) = src
-				//**T = *T
-				//}
-				//d := reflect.NewAt(a.x.Type, dest).Elem().Interface()
-				//fmt.Printf("Dest: %v %T %v \n", a.x.Type.String(), d, d)
-
-				//if src != nil {
-				//	s := reflect.NewAt(a.y.Type, src).Elem().Interface()
-				//	fmt.Printf("Src:: %v %T %v \n", a.y.Type.String(), s, s)
-				//}
 			}
 
 			return src

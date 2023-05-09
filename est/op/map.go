@@ -44,8 +44,4 @@ func (m *Map) Exec(mapPtr unsafe.Pointer, state *est.State) unsafe.Pointer {
 	default:
 		return xunsafe.AsPointer(iface)
 	}
-
-	//pointer := unsafe.Pointer(actualValue.Pointer())
-	//fmt.Println(*(*int)(pointer))
-	//return pointer
 }

@@ -15,7 +15,6 @@ type Operand struct {
 	Type       reflect.Type
 	XType      *xunsafe.Type
 	unify      func(pointer unsafe.Pointer) unsafe.Pointer
-	Repeat     bool
 }
 
 func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
