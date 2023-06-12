@@ -62,7 +62,6 @@ func (e *Expression) Operand(control est.Control, options ...interface{}) (*Oper
 		return operand, nil
 
 	}
-
 	operand.SetType(e.Type)
 	compute, err := e.New(control)
 	if err != nil {
