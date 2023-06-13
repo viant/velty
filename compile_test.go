@@ -1275,7 +1275,7 @@ $lastColumnName`,
 			template:    `$tester.TestIt("true")`,
 			definedVars: map[string]interface{}{
 				"tester": &definedVariable{
-					valueType: &iTest,
+					valueType: reflect.TypeOf(&iTest).Elem(),
 					value:     &TestImpl{M: "abc"},
 				},
 			},

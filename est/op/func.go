@@ -151,11 +151,11 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 }
 
 func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, error) {
-
-	if f.iFaceMethod {
-		owner := operands[0].ExecValue(state)
+	caller := f.caller
+	if f.iFaceMethod { //TODO optimize
+		owner := operands[0].ExecReflectValue(state)
 		method := owner.MethodByName(f.Name)
-		f.caller = method
+		caller = method
 		operands = operands[1:]
 	}
 
@@ -165,27 +165,27 @@ func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, 
 
 	switch len(operands) {
 	case 0:
-		return f.caller.Call([]reflect.Value{}), nil
+		return caller.Call([]reflect.Value{}), nil
 	case 1:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 		}), nil
 
 	case 2:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 		}), nil
 
 	case 3:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
 		}), nil
 
 	case 4:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
@@ -203,7 +203,7 @@ func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, 
 			values = append(values, f.ensureValue(anInterface, operands[i].Type))
 		}
 
-		return f.caller.Call(values), nil
+		return caller.Call(values), nil
 	}
 }
 
@@ -344,7 +344,7 @@ func (f *Functions) newFunc(name string, funcType reflect.Type, resultType refle
 	aFunc := &Func{
 		Name:        name,
 		caller:      caller,
-		iFaceMethod: isNamedIFace, //TODO move setting this falg with interface
+		iFaceMethod: isNamedIFace,
 		ResultType:  resultType,
 		XType:       xunsafe.NewType(resultType),
 		isVariadic:  funcType.IsVariadic(),

@@ -60,13 +60,13 @@ func (o *Operand) IsIndirect() bool {
 
 func (o *Operand) SetType(rType reflect.Type) {
 	o.Type = rType
-	if rType != nil {
-		o.XType = xunsafe.NewType(o.getXType(rType))
-		if rType.Kind() == reflect.Interface && rType.NumMethod() > 0 {
-			o.NamedIFace = true
-		}
-	} else {
-		o.XType = nil
+	o.XType = nil
+	if rType == nil {
+		return
+	}
+	o.XType = xunsafe.NewType(o.getXType(rType))
+	if rType.Kind() == reflect.Interface && rType.NumMethod() > 0 {
+		o.NamedIFace = true
 	}
 }
 
@@ -75,7 +75,7 @@ func (o *Operand) ExecInterface(state *est.State) interface{} {
 	return o.AsInterface(valuePtr)
 }
 
-func (o *Operand) ExecValue(state *est.State) reflect.Value {
+func (o *Operand) ExecReflectValue(state *est.State) reflect.Value {
 	valuePtr := o.Exec(state)
 	var anInterface interface{}
 	switch o.XType.Kind() {
