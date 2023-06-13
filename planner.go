@@ -178,7 +178,6 @@ func (p *Planner) DefineVariable(name string, v interface{}, names ...string) er
 	default:
 		sType = reflect.TypeOf(v)
 	}
-
 	field := p.Type.AddField(name, name, sType)
 	if err := p.addSelectors("", field, name); err != nil {
 		return err
@@ -393,7 +392,6 @@ func (p *Planner) Func(prev *op.Selector, methodName string, call *expr.Call) (*
 	if prev != nil {
 		receiver = prev.Type
 	}
-
 	aFunc, err := p.Functions.Method(receiver, methodName, call)
 	if err == nil {
 		return aFunc, nil

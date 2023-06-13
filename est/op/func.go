@@ -46,9 +46,10 @@ type (
 		ResultType reflect.Type
 		Function   Funeexpression
 
-		maxArgs    int
-		isVariadic bool
-		caller     reflect.Value
+		maxArgs     int
+		isVariadic  bool
+		iFaceMethod bool
+		caller      reflect.Value
 	}
 
 	Function struct {
@@ -107,13 +108,11 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 	if err != nil {
 		state.AddError(err)
 	}
-
 	if anIface != nil {
 		accumulator.SetValue(state.MemPtr, anIface)
 		if f.XType.Type().Kind() == reflect.Map {
 			return unsafe.Pointer(reflect.ValueOf(f.XType.Ref(anIface)).Pointer())
 		}
-
 		return xunsafe.AsPointer(anIface)
 	}
 
@@ -152,33 +151,41 @@ func (f *Func) callFunc(operands []*Operand, state *est.State) (interface{}, err
 }
 
 func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, error) {
+	caller := f.caller
+	if f.iFaceMethod { //TODO optimize
+		owner := operands[0].ExecReflectValue(state)
+		method := owner.MethodByName(f.Name)
+		caller = method
+		operands = operands[1:]
+	}
+
 	if len(operands) >= f.maxArgs && !f.isVariadic {
-		return nil, fmt.Errorf("too many non-variadic function arguments")
+		return nil, fmt.Errorf("too many non-variadic function argument: expected: %v, had: %v", f.maxArgs, len(operands))
 	}
 
 	switch len(operands) {
 	case 0:
-		return f.caller.Call([]reflect.Value{}), nil
+		return caller.Call([]reflect.Value{}), nil
 	case 1:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 		}), nil
 
 	case 2:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 		}), nil
 
 	case 3:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
 		}), nil
 
 	case 4:
-		return f.caller.Call([]reflect.Value{
+		return caller.Call([]reflect.Value{
 			f.ensureValue(operands[0].ExecInterface(state), operands[0].Type),
 			f.ensureValue(operands[1].ExecInterface(state), operands[1].Type),
 			f.ensureValue(operands[2].ExecInterface(state), operands[2].Type),
@@ -196,7 +203,7 @@ func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, 
 			values = append(values, f.ensureValue(anInterface, operands[i].Type))
 		}
 
-		return f.caller.Call(values), nil
+		return caller.Call(values), nil
 	}
 }
 
@@ -318,7 +325,15 @@ func (f *Functions) NewFunc(name string, function interface{}, resultType reflec
 
 func (f *Functions) reflectFunc(name string, function interface{}, funcType reflect.Type, resultType reflect.Type) (*Func, error) {
 	caller := reflect.ValueOf(function)
+	ret, err := f.newFunc(name, funcType, resultType, caller, false)
+	if err != nil {
+		return nil, err
+	}
+	ret.Literal = xunsafe.AsPointer(function)
+	return ret, nil
+}
 
+func (f *Functions) newFunc(name string, funcType reflect.Type, resultType reflect.Type, caller reflect.Value, isNamedIFace bool) (*Func, error) {
 	if resultType == nil && funcType.NumOut() != 0 {
 		resultType = funcType.Out(0)
 	}
@@ -326,17 +341,16 @@ func (f *Functions) reflectFunc(name string, function interface{}, funcType refl
 	if err := validateMethodSignature(funcType, resultType != nil); err != nil {
 		return nil, err
 	}
-
 	aFunc := &Func{
-		Name:       name,
-		caller:     caller,
-		ResultType: resultType,
-		XType:      xunsafe.NewType(resultType),
-		isVariadic: caller.Type().IsVariadic(),
-		maxArgs:    caller.Type().NumIn() + 1, //reflect.Method.Call require to pass a receiver as first Arg.
-		Literal:    xunsafe.AsPointer(function),
-	}
+		Name:        name,
+		caller:      caller,
+		iFaceMethod: isNamedIFace,
+		ResultType:  resultType,
+		XType:       xunsafe.NewType(resultType),
+		isVariadic:  funcType.IsVariadic(),
+		maxArgs:     funcType.NumIn() + 1, //reflect.Method.Call require to pass a receiver as first Arg.
 
+	}
 	aFunc.Function = aFunc.callFunc
 	return aFunc, nil
 }
@@ -426,6 +440,10 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 	index, ok := receiver.index[id]
 	if ok {
 		return receiver.funcs[index], nil
+	}
+
+	if receiverType.Kind() == reflect.Interface {
+		return f.newFunc(method.Name, method.Type, nil, method.Func, true)
 	}
 
 	methodSignature := method.Func.Interface()

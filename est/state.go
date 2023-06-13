@@ -27,7 +27,7 @@ func (s *State) SetValue(k string, v interface{}) error {
 	}
 
 	switch xField.Kind() {
-	case reflect.Ptr, reflect.Struct, reflect.Slice, reflect.Map:
+	case reflect.Ptr, reflect.Struct, reflect.Slice, reflect.Map, reflect.Interface:
 		xField.SetValue(s.MemPtr, v)
 	default:
 		xField.Set(s.MemPtr, v)

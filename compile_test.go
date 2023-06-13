@@ -73,7 +73,21 @@ func (b *barAggregator) Handler() interface{} {
 	}
 }
 
+type ITest interface {
+	TestIt(b string) string
+}
+
+type TestImpl struct {
+	M string
+	K int
+}
+
+func (t *TestImpl) TestIt(b string) string {
+	return "my test" + b
+}
+
 func TestPlanner_Compile(t *testing.T) {
+	var iTest ITest
 	functions.Now = func() time.Time {
 		parse, _ := time.Parse("2006-01-02 15:04:05.000000000 -0700 MST", "2014-11-12 11:45:26.000000000 +0000 UTC")
 		return parse
@@ -1255,6 +1269,18 @@ $lastColumnName`,
 			},
 			expect: "is true",
 		},
+
+		{
+			description: "iface call",
+			template:    `$tester.TestIt("true")`,
+			definedVars: map[string]interface{}{
+				"tester": &definedVariable{
+					valueType: reflect.TypeOf(&iTest).Elem(),
+					value:     &TestImpl{M: "abc"},
+				},
+			},
+			expect: "my testtrue",
+		},
 	}
 
 	//for i, testCase := range testCases[:len(testCases)-1] {
@@ -1321,6 +1347,11 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 	}
 
 	for k, v := range d.definedVars {
+		if def, ok := v.(*definedVariable); ok {
+			planner.DefineVariable(k, def.valueType)
+			continue
+		}
+
 		err := planner.DefineVariable(k, v)
 		if !assert.Nil(t, err, d.description) {
 			return nil, nil, err
@@ -1384,6 +1415,10 @@ func (d *testdata) init(t *testing.T) (*est.Execution, *est.State, error) {
 
 func (d *testdata) populateState(t *testing.T, state *est.State) error {
 	for k, v := range d.definedVars {
+		if def, ok := v.(*definedVariable); ok {
+			v = def.value
+		}
+
 		err := state.SetValue(k, v)
 		if !assert.Nil(t, err, d.description+" var "+k) {
 			return err
@@ -1459,6 +1494,11 @@ func Test_ForEach_Issue(t *testing.T) {
 `
 	assert.EqualValues(t, expect, actual)
 
+}
+
+type definedVariable struct {
+	valueType interface{}
+	value     interface{}
 }
 
 type filter struct {
