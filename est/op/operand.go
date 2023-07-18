@@ -1,7 +1,6 @@
 package op
 
 import (
-	"fmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
 	"github.com/viant/xunsafe/converter"
@@ -17,6 +16,7 @@ type Operand struct {
 	XType      *xunsafe.Type
 	unify      func(pointer unsafe.Pointer) unsafe.Pointer
 	NamedIFace bool
+	Value      interface{}
 }
 
 func (o *Operand) Pointer(state *est.State) unsafe.Pointer {
@@ -51,6 +51,10 @@ func (o *Operand) exec(state *est.State) unsafe.Pointer {
 		return *o.LiteralPtr
 	}
 
+	if o.Value != nil {
+		return xunsafe.AsPointer(o.Value)
+	}
+
 	return o.pointer(state)
 }
 
@@ -76,6 +80,10 @@ func (o *Operand) ExecInterface(state *est.State) interface{} {
 }
 
 func (o *Operand) ExecReflectValue(state *est.State) reflect.Value {
+	if o.Value != nil {
+		return reflect.ValueOf(o.Value)
+	}
+
 	valuePtr := o.Exec(state)
 	var anInterface interface{}
 	switch o.XType.Kind() {
@@ -85,8 +93,8 @@ func (o *Operand) ExecReflectValue(state *est.State) reflect.Value {
 		}
 		anInterface = xunsafe.AsInterface(valuePtr)
 		return reflect.ValueOf(anInterface)
-	case reflect.Func:
-		anInterface = o.XType.Value(valuePtr)
+	//case reflect.Func:
+	//	anInterface = o.XType.Value(valuePtr)
 	default:
 		if o.LiteralPtr != nil {
 			return reflect.ValueOf(o.XType.Value(valuePtr))
@@ -97,13 +105,17 @@ func (o *Operand) ExecReflectValue(state *est.State) reflect.Value {
 }
 
 func (o *Operand) AsInterface(valuePtr unsafe.Pointer) interface{} {
+	if o.Value != nil {
+		return o.Value
+	}
+
 	var anInterface interface{}
 	switch o.XType.Kind() {
 	case reflect.Interface:
 		if o.NamedIFace {
-			anInterface = reflect.NewAt(o.Type, valuePtr).Elem().Interface()
-			fmt.Printf("LL %T %v\n", anInterface, anInterface)
-			return anInterface
+			return *(*interface {
+				M()
+			})(valuePtr)
 		}
 		anInterface = xunsafe.AsInterface(valuePtr)
 	case reflect.Func:

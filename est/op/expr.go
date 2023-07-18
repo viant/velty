@@ -48,12 +48,6 @@ func (e *Expression) Operand(control est.Control, options ...interface{}) (*Oper
 		return operand, nil
 	}
 
-	if e.Selector != nil && e.Selector.Func != nil {
-		operand.trySetType(e.Func.ResultType)
-		operand.Comp = e.funcCall(shouldDerefLast, shouldRefLast)
-		return operand, nil
-	}
-
 	if e.Selector != nil {
 		if e.Selector != nil && e.Selector.Indirect {
 			operand.Comp = e.newIndirectSelector(shouldDerefLast, shouldRefLast)

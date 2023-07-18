@@ -54,11 +54,29 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 		}
 
 		for i := 0; i < parentLen; i++ {
-			shouldRef := shouldRefLast && (len(parents)-1 < i && !(parents[i+1].IsFieldSelector)) || shouldRefLast
+			shouldRef := shouldRefLast && (i == parentLen-1)
 			if parents[i].Literal != nil {
 				ptr = refIfNeeded(parents[i].Literal, shouldRef)
 			} else if parents[i].Func != nil {
-				ptr = refIfNeeded(parents[i].Func.CallFunc(parents[i], parents[i].Args, state), shouldRef)
+				args := parents[i].Args
+				if i != 0 { //receiver call
+					args = make([]*Operand, len(parents[i].Args)) // have to copy args and replace first operand,
+					// because CallFunc would call Upstream once again,
+					// calling all methods multiple times
+					copy(args, parents[i].Args)
+					newArg := *args[0]
+					newArg.Comp = nil
+					if parents[i-1].Func != nil {
+						newArg.Value = newArg.AsValue(ptr)
+					} else {
+						newArg.Value = newArg.AsInterface(ptr)
+
+					}
+
+					args[0] = &newArg
+				}
+
+				ptr = refIfNeeded(parents[i].Func.CallFunc(parents[i], args, state), shouldRef)
 			} else if parents[i].Slice != nil {
 				ptr = refIfNeeded(parents[i].Slice.Exec(ptr, state), shouldRef)
 			} else if parents[i].Map != nil {
