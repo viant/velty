@@ -33,8 +33,8 @@ type (
 	}
 )
 
-//EmbedVariable enrich the Type by adding Anonymous field with given name.
-//val can be either of the reflect.Type or regular type (i.e. Foo)
+// EmbedVariable enrich the Type by adding Anonymous field with given name.
+// val can be either of the reflect.Type or regular type (i.e. Foo)
 func (p *Planner) EmbedVariable(val interface{}) error {
 	var rType reflect.Type
 	switch actual := val.(type) {
@@ -65,7 +65,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 	vTag := Parse(field.Tag.Get(velty))
 
-	parent, err := p.indexSelectorIfNeeded(prefix, field, parent, offsetSoFar, initialOffset, indirect, cycleSelector, fieldName)
+	newParent, err := p.indexSelectorIfNeeded(prefix, field, parent, offsetSoFar, initialOffset, indirect, cycleSelector, fieldName)
 	if err != nil || cycleSelector != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 		return nil
 	}
 
-	return p.addChildrenSelectors(prefix, field, offsetSoFar, initialOffset, indirect, cycleNode, parent)
+	return p.addChildrenSelectors(prefix, field, offsetSoFar, initialOffset, indirect, cycleNode, newParent)
 }
 
 func (p *Planner) cycle(cycleDetector *CycleDetector, field reflect.StructField, parent *op.Selector) (*CycleDetector, *op.Selector) {
@@ -119,6 +119,10 @@ func (p *Planner) addChildrenSelectors(holderPrefix string, field reflect.Struct
 			}
 
 			for _, name := range fieldNames {
+				if name == "_" {
+					continue
+				}
+
 				if err := p.createSelectors(holderPrefix, structField, parent, offsetSoFar, initialOffset, indirect || elemed, detector, name); err != nil {
 					return err
 				}
@@ -164,8 +168,8 @@ func elemIfNeeded(rType reflect.Type) (reflect.Type, bool) {
 	return rType, wasPtr
 }
 
-//DefineVariable enrich the Type by adding field with given name.
-//val can be either of the reflect.Type or regular type (i.e. Foo)
+// DefineVariable enrich the Type by adding field with given name.
+// val can be either of the reflect.Type or regular type (i.e. Foo)
 func (p *Planner) DefineVariable(name string, v interface{}, names ...string) error {
 	if p.selectorByName(name) != nil {
 		return nil
