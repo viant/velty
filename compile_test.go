@@ -9,6 +9,7 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/est/op"
 	"github.com/viant/velty/functions"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,7 +17,8 @@ import (
 )
 
 type Node struct {
-	DB *sql.DB
+	DB      *sql.DB
+	Request *http.Request
 }
 
 type bar struct {
