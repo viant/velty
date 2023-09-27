@@ -138,6 +138,8 @@ github.com/viant/xreflect v0.0.0-20230303201326-f50afb0feb0d h1:zMKhSRx3xy89QlYc
 github.com/viant/xreflect v0.0.0-20230303201326-f50afb0feb0d/go.mod h1:uflXFHcw4TQXgYJvTQ7Akf4SAzXYPCVi8NGZgsVlwmA=
 github.com/viant/xunsafe v0.8.4-0.20230304004317-9d184b8b025f h1:sfA5RcsRYKSXq/7Xc8TuV+HEKob8BW0D3gNyYPWdIOk=
 github.com/viant/xunsafe v0.8.4-0.20230304004317-9d184b8b025f/go.mod h1:V3RCwtqpbNPznhmHysyAOpsyuSVkIYWo1Ewip7qb9/s=
+github.com/viant/xunsafe v0.9.1-0.20230927172001-c46ad2c48d68 h1:rrdh+8vc88A9+RvjNZ/yFzso4KQliaNY1rgYjVqTD7c=
+github.com/viant/xunsafe v0.9.1-0.20230927172001-c46ad2c48d68/go.mod h1:V3RCwtqpbNPznhmHysyAOpsyuSVkIYWo1Ewip7qb9/s=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

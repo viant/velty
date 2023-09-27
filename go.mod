@@ -8,7 +8,7 @@ require (
 	github.com/viant/parsly v0.0.0-20220309230857-3a8c3e9c4030
 	github.com/viant/toolbox v0.34.6-0.20221112031702-3e7cdde7f888
 	github.com/viant/xreflect v0.0.0-20230303201326-f50afb0feb0d
-	github.com/viant/xunsafe v0.8.4-0.20230304004317-9d184b8b025f
+	github.com/viant/xunsafe v0.9.1-0.20230927172001-c46ad2c48d68
 )
 
 require (
