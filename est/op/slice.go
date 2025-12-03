@@ -5,6 +5,7 @@ import (
 	"github.com/viant/velty/est"
 	"github.com/viant/xunsafe"
 	"github.com/viant/xunsafe/converter"
+	"reflect"
 	"unsafe"
 )
 
@@ -28,6 +29,14 @@ func (s *Slice) Exec(slicePtr unsafe.Pointer, state *est.State) unsafe.Pointer {
 		panic(fmt.Sprintf("index out of range [%v] with length %v", index, sliceLen))
 	}
 
-	return s.XSlice.PointerAt(slicePtr, uintptr(index))
+	elemPtr := s.XSlice.PointerAt(slicePtr, uintptr(index))
+	// If the slice element is a pointer type (e.g., []*T), dereference the slot
+	// and return the underlying pointer so field access works on the element.
+	if s.SliceOperand != nil && s.SliceOperand.Type != nil {
+		if s.SliceOperand.Type.Elem().Kind() == reflect.Ptr {
+			return *(*unsafe.Pointer)(elemPtr)
+		}
+	}
+	return elemPtr
 
 }

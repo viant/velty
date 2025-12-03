@@ -17,6 +17,29 @@ type ForEach struct {
 	*xunsafe.Slice
 }
 
+// foreachSetter sets $foreach context into state if defined.
+func foreachSetter(state *est.State, i, l int) {
+	accessor, ok := state.StateType.ValueAccessor("foreach")
+	if !ok {
+		return
+	}
+	// Build context
+	info := struct {
+		Index   int
+		Count   int
+		HasNext bool
+		First   bool
+		Last    bool
+	}{
+		Index:   i,
+		Count:   i + 1,
+		HasNext: i < l-1,
+		First:   i == 0,
+		Last:    i == l-1,
+	}
+	accessor.SetValue(state.MemPtr, info)
+}
+
 func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 	xPtr := e.X.Pointer(state)
 	l := e.Slice.Len(xPtr)
@@ -25,6 +48,7 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
 		e.Item.Sel.Set(state.MemPtr, v)
+		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
 	}
 
@@ -39,6 +63,7 @@ func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValuePointerAt(xPtr, i)
 		e.Item.Sel.SetValue(state.MemPtr, v)
+		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
 	}
 
@@ -53,6 +78,7 @@ func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValuePointerAt(xPtr, i)
 		e.Item.Sel.SetValue(state.MemPtr, v)
+		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
 	}
 
@@ -66,6 +92,7 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
 		e.Item.Sel.SetValue(state.MemPtr, v)
+		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
 	}
 
@@ -80,6 +107,7 @@ func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
 	for i := 0; i < l; i++ {
 		v := e.Slice.ValueAt(xPtr, i)
 		e.Item.Sel.SetValue(state.MemPtr, v)
+		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
 	}
 

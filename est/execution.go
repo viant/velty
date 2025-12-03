@@ -1,6 +1,9 @@
 package est
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type Execution struct {
 	compute      Compute
@@ -31,4 +34,11 @@ func (e *Execution) Exec(stat *State) (err error) {
 
 func NewExecution(compute Compute) *Execution {
 	return &Execution{compute: compute}
+}
+
+// ExecWithContext executes with the provided context set on the state.
+// Backward compatible: underlying Exec is invoked after setting state context.
+func (e *Execution) ExecWithContext(ctx context.Context, stat *State) error {
+	stat.Ctx = ctx
+	return e.Exec(stat)
 }

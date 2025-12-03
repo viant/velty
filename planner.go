@@ -30,6 +30,7 @@ type (
 		cache        *cache
 		escapeHTML   bool
 		panicOnError bool
+		nodeSeq      int
 	}
 )
 
@@ -146,6 +147,7 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 	} else {
 		fieldSelector = op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 	}
+	fieldSelector.NodeID = p.nextNodeID()
 
 	if field.Anonymous {
 		return fieldSelector, nil
@@ -242,19 +244,47 @@ func (p *Planner) copyWithParent(dest, parent *op.Selector) *op.Selector {
 }
 
 func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector, selectorId string, parentType reflect.Type) (*op.Selector, ast.Expression, error) {
-	selector, next, err := p.tryMatchCall(call, resultSelector, selectorId)
-	if err != nil || selector != nil {
-		return selector, next, err
-	}
+	var err error
 
 	switch actual := call.(type) {
-	case *expr.Select:
-		if callSelector, callNext, callErr := p.tryMatchCall(actual.X, resultSelector, actual.ID); callSelector != nil || callErr != nil {
-			return callSelector, callNext, callErr
+	case *expr.Call:
+		// Direct method on current selector (e.g., $foo.ToUpper())
+		return p.matchFunc(selectorId, actual, resultSelector)
+
+	case *expr.SliceIndex:
+		// Indexing into current selector (e.g., $arr[0])
+		switch resultSelector.Type.Kind() {
+		case reflect.Map:
+			mapSelector, err := p.newMapSelector(selectorId, actual, resultSelector)
+			if err != nil {
+				return nil, nil, err
+			}
+			return mapSelector, actual.Y, nil
+		case reflect.Interface:
+			interfaceSelector, err := p.newInterfaceSelector(selectorId, actual, resultSelector)
+			if err != nil {
+				return nil, nil, err
+			}
+			return interfaceSelector, actual.Y, nil
+		default:
+			sliceSelector, err := p.newSliceSelector(selectorId, actual, resultSelector)
+			if err != nil {
+				return nil, nil, err
+			}
+			return sliceSelector, actual.Y, nil
 		}
 
-		_, err = p.fieldByName(parentType, actual, actual.ID)
-		if err != nil {
+	case *expr.Select:
+		// If the next segment is a method call on this field (e.g., $Slice.Length()),
+		// handle it before resolving the field as a struct field.
+		if _, isCall := actual.X.(*expr.Call); isCall {
+			if callSelector, callNext, callErr := p.tryMatchCall(actual.X, resultSelector, actual.ID); callSelector != nil || callErr != nil {
+				return callSelector, callNext, callErr
+			}
+		}
+
+		// Resolve the field first, then apply any call or index chained to it.
+		if _, err = p.fieldByName(parentType, actual, actual.ID); err != nil {
 			return nil, nil, err
 		}
 
@@ -265,6 +295,7 @@ func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector
 			return nil, nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
 		}
 
+		// Defer handling of calls or indexes to the next iteration with the updated selectorId.
 		return resultSelector, actual.X, nil
 	}
 
@@ -304,6 +335,7 @@ func deref(rType reflect.Type) reflect.Type {
 func (p *Planner) accumulator(t reflect.Type) *op.Selector {
 	name := p.newName()
 	sel := op.NewSelector(name, name, t, nil)
+	sel.NodeID = p.nextNodeID()
 	if t != nil {
 		_ = p.selectors.Append(sel)
 		sel.Field = xunsafe.NewField(p.Type.AddFieldWithTag(name, name, "", t))
@@ -375,6 +407,7 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 
 	accumulator := p.accumulator(aFunc.ResultType)
 	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
+	newSelector.NodeID = p.nextNodeID()
 	newSelector.Args = operands
 	newSelector.Type = aFunc.ResultType
 	if newSelector.Type == xreflect.InterfaceType {
@@ -446,6 +479,11 @@ func New(options ...Option) *Planner {
 	return planner
 }
 
+func (p *Planner) nextNodeID() int {
+	p.nodeSeq++
+	return p.nodeSeq
+}
+
 func (p *Planner) New() *Planner {
 	scope := &Planner{
 		bufferSize: p.bufferSize,
@@ -515,6 +553,15 @@ func (p *Planner) matchCall(call ast.Expression, selector *op.Selector, ID strin
 	case *expr.Call:
 		return p.matchFunc(ID, actual, selector)
 	case *expr.SliceIndex:
+		// If indexing follows a field segment (e.g., $Model.Items[0]), resolve that field first.
+		if ID != "" && selector != nil {
+			combined := selector.ID + fieldSeparator + ID
+			if resolved, ok := p.selectors.ById(combined); ok {
+				selector = resolved
+				ID = combined
+			}
+		}
+
 		switch selector.Type.Kind() {
 		case reflect.Map:
 			mapSelector, err := p.newMapSelector(ID, actual, selector)
@@ -560,7 +607,12 @@ func (p *Planner) newSliceSelector(id string, actual *expr.SliceIndex, selector 
 		return nil, err
 	}
 
-	return op.SliceSelector(id, "", sliceOperand, operandExpression, selector)
+	s, err := op.SliceSelector(id, "", sliceOperand, operandExpression, selector)
+	if err != nil {
+		return nil, err
+	}
+	s.NodeID = p.nextNodeID()
+	return s, nil
 }
 
 func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
@@ -574,7 +626,12 @@ func (p *Planner) newMapSelector(id string, actual *expr.SliceIndex, selector *o
 		return nil, err
 	}
 
-	return op.NewMapSelector(id, "", mapOperand, keyOperand, selector)
+	s, err := op.NewMapSelector(id, "", mapOperand, keyOperand, selector)
+	if err != nil {
+		return nil, err
+	}
+	s.NodeID = p.nextNodeID()
+	return s, nil
 }
 
 func (p *Planner) newInterfaceSelector(id string, actual *expr.SliceIndex, selector *op.Selector) (*op.Selector, error) {
@@ -588,7 +645,12 @@ func (p *Planner) newInterfaceSelector(id string, actual *expr.SliceIndex, selec
 		return nil, err
 	}
 
-	return op.NewInterfaceSelector(id, "", xOperand, yOperand, selector)
+	s, err := op.NewInterfaceSelector(id, "", xOperand, yOperand, selector)
+	if err != nil {
+		return nil, err
+	}
+	s.NodeID = p.nextNodeID()
+	return s, nil
 }
 
 func (p *Planner) compileOperand(actual ast.Expression) (*op.Operand, error) {

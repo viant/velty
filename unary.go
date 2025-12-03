@@ -14,7 +14,7 @@ func (p *Planner) compileUnary(actual *aexpr.Unary) (*op.Expression, error) {
 
 	acc := p.accumulator(x.Type)
 
-	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
+	resultExpr := &op.Expression{Selector: acc, Type: acc.Type, NodeID: p.nextNodeID()}
 
 	computeNew, err := eexpr.Unary(actual.Token, x, resultExpr)
 	if err != nil {
@@ -22,7 +22,8 @@ func (p *Planner) compileUnary(actual *aexpr.Unary) (*op.Expression, error) {
 	}
 
 	return &op.Expression{
-		Type: x.Type,
-		New:  computeNew,
+		Type:   x.Type,
+		New:    computeNew,
+		NodeID: p.nextNodeID(),
 	}, nil
 }

@@ -9,7 +9,7 @@ import (
 
 func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
 	var err error
-	expression := &op.Expression{}
+	expression := &op.Expression{NodeID: p.nextNodeID()}
 	expression.Selector, err = p.selector(selector)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package est
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -18,6 +19,7 @@ type State struct {
 	Errors       []error
 	PanicOnError bool
 	isTaken      bool
+	Ctx          context.Context
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
@@ -75,6 +77,9 @@ func (s *State) Reset() {
 	s.Errors = nil
 	s.isTaken = true
 }
+
+func (s *State) SetContext(ctx context.Context) { s.Ctx = ctx }
+func (s *State) Context() context.Context       { return s.Ctx }
 
 func (s *State) IsValid() bool {
 	return len(s.Errors) == 0

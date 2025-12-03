@@ -1,6 +1,7 @@
 package op
 
 import (
+	"context"
 	"fmt"
 	"github.com/viant/velty/ast/expr"
 	"github.com/viant/velty/est"
@@ -50,6 +51,9 @@ type (
 		isVariadic  bool
 		iFaceMethod bool
 		caller      reflect.Value
+
+		expectsCtx      bool
+		expectsReceiver bool
 	}
 
 	Function struct {
@@ -82,6 +86,8 @@ type (
 		ResultType reflect.Type
 	}
 )
+
+var contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
 
 func (r *funcReceiver) registerFunc(aFunc *Func) error {
 	if _, ok := r.index[aFunc.Name]; ok {
@@ -161,6 +167,34 @@ func (f *Func) execute(operands []*Operand, state *est.State) ([]reflect.Value, 
 
 	if len(operands) >= f.maxArgs && !f.isVariadic {
 		return nil, fmt.Errorf("too many non-variadic function argument: expected: %v, had: %v", f.maxArgs, len(operands))
+	}
+
+	// If function expects context, inject it at the correct position.
+	if f.expectsCtx {
+		// Build values dynamically to place context properly.
+		insertPos := 0
+		if f.expectsReceiver {
+			insertPos = 1 // after receiver
+		}
+		values := make([]reflect.Value, 0, len(operands)+1)
+		ctxVal := reflect.Zero(contextType)
+		if state.Ctx != nil {
+			ctxVal = reflect.ValueOf(state.Ctx)
+		}
+
+		for i := 0; i < len(operands)+1; i++ {
+			if i == insertPos {
+				values = append(values, ctxVal)
+				continue
+			}
+			// pick from operands with offset on/after insert
+			idx := i
+			if i > insertPos {
+				idx = i - 1
+			}
+			values = append(values, f.ensureValue(operands[idx].ExecInterface(state), operands[idx].Type))
+		}
+		return caller.Call(values), nil
 	}
 
 	switch len(operands) {
@@ -330,6 +364,10 @@ func (f *Functions) reflectFunc(name string, function interface{}, funcType refl
 		return nil, err
 	}
 	ret.Literal = xunsafe.AsPointer(function)
+	// Detect context as the first parameter for plain functions
+	if funcType.NumIn() > 0 && funcType.In(0) == contextType {
+		ret.expectsCtx = true
+	}
 	return ret, nil
 }
 
@@ -459,6 +497,14 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 		}
 	}
 
+	// Mark receiver expectation for non-interface methods
+	aFunc.expectsReceiver = true
+
+	// Detect context as the first parameter after receiver for methods
+	if method.Type.NumIn() > 1 && method.Type.In(1) == contextType {
+		aFunc.expectsCtx = true
+	}
+
 	receiver.index[id] = len(receiver.funcs)
 	receiver.funcs = append(receiver.funcs, aFunc)
 	return aFunc, nil
@@ -466,6 +512,210 @@ func (f *Functions) asFunc(receiverType reflect.Type, id string, method reflect.
 
 func (f *Functions) discover(receiverType reflect.Type, function interface{}) (Funeexpression, reflect.Type, bool) {
 	switch actual := function.(type) {
+	// context-aware fast paths
+	case func(context.Context, string) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(string)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state))), nil
+		}, stringType, true
+
+	case func(context.Context, string) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(string)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state))), nil
+		}, boolType, true
+
+	case func(context.Context, string) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(string)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state))), nil
+		}, intType, true
+
+	case func(context.Context, string, string) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(string, string)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
+		}, stringType, true
+
+	case func(context.Context, string, string) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(string, string)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
+		}, boolType, true
+
+	// 1-arg numeric/bytes fast paths
+	case func(context.Context, int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(int)", operands)
+			}
+			return actual(state.Ctx, *(*int)(operands[0].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, int) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(int)", operands)
+			}
+			return actual(state.Ctx, *(*int)(operands[0].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, float64) float64:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(float64)", operands)
+			}
+			return actual(state.Ctx, *(*float64)(operands[0].Exec(state))), nil
+		}, float64Type, true
+	case func(context.Context, float64) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(float64)", operands)
+			}
+			return actual(state.Ctx, *(*float64)(operands[0].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, []byte) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("([]byte)", operands)
+			}
+			return actual(state.Ctx, *(*[]byte)(operands[0].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, []byte) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("([]byte)", operands)
+			}
+			return actual(state.Ctx, *(*[]byte)(operands[0].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, []byte) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("([]byte)", operands)
+			}
+			return actual(state.Ctx, *(*[]byte)(operands[0].Exec(state))), nil
+		}, stringType, true
+	case func(context.Context, []string) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("([]string)", operands)
+			}
+			return actual(state.Ctx, *(*[]string)(operands[0].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, []int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("([]int)", operands)
+			}
+			return actual(state.Ctx, *(*[]int)(operands[0].Exec(state))), nil
+		}, intType, true
+
+	// map[string]string variants
+	case func(context.Context, map[string]string) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(map[string]string)", operands)
+			}
+			return actual(state.Ctx, *(*map[string]string)(operands[0].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, map[string]string) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(map[string]string)", operands)
+			}
+			return actual(state.Ctx, *(*map[string]string)(operands[0].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, map[string]string) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 1 {
+				return nil, incorrectArgumentsError("(map[string]string)", operands)
+			}
+			return actual(state.Ctx, *(*map[string]string)(operands[0].Exec(state))), nil
+		}, stringType, true
+
+	// 2-arg common combos
+	case func(context.Context, string, int) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(string, int)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
+		}, stringType, true
+	case func(context.Context, string, int) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(string, int)", operands)
+			}
+			return actual(state.Ctx, *(*string)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, int, string) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(int, string)", operands)
+			}
+			return actual(state.Ctx, *(*int)(operands[0].Exec(state)), *(*string)(operands[1].Exec(state))), nil
+		}, stringType, true
+	case func(context.Context, int, int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(int, int)", operands)
+			}
+			return actual(state.Ctx, *(*int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, int, int) bool:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(int, int)", operands)
+			}
+			return actual(state.Ctx, *(*int)(operands[0].Exec(state)), *(*int)(operands[1].Exec(state))), nil
+		}, boolType, true
+	case func(context.Context, float64, float64) float64:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 2 {
+				return nil, incorrectArgumentsError("(float64, float64)", operands)
+			}
+			return actual(state.Ctx, *(*float64)(operands[0].Exec(state)), *(*float64)(operands[1].Exec(state))), nil
+		}, float64Type, true
+
+	// 3-arg common combos
+	case func(context.Context, string, string, int) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 3 {
+				return nil, incorrectArgumentsError("(string, string, int)", operands)
+			}
+			return actual(state.Ctx,
+				*(*string)(operands[0].Exec(state)),
+				*(*string)(operands[1].Exec(state)),
+				*(*int)(operands[2].Exec(state))), nil
+		}, stringType, true
+	case func(context.Context, int, int, int) int:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 3 {
+				return nil, incorrectArgumentsError("(int, int, int)", operands)
+			}
+			return actual(state.Ctx,
+				*(*int)(operands[0].Exec(state)),
+				*(*int)(operands[1].Exec(state)),
+				*(*int)(operands[2].Exec(state))), nil
+		}, intType, true
+	case func(context.Context, string, int, int) string:
+		return func(operands []*Operand, state *est.State) (interface{}, error) {
+			if len(operands) < 3 {
+				return nil, incorrectArgumentsError("(string, int, int)", operands)
+			}
+			return actual(state.Ctx,
+				*(*string)(operands[0].Exec(state)),
+				*(*int)(operands[1].Exec(state)),
+				*(*int)(operands[2].Exec(state))), nil
+		}, stringType, true
 	case func(s, substr string) bool:
 		return func(operands []*Operand, state *est.State) (interface{}, error) {
 			if len(operands) < 2 {

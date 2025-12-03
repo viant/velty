@@ -15,7 +15,8 @@ type Expression struct {
 	Type       reflect.Type
 	*Selector
 	est.New
-	Unify converter.UnifyFn
+	Unify  converter.UnifyFn
+	NodeID int
 }
 
 func (e *Expression) Operand(control est.Control, options ...interface{}) (*Operand, error) {

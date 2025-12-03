@@ -29,7 +29,7 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 
 	resultType := notNilType(types.NormalizeType(actual.Type()), unify.RType)
 	acc := p.accumulator(resultType)
-	resultExpr := &op.Expression{Selector: acc, Type: acc.Type}
+	resultExpr := &op.Expression{Selector: acc, Type: acc.Type, NodeID: p.nextNodeID()}
 
 	computeNew, err := eexpr.Binary(actual.Token, x, y, resultExpr)
 	if err != nil {
@@ -37,8 +37,9 @@ func (p *Planner) compileBinary(actual *expr.Binary) (*op.Expression, error) {
 	}
 
 	return &op.Expression{
-		Type: resultType,
-		New:  computeNew,
+		Type:   resultType,
+		New:    computeNew,
+		NodeID: p.nextNodeID(),
 	}, nil
 }
 
