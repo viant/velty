@@ -46,6 +46,7 @@ func (e *evaluator) newState(planner *Planner, state *est.State) *est.State {
 	}
 
 	newState.Buffer = state.Buffer
+	newState.Ctx = state.Ctx
 	return newState
 }
 

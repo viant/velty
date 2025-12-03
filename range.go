@@ -37,5 +37,6 @@ func (p *Planner) compileRange(actual *aexpr.Range) (*op.Expression, error) {
 	return &op.Expression{
 		LiteralPtr: &slicePtr,
 		Type:       reflect.SliceOf(actual.Type()),
+		NodeID:     p.nextNodeID(),
 	}, nil
 }

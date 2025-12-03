@@ -1,6 +1,7 @@
 package velty
 
 import (
+	"context"
 	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/parser"
@@ -8,7 +9,7 @@ import (
 	"reflect"
 )
 
-//Compile create Execution Plan and State provider for the Execution Plan.
+// Compile create Execution Plan and State provider for the Execution Plan.
 func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, error) {
 	root, err := parser.Parse(template)
 	if err != nil {
@@ -33,6 +34,7 @@ func (p *Planner) stateProvider() func() *est.State {
 			Buffer:       est.NewBuffer(p.bufferSize, p.escapeHTML),
 			StateType:    p.Type,
 			PanicOnError: p.panicOnError,
+			Ctx:          context.Background(),
 		}
 
 		return state

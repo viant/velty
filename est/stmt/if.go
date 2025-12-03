@@ -4,8 +4,9 @@ import (
 	"fmt"
 	est "github.com/viant/velty/est"
 	op2 "github.com/viant/velty/est/op"
-	"github.com/viant/xunsafe/converter"
+	"github.com/viant/xunsafe"
 	"reflect"
+	"sync"
 	"unsafe"
 )
 
@@ -13,6 +14,42 @@ type If struct {
 	ElseIf    est.Compute
 	Block     est.Compute
 	Condition *op2.Operand
+}
+
+// zero-check cache for struct types
+type zeroMethodKind int
+
+const (
+	zeroNone zeroMethodKind = iota
+	zeroIsZeroVal
+	zeroIsZeroPtr
+	zeroZeroVal
+	zeroZeroPtr
+)
+
+var zeroCache sync.Map // map[reflect.Type]zeroMethodKind
+
+func lookupZeroMethod(t reflect.Type) zeroMethodKind {
+	if v, ok := zeroCache.Load(t); ok {
+		return v.(zeroMethodKind)
+	}
+	kind := zeroNone
+	// value receiver IsZero/Zero
+	if m, ok := t.MethodByName("IsZero"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.Bool {
+		kind = zeroIsZeroVal
+	} else if m, ok := t.MethodByName("Zero"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.Bool {
+		kind = zeroZeroVal
+	} else {
+		// pointer receiver methods
+		pt := reflect.PtrTo(t)
+		if m, ok := pt.MethodByName("IsZero"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.Bool {
+			kind = zeroIsZeroPtr
+		} else if m, ok := pt.MethodByName("Zero"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 && m.Type.Out(0).Kind() == reflect.Bool {
+			kind = zeroZeroPtr
+		}
+	}
+	zeroCache.Store(t, kind)
+	return kind
 }
 
 func (i *If) computeWithoutElse(state *est.State) unsafe.Pointer {
@@ -79,27 +116,28 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 		return nil, fmt.Errorf("couldn't determine type of the %v\n", condition.Selector.Name)
 	}
 
-	unify, err := converter.Unify(reflect.TypeOf(true), rType)
-	if err != nil {
-		return nil, err
+	// Explicitly reject unsupported non-pointer map/struct before any coercion
+	if rType.Kind() == reflect.Map || rType.Kind() == reflect.Struct {
+		return nil, fmt.Errorf("unsupported comparable type %v", rType.Kind())
 	}
 
-	if err != nil || rType.Kind() == reflect.Bool {
+	// If it's already boolean, pass through
+	if rType.Kind() == reflect.Bool {
 		return anOperand, err
 	}
 
 	newOperand := &op2.Operand{}
-	if unify.Y != nil {
-		newOperand.SetUnifier(unify.Y)
-		rType = reflect.TypeOf(true)
-	}
+	// Do not apply generic unifier; we define explicit coercion semantics below.
 
 	switch rType.Kind() {
 	case reflect.Slice:
+		xs := xunsafe.NewSlice(rType)
 		newOperand.Comp = func(state *est.State) unsafe.Pointer {
 			anPtr := anOperand.Exec(state)
-			anHeader := (*reflect.SliceHeader)(anPtr)
-			if anHeader != nil && anHeader.Len > 0 {
+			if anPtr == nil {
+				return est.FalseValuePtr
+			}
+			if xs.Len(anPtr) > 0 {
 				return est.TrueValuePtr
 			}
 			return est.FalseValuePtr
@@ -138,10 +176,48 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 	case reflect.Ptr:
 		newOperand.Comp = func(state *est.State) unsafe.Pointer {
 			anPtr := anOperand.Exec(state)
-			if anPtr != nil {
-				return est.TrueValuePtr
+			if anPtr == nil {
+				return est.FalseValuePtr
 			}
-			return est.FalseValuePtr
+			pointee := *(*unsafe.Pointer)(anPtr)
+			if pointee == nil {
+				return est.FalseValuePtr
+			}
+			// check zero method for *struct
+			elem := rType.Elem()
+			if elem.Kind() == reflect.Struct {
+				switch lookupZeroMethod(elem) {
+				case zeroIsZeroVal:
+					v := reflect.NewAt(elem, pointee).Elem()
+					res := v.MethodByName("IsZero").Call(nil)[0].Bool()
+					if !res {
+						return est.TrueValuePtr
+					}
+					return est.FalseValuePtr
+				case zeroZeroVal:
+					v := reflect.NewAt(elem, pointee).Elem()
+					res := v.MethodByName("Zero").Call(nil)[0].Bool()
+					if !res {
+						return est.TrueValuePtr
+					}
+					return est.FalseValuePtr
+				case zeroIsZeroPtr:
+					v := reflect.NewAt(reflect.PtrTo(elem), unsafe.Pointer(&pointee)).Elem()
+					res := v.MethodByName("IsZero").Call(nil)[0].Bool()
+					if !res {
+						return est.TrueValuePtr
+					}
+					return est.FalseValuePtr
+				case zeroZeroPtr:
+					v := reflect.NewAt(reflect.PtrTo(elem), unsafe.Pointer(&pointee)).Elem()
+					res := v.MethodByName("Zero").Call(nil)[0].Bool()
+					if !res {
+						return est.TrueValuePtr
+					}
+					return est.FalseValuePtr
+				}
+			}
+			return est.TrueValuePtr
 		}
 
 	case reflect.Bool:
@@ -150,8 +226,12 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 			return anPtr
 		}
 
+	case reflect.Map:
+		return nil, fmt.Errorf("unsupported comparable type %v", rType.Kind())
+	case reflect.Struct:
+		return nil, fmt.Errorf("unsupported comparable type %v", rType.Kind())
 	default:
-		return nil, fmt.Errorf("unsupported comparable type %v", condition.Type.Kind())
+		return nil, fmt.Errorf("unsupported comparable type %v", rType.Kind())
 	}
 
 	return newOperand, nil

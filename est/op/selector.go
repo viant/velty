@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-//Selector represent data selector
+// Selector represent data selector
 type Selector struct {
 	ID   string
 	Type reflect.Type
@@ -25,9 +25,10 @@ type Selector struct {
 	InterfaceExec   *Interface
 	Cycle           *Selector
 	IsFieldSelector bool
+	NodeID          int
 }
 
-//NewSelector create a selector
+// NewSelector create a selector
 func NewSelector(id, name string, sType reflect.Type, parent *Selector) *Selector {
 	xField := newXField(name, sType)
 	return &Selector{

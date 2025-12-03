@@ -10,7 +10,7 @@ import (
 )
 
 func (p *Planner) literalExpr(literal *expr.Literal) (*op.Expression, error) {
-	expr := &op.Expression{}
+	expr := &op.Expression{NodeID: p.nextNodeID()}
 	switch literal.RType.Kind() {
 	case reflect.Int:
 		i, _ := strconv.Atoi(literal.Value)

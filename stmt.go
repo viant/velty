@@ -131,6 +131,10 @@ func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 		return nil, err
 	}
 
+	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last
+	// If already defined, DefineVariable is a no-op.
+	_ = p.DefineVariable("foreach", ForEachInfo{})
+
 	selector, err := p.compileExpr(actual.Item)
 	if err != nil {
 		return nil, err
