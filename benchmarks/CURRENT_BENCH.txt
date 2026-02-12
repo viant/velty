@@ -1,0 +1,57 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/assign
+Benchmark_Exec_Shared-10    	 8294526	       142.1 ns/op	      16 B/op	       1 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/assign	1.568s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/evaluate
+Benchmark_Exec_Direct-10      	 1424226	       828.4 ns/op	    1488 B/op	      14 allocs/op
+Benchmark_Exec_Indirect-10    	 1406422	       871.6 ns/op	    1488 B/op	      14 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/evaluate	4.388s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/for
+Benchmark_Exec_Direct-10      	 2248249	       523.2 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	 2270325	       529.0 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/for	3.717s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/foreach
+Benchmark_Exec_Direct-10        	 1581127	       746.7 ns/op	     288 B/op	      12 allocs/op
+Benchmark_Exec_Indirect-10      	 1602817	       750.2 ns/op	     288 B/op	      12 allocs/op
+Benchmark_NewState_Direct-10    	 5180450	       236.9 ns/op	    1216 B/op	       4 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/foreach	5.636s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/functions
+Benchmark_Exec_WithContext-10    	 6691671	       177.0 ns/op	     216 B/op	       7 allocs/op
+Benchmark_Exec_Shared-10         	 6211293	       195.7 ns/op	     224 B/op	       7 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/functions	2.826s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/if
+Benchmark_Exec_Direct-10      	11868339	        93.33 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	12708699	        92.56 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/if	2.724s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/select
+Benchmark_Exec_Direct-10      	20155932	        60.83 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	19291130	        60.62 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/select	3.696s
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/template
+Benchmark_Exec_Velty-10            	   34710	     32166 ns/op	   25920 B/op	     720 allocs/op
+Benchmark_ExecFuncLess_Velty-10    	   88392	     14296 ns/op	    2880 B/op	     120 allocs/op
+Benchmark_NewState_Direct-10       	 1000000	      1057 ns/op	   10496 B/op	       4 allocs/op
+PASS
+ok  	github.com/viant/velty/bench/template	4.221s

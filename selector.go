@@ -21,6 +21,9 @@ func (p *Planner) selectorExpr(selector *expr.Select) (*op.Expression, error) {
 		expression.Selector.Placeholder = selector.FullName
 	}
 
+	if p.planListener != nil && expression.Selector != nil {
+		p.planListener.OnSelectorResolved(expression.Selector)
+	}
 	expression.Type = expression.Selector.Type
 	return expression, nil
 }

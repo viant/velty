@@ -9,9 +9,18 @@ import (
 	"strings"
 )
 
-func Parse(input []byte) (*stmt.Block, error) {
+// parse is the internal implementation shared by Parse and ParseWithSpans.
+func parse(input []byte) (*stmt.Block, error) {
 	if len(input) == 0 {
 		return &stmt.Block{}, nil
+	}
+
+	if recordSpans {
+		// initialize span registry for this parse
+		resetSpans()
+	} else {
+		// ensure no stale spans are exposed when not recording
+		nodeSpans = nil
 	}
 
 	builder := NewBuilder()
@@ -81,6 +90,18 @@ outer:
 	}
 
 	return builder.Block(), nil
+}
+
+// Parse parses the input template without recording spans (fast path).
+func Parse(input []byte) (*stmt.Block, error) {
+	recordSpans = false
+	return parse(input)
+}
+
+// ParseWithSpans parses the input template and records node spans.
+func ParseWithSpans(input []byte) (*stmt.Block, error) {
+	recordSpans = true
+	return parse(input)
 }
 
 func checkIfEscaped(cursor *parsly.Cursor) (*stmt.Append, bool) {

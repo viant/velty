@@ -426,6 +426,38 @@ func (f *Functions) IsFuncNs(ns string) bool {
 	return ok
 }
 
+// NamespaceNames returns all registered function namespaces.
+func (f *Functions) NamespaceNames() []string {
+	names := make([]string, 0, len(f.ns))
+	for k := range f.ns {
+		names = append(names, k)
+	}
+	return names
+}
+
+// HasStandalone reports if a standalone function with the given name is registered.
+func (f *Functions) HasStandalone(name string) bool {
+	if _, ok := f.index[name]; ok {
+		return true
+	}
+	if _, ok := f.functions[name]; ok {
+		return true
+	}
+	return false
+}
+
+// StandaloneNames returns standalone function names.
+func (f *Functions) StandaloneNames() []string {
+	names := make([]string, 0, len(f.index)+len(f.functions))
+	for k := range f.index {
+		names = append(names, k)
+	}
+	for k := range f.functions {
+		names = append(names, k)
+	}
+	return names
+}
+
 func (f *Functions) Method(rType reflect.Type, id string, call *expr.Call) (*Func, error) {
 	return f.method(rType, id, call)
 }

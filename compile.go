@@ -11,9 +11,46 @@ import (
 
 // Compile create Execution Plan and State provider for the Execution Plan.
 func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, error) {
-	root, err := parser.Parse(template)
-	if err != nil {
-		return nil, nil, err
+	var (
+		root *stmt.Block
+		err  error
+	)
+
+	hasParserHooks := p.listener != nil || p.adjuster != nil
+
+	if !hasParserHooks {
+		// Fast path: parse without spans and compile directly.
+		root, err = parser.Parse(template)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		// Instrumented path: parse with spans and run listener/adjuster hooks.
+		root, err = parser.ParseWithSpans(template)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Build symbol seeds for resolution helpers
+		params := make([]string, 0)
+		for _, sel := range p.selectors.Selectors() {
+			if sel.Parent == nil && sel.IsFieldSelector {
+				params = append(params, sel.ID)
+			}
+		}
+		namespaces := []string{}
+		funcs := []string{}
+		if p.Functions != nil {
+			namespaces = p.Functions.NamespaceNames()
+			funcs = p.Functions.StandaloneNames()
+		}
+		seeds := &SymbolSeeds{Params: params, Namespaces: namespaces, Standalone: funcs}
+		// apply hooks with evaluate config and seeds; ignore patches here (integrator may use them separately)
+		if transformed, _, err := applyParserHooksWithConfig("", template, root, p.listener, p.adjuster, p.evalConfig, seeds); err == nil && transformed != nil {
+			root = transformed
+		} else if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	exec, err := p.newExecution(root)

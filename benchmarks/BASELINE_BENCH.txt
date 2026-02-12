@@ -1,0 +1,48 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/assign
+Benchmark_Exec_Shared-10    	 7646671	       141.7 ns/op	      16 B/op	       1 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/evaluate
+Benchmark_Exec_Direct-10      	 2034057	       575.0 ns/op	    1200 B/op	       4 allocs/op
+Benchmark_Exec_Indirect-10    	 2048505	       572.3 ns/op	    1200 B/op	       4 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/for
+Benchmark_Exec_Direct-10      	 2263370	       522.1 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	 2263562	       527.6 ns/op	       0 B/op	       0 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/foreach
+Benchmark_Exec_Direct-10        	 3319246	       360.9 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10      	 3356926	       361.2 ns/op	       0 B/op	       0 allocs/op
+Benchmark_NewState_Direct-10    	 5285397	       201.8 ns/op	    1168 B/op	       4 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/functions
+Benchmark_Exec_Shared-10    	 5636460	       195.1 ns/op	     224 B/op	       7 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/if
+Benchmark_Exec_Direct-10      	13293734	        91.81 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	14079205	        85.99 ns/op	       0 B/op	       0 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/select
+Benchmark_Exec_Direct-10      	20560766	        57.69 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Exec_Indirect-10    	21125659	        57.64 ns/op	       0 B/op	       0 allocs/op
+
+goos: darwin
+goarch: arm64
+pkg: github.com/viant/velty/bench/template
+Benchmark_Exec_Velty-10            	   42586	     28730 ns/op	   23040 B/op	     600 allocs/op
+Benchmark_ExecFuncLess_Velty-10    	  121345	      9986 ns/op	       0 B/op	       0 allocs/op
+Benchmark_NewState_Direct-10       	 1242596	       921.7 ns/op	   10448 B/op	       4 allocs/op
+

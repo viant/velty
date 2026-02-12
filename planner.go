@@ -31,6 +31,14 @@ type (
 		escapeHTML   bool
 		panicOnError bool
 		nodeSeq      int
+		// listener receives parse events (reserved for future use)
+		listener ParserListener
+		// adjuster applies node transformations (reserved for future use)
+		adjuster NodeAdjuster
+		// evaluate traversal configuration
+		evalConfig EvaluateConfig
+		// planListener receives binding/type resolution hooks
+		planListener PlannerListener
 	}
 )
 
@@ -188,10 +196,16 @@ func (p *Planner) DefineVariable(name string, v interface{}, names ...string) er
 	if err := p.addSelectors("", field, name); err != nil {
 		return err
 	}
+	if p.planListener != nil {
+		p.planListener.OnDefineVariable(name, sType)
+	}
 
 	for _, additionalFieldName := range names {
 		if err := p.addSelectors("", field, additionalFieldName); err != nil {
 			return err
+		}
+		if p.planListener != nil {
+			p.planListener.OnDefineVariable(additionalFieldName, sType)
 		}
 	}
 
@@ -420,6 +434,13 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 			newSelector.Type = actualType
 		}
 	}
+	if p.planListener != nil {
+		var recvType reflect.Type
+		if prev != nil {
+			recvType = prev.Type
+		}
+		p.planListener.OnFunctionBind(methodName, aFunc, recvType)
+	}
 
 	return newSelector, nil
 }
@@ -514,6 +535,18 @@ func (p *Planner) apply(options []Option) {
 			if p.Functions == nil {
 				p.Functions = actual
 			}
+		case Listener:
+			p.listener = ParserListener(actual)
+		case Adjuster:
+			p.adjuster = NodeAdjuster(actual)
+		case Policies:
+			if reg := (*PolicyRegistry)(actual); reg != nil {
+				p.adjuster = reg.AsAdjuster()
+			}
+		case EvalCfg:
+			p.evalConfig = EvaluateConfig(actual)
+		case PlanHooks:
+			p.planListener = PlannerListener(actual)
 		}
 	}
 }
