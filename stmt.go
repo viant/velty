@@ -134,9 +134,9 @@ func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 		p.planListener.OnForEachResolved(actual.Item.ID, itemType, sliceSelector.Type)
 	}
 
-	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last
-	// If already defined, DefineVariable is a no-op.
-	_ = p.DefineVariable("foreach", ForEachInfo{})
+	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last.
+	// Must match runtime loop writer type in est/stmt.
+	_ = p.DefineVariable("foreach", stmt.ForEachInfo{})
 
 	selector, err := p.compileExpr(actual.Item)
 	if err != nil {

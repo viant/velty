@@ -17,6 +17,15 @@ type ForEach struct {
 	*xunsafe.Slice
 }
 
+// ForEachInfo holds loop context values exposed as $foreach in templates.
+type ForEachInfo struct {
+	Index   int
+	Count   int
+	HasNext bool
+	First   bool
+	Last    bool
+}
+
 // foreachSetter sets $foreach context into state if defined.
 func foreachSetter(state *est.State, i, l int) {
 	accessor, ok := state.StateType.ValueAccessor("foreach")
@@ -24,13 +33,7 @@ func foreachSetter(state *est.State, i, l int) {
 		return
 	}
 	// Build context
-	info := struct {
-		Index   int
-		Count   int
-		HasNext bool
-		First   bool
-		Last    bool
-	}{
+	info := ForEachInfo{
 		Index:   i,
 		Count:   i + 1,
 		HasNext: i < l-1,
