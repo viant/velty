@@ -10,6 +10,7 @@ Please refer to [`CHANGELOG.md`](CHANGELOG.md) if you encounter breaking changes
 - [Motivation](#motivation)
 - [Introduction](#introduction)
 - [Usage](#usage)
+- [New Capabilities](#new-capabilities)
 - [Performance](#benchmarks)
 - [Tags](#tags)
 - [Bugs](#bugs)
@@ -154,6 +155,82 @@ The next step is to create execution plan and new state function:
   exec.Exec(state)
 ```
 
+## New Capabilities
+
+### 1) Context-aware execution and functions
+
+States carry `context.Context`. Functions (or methods) that declare `context.Context` as the first parameter
+automatically receive the state context.
+
+```go
+planner := velty.New()
+_ = planner.RegisterFunction("ToUpperWithCtx", func(ctx context.Context, s string) string {
+    return strings.ToUpper(s)
+})
+
+exec, newState, err := planner.Compile([]byte(`$ToUpperWithCtx("go")`))
+if err != nil {
+    panic(err)
+}
+
+state := newState()
+_ = exec.ExecWithContext(context.Background(), state) // explicitly set execution context
+```
+
+If no context is provided, new states default to `context.Background()`.
+
+### 2) Parser hooks: Listener and Adjuster
+
+You can instrument parsing and/or transform AST nodes before planning by passing `Listener` and `Adjuster`
+options to `velty.New(...)`.
+
+```go
+type myListener struct{}
+func (l *myListener) OnEvent(e velty.Event) {
+    // observe enter/exit events, spans, and expression context
+}
+
+type myAdjuster struct{}
+func (a *myAdjuster) Adjust(node ast.Node, ctx *velty.ParserContext) (velty.Action, error) {
+    return velty.Keep(), nil
+}
+
+planner := velty.New(
+    velty.Listener(&myListener{}),
+    velty.Adjuster(&myAdjuster{}),
+)
+```
+
+### 3) Policy-based adjustment
+
+For composable AST rewrite/validation rules, register policies in `PolicyRegistry` and pass them as planner options.
+
+```go
+reg := velty.NewPolicyRegistry()
+reg.Register(&velty.BasicPolicy{
+    ID:     "example",
+    Order:  10,
+    Active: true,
+    Fn: func(node ast.Node, ctx *velty.ParserContext) (velty.Action, error) {
+        return velty.Keep(), nil
+    },
+})
+
+planner := velty.New(velty.Policies(reg))
+```
+
+### 4) Source-to-source template transform
+
+You can parse with spans, run adjusters, and materialize text patches using `TransformTemplate`.
+
+```go
+out, err := velty.TransformTemplate(in, adjuster)
+if err != nil {
+    panic(err)
+}
+_ = out
+```
+
 ## Tags
 In order to match template identifiers with the struct fields, you can use the `velty` tag. 
 Supported attributes:
@@ -273,5 +350,4 @@ all compatible with Apache License, Version 2. Please see individual files for d
 ## Credits and Acknowledgements
 
 **Library Author:** Kamil Larysz
-
 
