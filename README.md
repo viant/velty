@@ -376,4 +376,4 @@ all compatible with Apache License, Version 2. Please see individual files for d
 
 ## Credits and Acknowledgements
 
-**Library Author:** Kamil Larysz
+**Library Author:** Kamil Larysz, Adrian Witas
