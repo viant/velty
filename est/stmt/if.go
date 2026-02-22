@@ -27,7 +27,8 @@ const (
 	zeroZeroPtr
 )
 
-var zeroCache sync.Map // map[reflect.Type]zeroMethodKind
+var zeroCache sync.Map  // map[reflect.Type]zeroMethodKind
+var sliceCache sync.Map // map[reflect.Type]*xunsafe.Slice
 
 func lookupZeroMethod(t reflect.Type) zeroMethodKind {
 	if v, ok := zeroCache.Load(t); ok {
@@ -50,6 +51,15 @@ func lookupZeroMethod(t reflect.Type) zeroMethodKind {
 	}
 	zeroCache.Store(t, kind)
 	return kind
+}
+
+func lookupSliceAccessor(t reflect.Type) *xunsafe.Slice {
+	if v, ok := sliceCache.Load(t); ok {
+		return v.(*xunsafe.Slice)
+	}
+	xs := xunsafe.NewSlice(t)
+	sliceCache.Store(t, xs)
+	return xs
 }
 
 func (i *If) computeWithoutElse(state *est.State) unsafe.Pointer {
@@ -131,7 +141,7 @@ func conditionOperand(condition *op2.Expression, control est.Control) (*op2.Oper
 
 	switch rType.Kind() {
 	case reflect.Slice:
-		xs := xunsafe.NewSlice(rType)
+		xs := lookupSliceAccessor(rType)
 		newOperand.Comp = func(state *est.State) unsafe.Pointer {
 			anPtr := anOperand.Exec(state)
 			if anPtr == nil {

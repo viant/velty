@@ -5,8 +5,8 @@ import (
 	"github.com/viant/velty/ast/stmt"
 )
 
-func matchIf(cursor *parsly.Cursor) (*stmt.If, error) {
-	expression, err := matchEquationExpression(cursor)
+func matchIf(cursor *parsly.Cursor, spans *spanState) (*stmt.If, error) {
+	expression, err := matchEquationExpression(cursor, spans)
 
 	if err != nil {
 		return nil, err

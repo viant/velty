@@ -6,7 +6,7 @@ import (
 	"github.com/viant/velty/ast/expr"
 )
 
-func matchEquationExpression(cursor *parsly.Cursor) (ast2.Expression, error) {
+func matchEquationExpression(cursor *parsly.Cursor, spans *spanState) (ast2.Expression, error) {
 	candidates := []*parsly.Token{Parentheses}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 
@@ -18,11 +18,11 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast2.Expression, error) {
 		shouldNegate := matched.Code == negationToken
 
 		expressionCursor := parsly.NewCursor("", []byte(expressionValue[1:len(expressionValue)-1]), 0)
-		expression, err := matchEquationExpression(expressionCursor)
+		expression, err := matchEquationExpression(expressionCursor, spans)
 		if err != nil {
 			return nil, err
 		}
-		err = addEquationIfNeeded(cursor, &expression)
+		err = addEquationIfNeeded(cursor, spans, &expression)
 		if err != nil {
 			return nil, err
 		}
@@ -37,7 +37,7 @@ func matchEquationExpression(cursor *parsly.Cursor) (ast2.Expression, error) {
 
 		return result, nil
 	default:
-		_, expression, err := matchOperand(cursor, dataTypeMatchers...)
+		_, expression, err := matchOperand(cursor, spans, dataTypeMatchers...)
 		if err != nil {
 			return nil, err
 		}

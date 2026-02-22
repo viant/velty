@@ -9,22 +9,22 @@ import (
 	"strings"
 )
 
-func matchVariable(cursor *parsly.Cursor) (*expr.Select, error) {
+func matchVariable(cursor *parsly.Cursor, spans *spanState) (*expr.Select, error) {
 	candidates := []*parsly.Token{SelectorStart}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
 	case selectorStartToken:
-		return parseIdentity(cursor)
+		return parseIdentity(cursor, spans)
 	}
 	return nil, cursor.NewError(candidates...)
 }
 
-func matchRangeable(cursor *parsly.Cursor) (ast.Expression, error) {
+func matchRangeable(cursor *parsly.Cursor, spans *spanState) (ast.Expression, error) {
 	candidates := []*parsly.Token{SelectorStart, SquareBrackets}
 	matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	switch matched.Code {
 	case selectorStartToken:
-		return MatchSelector(cursor)
+		return MatchSelector(cursor, spans)
 	case squareBracketsToken:
 		text := matched.Text(cursor)
 		rangeCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
@@ -34,7 +34,7 @@ func matchRangeable(cursor *parsly.Cursor) (ast.Expression, error) {
 		}
 		start := cursor.Pos - len(text)
 		end := cursor.Pos - 1
-		recordSpan(expr, start, end)
+		spans.recordSpan(expr, start, end)
 		return expr, nil
 	}
 	return nil, cursor.NewError(candidates...)
@@ -62,7 +62,11 @@ func matchRange(cursor *parsly.Cursor) (ast.Expression, error) {
 	}, nil
 }
 
-func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
+func MatchSelector(cursor *parsly.Cursor, opts ...*spanState) (*expr.Select, error) {
+	var spans *spanState
+	if len(opts) > 0 {
+		spans = opts[0]
+	}
 	selectorStart := cursor.Pos
 	matched := cursor.MatchOne(Negation) // Java velocity supports `$!`. If String is null, then it will be replaced with Empty String. In Go - we don't need that
 	matched = cursor.MatchOne(SelectorBlock)
@@ -70,7 +74,7 @@ func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 	if matched.Code == selectorBlockToken {
 		ID := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(ID[1:len(ID)-1]), 0)
-		result, err := MatchSelector(selectorCursor)
+		result, err := MatchSelector(selectorCursor, spans)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +87,7 @@ func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 		// span covers full selector including leading '$'
 		start := selectorStart - 1
 		end := cursor.Pos - 1
-		recordSpan(result, start, end)
+		spans.recordSpan(result, start, end)
 		return result, err
 
 	}
@@ -98,12 +102,12 @@ func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 	case selectorToken:
 		selectorValue := matched.Text(cursor)
 		selectorCursor := parsly.NewCursor("", []byte(selectorValue), 0)
-		selector, err := parseIdentity(selectorCursor)
+		selector, err := parseIdentity(selectorCursor, spans)
 		if err != nil {
 			return nil, err
 		}
 
-		selector.X, err = matchCall(cursor)
+		selector.X, err = matchCall(cursor, spans)
 		if err != nil {
 			return nil, err
 		}
@@ -112,35 +116,35 @@ func MatchSelector(cursor *parsly.Cursor) (*expr.Select, error) {
 		// span covers full selector including leading '$'
 		start := selectorStart - 1
 		end := cursor.Pos - 1
-		recordSpan(selector, start, end)
+		spans.recordSpan(selector, start, end)
 		return selector, nil
 	}
 
 	return nil, cursor.NewError(candidates...)
 }
 
-func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
+func matchCall(cursor *parsly.Cursor, spans *spanState) (ast.Expression, error) {
 	candidates := []*parsly.Token{Parentheses, Dot, SquareBrackets}
 	matched := cursor.MatchAny(candidates...)
 	switch matched.Code {
 	case dotToken:
-		return MatchSelector(cursor)
+		return MatchSelector(cursor, spans)
 	case parenthesesToken:
 		id := matched.Text(cursor)
 		// id includes surrounding parentheses; compute start/end for call
 		callStart := cursor.Pos - len(id)
 		callEnd := cursor.Pos - 1
 		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
-		call, err := matchFunctionCall(newCursor)
+		call, err := matchFunctionCall(newCursor, spans)
 		if err != nil {
 			return nil, err
 		}
 
-		call.X, err = matchCall(cursor)
+		call.X, err = matchCall(cursor, spans)
 		if err != nil {
 			return nil, err
 		}
-		recordSpan(call, callStart, callEnd)
+		spans.recordSpan(call, callStart, callEnd)
 		return call, nil
 
 	case squareBracketsToken:
@@ -149,7 +153,7 @@ func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 		idxStart := cursor.Pos - len(id)
 		idxEnd := cursor.Pos - 1
 		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
-		_, expression, err := matchOperand(newCursor, Number)
+		_, expression, err := matchOperand(newCursor, spans, Number)
 		if err != nil {
 			return nil, err
 		}
@@ -157,19 +161,19 @@ func matchCall(cursor *parsly.Cursor) (ast.Expression, error) {
 		index := &expr.SliceIndex{
 			X: expression,
 		}
-		index.Y, err = matchCall(cursor)
+		index.Y, err = matchCall(cursor, spans)
 		if err != nil {
 			return nil, err
 		}
 
-		recordSpan(index, idxStart, idxEnd)
+		spans.recordSpan(index, idxStart, idxEnd)
 		return index, nil
 	}
 
 	return nil, nil
 }
 
-func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
+func parseIdentity(cursor *parsly.Cursor, spans *spanState) (*expr.Select, error) {
 	candidates := []*parsly.Token{Selector, SelectorBlock}
 	matched := cursor.MatchAny(candidates...)
 	selectorId := matched.Text(cursor)
@@ -180,11 +184,11 @@ func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
 		return &expr.Select{ID: selectorId}, nil
 	case selectorBlockToken:
 		newCursor := parsly.NewCursor("", []byte(selectorId[1:len(selectorId)-1]), 0)
-		return parseIdentity(newCursor)
+		return parseIdentity(newCursor, spans)
 	case selectorToken:
 		selector := &expr.Select{ID: selectorId}
 		var err error
-		selector.X, err = matchCall(cursor)
+		selector.X, err = matchCall(cursor, spans)
 		if err != nil {
 			return nil, err
 		}
@@ -193,12 +197,12 @@ func parseIdentity(cursor *parsly.Cursor) (*expr.Select, error) {
 	return nil, cursor.NewError(candidates...)
 }
 
-func matchFunctionCall(cursor *parsly.Cursor) (*expr.Call, error) {
+func matchFunctionCall(cursor *parsly.Cursor, spans *spanState) (*expr.Call, error) {
 	expressions := make([]ast.Expression, 0)
 
 	for cursor.Pos < cursor.InputSize-1 {
 		argumentCursor := extractArgument(cursor)
-		_, expression, err := matchOperand(argumentCursor, String, Boolean, Number)
+		_, expression, err := matchOperand(argumentCursor, spans, String, Boolean, Number)
 		if err != nil {
 			return nil, err
 		}

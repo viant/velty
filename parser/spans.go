@@ -10,42 +10,43 @@ type NodeSpan struct {
 	End   int
 }
 
-// nodeSpans holds spans for the most recent parse when span recording is enabled.
-var nodeSpans map[ast.Node]NodeSpan
+type spanState struct {
+	record bool
+	spans  map[ast.Node]NodeSpan
+}
 
-// recordSpans controls whether spans are recorded for the current parse.
-var recordSpans bool
-
-// resetSpans initializes the global span registry for a new parse when recording is enabled.
-func resetSpans() {
-	if !recordSpans {
-		nodeSpans = nil
-		return
+func newSpanState(record bool) *spanState {
+	st := &spanState{record: record}
+	if record {
+		st.spans = make(map[ast.Node]NodeSpan)
 	}
-	nodeSpans = make(map[ast.Node]NodeSpan)
+	return st
 }
 
 // recordSpan registers a span for the given node when recording is enabled.
-func recordSpan(n ast.Node, start, end int) {
-	if !recordSpans || n == nil {
+func (s *spanState) recordSpan(n ast.Node, start, end int) {
+	if s == nil || !s.record || n == nil {
 		return
 	}
-	if nodeSpans == nil {
-		nodeSpans = make(map[ast.Node]NodeSpan)
+	if s.spans == nil {
+		s.spans = make(map[ast.Node]NodeSpan)
 	}
-	nodeSpans[n] = NodeSpan{Start: start, End: end}
+	s.spans[n] = NodeSpan{Start: start, End: end}
 }
 
 // getSpan returns a span for a node if recorded.
-func getSpan(n ast.Node) (NodeSpan, bool) {
-	if nodeSpans == nil {
+func (s *spanState) getSpan(n ast.Node) (NodeSpan, bool) {
+	if s == nil || s.spans == nil {
 		return NodeSpan{}, false
 	}
-	s, ok := nodeSpans[n]
-	return s, ok
+	span, ok := s.spans[n]
+	return span, ok
 }
 
-// Spans exposes the current parse node spans.
-func Spans() map[ast.Node]NodeSpan {
-	return nodeSpans
+// Spans exposes parse node spans for this parse invocation.
+func (s *spanState) Spans() map[ast.Node]NodeSpan {
+	if s == nil || s.spans == nil {
+		return nil
+	}
+	return s.spans
 }

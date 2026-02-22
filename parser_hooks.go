@@ -27,8 +27,13 @@ func applyParserHooks(root *stmt.Block, listener ParserListener, adjuster NodeAd
 func applyParserHooksWithSource(file string, src []byte, root *stmt.Block, listener ParserListener, adjuster NodeAdjuster) (*stmt.Block, error) {
 	ctx := &ParserContext{Scope: NewScope(nil)}
 	ctx.InitSource(file, src)
+	spans := spansFromSource(src)
+	return applyParserHooksWithSourceAndSpans(ctx, root, listener, adjuster, spans)
+}
+
+func applyParserHooksWithSourceAndSpans(ctx *ParserContext, root *stmt.Block, listener ParserListener, adjuster NodeAdjuster, spans map[ast.Node]parser.NodeSpan) (*stmt.Block, error) {
 	// seed spans recorded by the parser into this context
-	for n, s := range parser.Spans() {
+	for n, s := range spans {
 		ctx.SetSpan(n, Span{Start: s.Start, End: s.End})
 	}
 	for i, s := range root.Stmt {
@@ -55,8 +60,24 @@ func applyParserHooksWithConfig(file string, src []byte, root *stmt.Block, liste
 	ctx := &ParserContext{Scope: NewScope(nil)}
 	ctx.InitSource(file, src)
 	ctx.EvalConfig = eval
+	spans := spansFromSource(src)
+	return applyParserHooksWithConfigAndSpans(ctx, root, listener, adjuster, spans, seeds...)
+}
+
+func spansFromSource(src []byte) map[ast.Node]parser.NodeSpan {
+	if len(src) == 0 {
+		return nil
+	}
+	_, spans, err := parser.ParseWithSpansDetailed(src)
+	if err != nil {
+		return nil
+	}
+	return spans
+}
+
+func applyParserHooksWithConfigAndSpans(ctx *ParserContext, root *stmt.Block, listener ParserListener, adjuster NodeAdjuster, spans map[ast.Node]parser.NodeSpan, seeds ...*SymbolSeeds) (*stmt.Block, *ParserContext, error) {
 	// seed spans recorded by the parser into this context
-	for n, s := range parser.Spans() {
+	for n, s := range spans {
 		ctx.SetSpan(n, Span{Start: s.Start, End: s.End})
 	}
 	if len(seeds) > 0 && seeds[0] != nil {
@@ -461,14 +482,17 @@ func handleEvaluate(ev *stmt.Evaluate, listener ParserListener, adjuster NodeAdj
 			return
 		}
 		// Parse and traverse child template with spans to preserve positions
-		block, err := parser.ParseWithSpans(data)
+		block, spans, err := parser.ParseWithSpansDetailed(data)
 		if err != nil {
 			return
 		}
 		// Descend with incremented depth; use synthetic file label
 		saved := ctx.EvalDepth
 		ctx.EvalDepth = saved + 1
-		_, _ = applyParserHooksWithSource(ctx.File+"#eval", data, block, listener, adjuster)
+		childCtx := &ParserContext{Scope: NewScope(nil)}
+		childCtx.InitSource(ctx.File+"#eval", data)
+		childCtx.EvalDepth = ctx.EvalDepth
+		_, _ = applyParserHooksWithSourceAndSpans(childCtx, block, listener, adjuster, spans)
 		ctx.EvalDepth = saved
 	case *aexpr.Select:
 		// Only inspect if allowed by safety and whitelist (no rewrite possible without actual data)

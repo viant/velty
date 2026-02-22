@@ -12,7 +12,7 @@ func TransformTemplate(src []byte, adjuster NodeAdjuster, evalCfg ...EvaluateCon
 		copy(dst, src)
 		return dst, nil
 	}
-	root, err := parser.ParseWithSpans(src)
+	root, spans, err := parser.ParseWithSpansDetailed(src)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,10 @@ func TransformTemplate(src []byte, adjuster NodeAdjuster, evalCfg ...EvaluateCon
 		cfg = evalCfg[0]
 	}
 	// Use adjuster chain so action patches are accumulated into parser context.
-	_, ctx, err := applyParserHooksWithConfig("", src, root, nil, NewAdjusterChain(adjuster), cfg)
+	hookCtx := &ParserContext{Scope: NewScope(nil)}
+	hookCtx.InitSource("", src)
+	hookCtx.EvalConfig = cfg
+	_, ctx, err := applyParserHooksWithConfigAndSpans(hookCtx, root, nil, NewAdjusterChain(adjuster), spans)
 	if err != nil {
 		return nil, err
 	}

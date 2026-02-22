@@ -135,8 +135,10 @@ func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 	}
 
 	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last.
-	// Must match runtime loop writer type in est/stmt.
-	_ = p.DefineVariable("foreach", stmt.ForEachInfo{})
+	// Register once per planner to avoid redundant selector tree construction.
+	if p.selectorByName("foreach") == nil {
+		_ = p.DefineVariable("foreach", stmt.ForEachInfo{})
+	}
 
 	selector, err := p.compileExpr(actual.Item)
 	if err != nil {

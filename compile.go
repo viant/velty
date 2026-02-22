@@ -2,6 +2,7 @@ package velty
 
 import (
 	"context"
+	"github.com/viant/velty/ast"
 	"github.com/viant/velty/ast/stmt"
 	"github.com/viant/velty/est"
 	"github.com/viant/velty/parser"
@@ -26,7 +27,8 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 		}
 	} else {
 		// Instrumented path: parse with spans and run listener/adjuster hooks.
-		root, err = parser.ParseWithSpans(template)
+		var spans map[ast.Node]parser.NodeSpan
+		root, spans, err = parser.ParseWithSpansDetailed(template)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -46,7 +48,10 @@ func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, e
 		}
 		seeds := &SymbolSeeds{Params: params, Namespaces: namespaces, Standalone: funcs}
 		// apply hooks with evaluate config and seeds; ignore patches here (integrator may use them separately)
-		if transformed, _, err := applyParserHooksWithConfig("", template, root, p.listener, p.adjuster, p.evalConfig, seeds); err == nil && transformed != nil {
+		hookCtx := &ParserContext{Scope: NewScope(nil)}
+		hookCtx.InitSource("", template)
+		hookCtx.EvalConfig = p.evalConfig
+		if transformed, _, err := applyParserHooksWithConfigAndSpans(hookCtx, root, p.listener, p.adjuster, spans, seeds); err == nil && transformed != nil {
 			root = transformed
 		} else if err != nil {
 			return nil, nil, err

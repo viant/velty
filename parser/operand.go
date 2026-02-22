@@ -9,7 +9,7 @@ import (
 
 var dataTypeMatchers = []*parsly.Token{String, Boolean, Number}
 
-func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.Token, ast2.Expression, error) {
+func matchOperand(cursor *parsly.Cursor, spans *spanState, candidates ...*parsly.Token) (*parsly.Token, ast2.Expression, error) {
 	matched := cursor.MatchAfterOptional(WhiteSpace, Negation)
 	hasNegation := matched.Code == negationToken
 
@@ -27,7 +27,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	case parenthesesToken:
 		text := matched.Text(cursor)
 		newCursor := parsly.NewCursor("", []byte(text[1:len(text)-1]), 0)
-		token, expr, err := matchOperand(newCursor, candidates...)
+		token, expr, err := matchOperand(newCursor, spans, candidates...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -36,7 +36,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		// span covers parentheses expression including brackets
 		pStart := cursor.Pos - len(text)
 		pEnd := cursor.Pos - 1
-		recordSpan(expr, pStart, pEnd)
+		spans.recordSpan(expr, pStart, pEnd)
 
 		if hasNegation {
 			expr = &aexpr.Unary{
@@ -52,10 +52,10 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		expression = aexpr.StringLiteral(value[1 : len(value)-1])
 		s := cursor.Pos - len(value)
 		e := cursor.Pos - 1
-		recordSpan(expression, s, e)
+		spans.recordSpan(expression, s, e)
 
 	case selectorStartToken:
-		expression, err = MatchSelector(cursor)
+		expression, err = MatchSelector(cursor, spans)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -68,7 +68,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		expression = aexpr.NumberLiteral(value)
 		s := cursor.Pos - len(value)
 		e := cursor.Pos - 1
-		recordSpan(expression, s, e)
+		spans.recordSpan(expression, s, e)
 
 	case booleanToken:
 		value := matched.Text(cursor)
@@ -76,7 +76,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 		expression = aexpr.BoolLiteral(value)
 		s := cursor.Pos - len(value)
 		e := cursor.Pos - 1
-		recordSpan(expression, s, e)
+		spans.recordSpan(expression, s, e)
 
 	case quoteToken:
 		matched = cursor.MatchOne(StringFinish)
@@ -90,22 +90,22 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 			expression = aexpr.StringLiteral("")
 			s := cursor.Pos - len(value)
 			e := cursor.Pos - 1
-			recordSpan(expression, s, e)
+			spans.recordSpan(expression, s, e)
 		} else {
 			newCursor := parsly.NewCursor("", []byte(value[:len(value)-1]), 0)
 
-			matcher, expression, err = matchOperand(newCursor, candidates...)
+			matcher, expression, err = matchOperand(newCursor, spans, candidates...)
 			if err != nil {
 				expression = aexpr.StringLiteral(value[:len(value)-1])
 				s := cursor.Pos - len(value)
 				e := cursor.Pos - 1
-				recordSpan(expression, s, e)
+				spans.recordSpan(expression, s, e)
 			} else {
 				if _, ok := expression.(*aexpr.Select); !ok {
 					expression = aexpr.StringLiteral(value[:len(value)-1])
 					s := cursor.Pos - len(value)
 					e := cursor.Pos - 1
-					recordSpan(expression, s, e)
+					spans.recordSpan(expression, s, e)
 				}
 			}
 		}
@@ -118,11 +118,11 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 			X:     expression,
 		}
 		// approximate span: extend one char to the left of operand
-		if s, ok := getSpan(expression.(*aexpr.Unary).X); ok {
-			recordSpan(expression, s.Start-1, s.End)
+		if s, ok := spans.getSpan(expression.(*aexpr.Unary).X); ok {
+			spans.recordSpan(expression, s.Start-1, s.End)
 		}
 	}
-	err = addEquationIfNeeded(cursor, &expression)
+	err = addEquationIfNeeded(cursor, spans, &expression)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -130,7 +130,7 @@ func matchOperand(cursor *parsly.Cursor, candidates ...*parsly.Token) (*parsly.T
 	return matcher, expression, nil
 }
 
-func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) error {
+func addEquationIfNeeded(cursor *parsly.Cursor, spans *spanState, expression *ast2.Expression) error {
 	for {
 		candidates := []*parsly.Token{Add, Sub, Multiply, Quo, NotEqual, Negation, Equal, And, Or, GreaterEqual, Greater, LessEqual, Less, Assign}
 		matched := cursor.MatchAfterOptional(WhiteSpace, candidates...)
@@ -149,10 +149,10 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) err
 
 		var rightExpression ast2.Expression
 		if err == nil {
-			rightExpression, err = matchEquationExpression(eprCursor)
+			rightExpression, err = matchEquationExpression(eprCursor, spans)
 			rightExpression = &aexpr.Parentheses{P: rightExpression}
 		} else {
-			_, rightExpression, err = matchOperand(cursor, dataTypeMatchers...)
+			_, rightExpression, err = matchOperand(cursor, spans, dataTypeMatchers...)
 		}
 
 		if err != nil {
@@ -175,8 +175,8 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) err
 			Y:     rightExpression,
 		}
 		// derive span from children if available
-		if lx, okx := getSpan((*expression).(*aexpr.Binary).X); okx {
-			if ry, oky := getSpan((*expression).(*aexpr.Binary).Y); oky {
+		if lx, okx := spans.getSpan((*expression).(*aexpr.Binary).X); okx {
+			if ry, oky := spans.getSpan((*expression).(*aexpr.Binary).Y); oky {
 				start := lx.Start
 				if ry.Start < start {
 					start = ry.Start
@@ -185,7 +185,7 @@ func addEquationIfNeeded(cursor *parsly.Cursor, expression *ast2.Expression) err
 				if ry.End > end {
 					end = ry.End
 				}
-				recordSpan(*expression, start, end)
+				spans.recordSpan(*expression, start, end)
 			}
 		}
 	}
