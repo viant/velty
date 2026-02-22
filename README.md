@@ -231,6 +231,33 @@ if err != nil {
 _ = out
 ```
 
+### 5) Foreach context variables
+
+Inside `#foreach`, Velty exposes `$foreach` metadata:
+- `$foreach.Index` (0-based index)
+- `$foreach.Count` (1-based counter)
+- `$foreach.HasNext`
+- `$foreach.First`
+- `$foreach.Last`
+
+Example:
+
+```go
+planner := velty.New()
+_ = planner.DefineVariable("Items", []string{})
+
+tpl := `#foreach($item in $Items)$foreach.Index:$item|count=$foreach.Count|first=$foreach.First|last=$foreach.Last|hasNext=$foreach.HasNext
+#end`
+
+exec, newState, err := planner.Compile([]byte(tpl))
+if err != nil {
+    panic(err)
+}
+state := newState()
+_ = state.SetValue("Items", []string{"A", "B", "C"})
+_ = exec.Exec(state)
+```
+
 ## Tags
 In order to match template identifiers with the struct fields, you can use the `velty` tag. 
 Supported attributes:
@@ -350,4 +377,3 @@ all compatible with Apache License, Version 2. Please see individual files for d
 ## Credits and Acknowledgements
 
 **Library Author:** Kamil Larysz
-
