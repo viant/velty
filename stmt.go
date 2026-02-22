@@ -130,10 +130,15 @@ func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {
 	if err := p.DefineVariable(actual.Item.ID, itemType); err != nil {
 		return nil, err
 	}
+	if p.planListener != nil {
+		p.planListener.OnForEachResolved(actual.Item.ID, itemType, sliceSelector.Type)
+	}
 
-	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last
-	// If already defined, DefineVariable is a no-op.
-	_ = p.DefineVariable("foreach", ForEachInfo{})
+	// Define $foreach context similar to Apache Velocity: index, count, hasNext, first, last.
+	// Register once per planner to avoid redundant selector tree construction.
+	if p.selectorByName("foreach") == nil {
+		_ = p.DefineVariable("foreach", stmt.ForEachInfo{})
+	}
 
 	selector, err := p.compileExpr(actual.Item)
 	if err != nil {

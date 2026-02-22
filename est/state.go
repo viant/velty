@@ -75,7 +75,8 @@ func (s *State) Reset() {
 
 	s.Buffer.Reset()
 	s.Errors = nil
-	s.isTaken = true
+	s.Ctx = context.Background()
+	s.isTaken = false
 }
 
 func (s *State) SetContext(ctx context.Context) { s.Ctx = ctx }

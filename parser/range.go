@@ -7,8 +7,8 @@ import (
 	"github.com/viant/velty/ast/stmt"
 )
 
-func matchForEach(cursor *parsly.Cursor) (*stmt.ForEach, error) {
-	variable, err := matchVariable(cursor)
+func matchForEach(cursor *parsly.Cursor, spans *spanState) (*stmt.ForEach, error) {
+	variable, err := matchVariable(cursor, spans)
 	if err != nil {
 		return nil, err
 	}
@@ -17,7 +17,7 @@ func matchForEach(cursor *parsly.Cursor) (*stmt.ForEach, error) {
 
 	var index *expr.Select
 	if matched.Code == comaToken {
-		index, err = matchVariable(cursor)
+		index, err = matchVariable(cursor, spans)
 		if err != nil {
 			return nil, err
 		}
@@ -29,7 +29,7 @@ func matchForEach(cursor *parsly.Cursor) (*stmt.ForEach, error) {
 		return nil, cursor.NewError(candidates...)
 	}
 
-	dataSet, err := matchRangeable(cursor)
+	dataSet, err := matchRangeable(cursor, spans)
 	if err != nil {
 		return nil, err
 	}
@@ -42,21 +42,21 @@ func matchForEach(cursor *parsly.Cursor) (*stmt.ForEach, error) {
 	}, nil
 }
 
-func matchFor(cursor *parsly.Cursor) (*stmt.ForLoop, error) {
+func matchFor(cursor *parsly.Cursor, spans *spanState) (*stmt.ForLoop, error) {
 	initCursor := extractForSegment(cursor)
-	forInit, err := matchAssign(initCursor)
+	forInit, err := matchAssign(initCursor, spans)
 	if err != nil {
 		return nil, err
 	}
 
 	conditionCursor := extractForSegment(cursor)
-	forCondition, err := matchEquationExpression(conditionCursor)
+	forCondition, err := matchEquationExpression(conditionCursor, spans)
 	if err != nil {
 		return nil, err
 	}
 
 	forPostCursor := extractForSegment(cursor)
-	forPost, err := matchForPost(forPostCursor)
+	forPost, err := matchForPost(forPostCursor, spans)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func matchFor(cursor *parsly.Cursor) (*stmt.ForLoop, error) {
 	}, nil
 }
 
-func matchForPost(cursor *parsly.Cursor) (ast2.Statement, error) {
-	variable, err := matchVariable(cursor)
+func matchForPost(cursor *parsly.Cursor, spans *spanState) (ast2.Statement, error) {
+	variable, err := matchVariable(cursor, spans)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func matchForPost(cursor *parsly.Cursor) (ast2.Statement, error) {
 	}
 
 	token := matchToken(matched)
-	_, rightOperand, err := matchOperand(cursor)
+	_, rightOperand, err := matchOperand(cursor, spans)
 	if err != nil {
 		return nil, err
 	}

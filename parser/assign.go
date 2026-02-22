@@ -6,8 +6,8 @@ import (
 	"github.com/viant/velty/ast/stmt"
 )
 
-func matchAssign(cursor *parsly.Cursor) (*stmt.Statement, error) {
-	variable, err := matchVariable(cursor)
+func matchAssign(cursor *parsly.Cursor, spans *spanState) (*stmt.Statement, error) {
+	variable, err := matchVariable(cursor, spans)
 	if err != nil {
 		return nil, err
 	}
@@ -23,12 +23,12 @@ func matchAssign(cursor *parsly.Cursor) (*stmt.Statement, error) {
 		return nil, fmt.Errorf("didn't found operator token for given token %v", matched.Name)
 	}
 
-	_, expression, err := matchOperand(cursor, Boolean, String, Number)
+	_, expression, err := matchOperand(cursor, spans, Boolean, String, Number)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = addEquationIfNeeded(cursor, &expression); err != nil {
+	if err = addEquationIfNeeded(cursor, spans, &expression); err != nil {
 		return nil, err
 	}
 
