@@ -146,7 +146,7 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 		return matchStatement(newCursor, spans)
 	}
 
-	candidates := []*parsly.Token{If, ElseIf, Else, Set, ForEach, For, Evaluate, End}
+	candidates := []*parsly.Token{If, ElseIf, Else, Set, ForEach, For, Break, Evaluate, End}
 	expressionMatch := cursor.MatchAfterOptional(WhiteSpace, candidates...)
 	expressionCode := expressionMatch.Code
 
@@ -211,6 +211,9 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 		}
 
 		return forStmt, expressionCode, nil
+
+	case breakToken:
+		return &stmt.Break{}, expressionCode, nil
 
 	case evaluateToken:
 		evaluateCursor, err := matchExpressionBlock(cursor)

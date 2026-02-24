@@ -181,6 +181,11 @@ func TestService_Parse(t *testing.T) {
 			output:      `{ "Stmt": [ { "Append": "<ul>" }, { "Init": { "X": { "ID": "var" }, "Op": "=", "Y": { "Value": "1" } }, "Cond": { "X": { "ID": "var" }, "Token": "<", "Y": { "Value": "10" } }, "Body": { "Stmt": [ { "Append": "<li>" }, { "ID": "value" }, { "Append": ", " }, { "ID": "index" }, { "Append": "</li>" } ] }, "Post": { "X": { "ID": "var" }, "Op": "=", "Y": { "X": { "ID": "var" }, "Token": "+", "Y": { "Value": "1" } } } }, { "Append": "</ul>" } ] }`,
 		},
 		{
+			description: "break in foreach",
+			input:       `#foreach($value in $values)#break#end`,
+			output:      `{ "Stmt": [ { "Item": { "ID": "value" }, "Set": { "ID": "values" }, "Body": { "Stmt": [ {} ] } } ] }`,
+		},
+		{
 			description: "different selectors",
 			input:       `#if( $id == ${Id3.Name} )#end`,
 			output:      `{ "Stmt": [ { "Condition": { "X": { "ID": "id" }, "Token": "==", "Y": { "ID": "Id3", "X": { "ID": "Name" } } } } ] }`,

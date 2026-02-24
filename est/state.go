@@ -12,14 +12,15 @@ import (
 type TemplateError error
 type State struct {
 	sync.Mutex
-	Mem          interface{}
-	MemPtr       unsafe.Pointer
-	StateType    *Type
-	Buffer       *Buffer
-	Errors       []error
-	PanicOnError bool
-	isTaken      bool
-	Ctx          context.Context
+	Mem            interface{}
+	MemPtr         unsafe.Pointer
+	StateType      *Type
+	Buffer         *Buffer
+	Errors         []error
+	PanicOnError   bool
+	isTaken        bool
+	Ctx            context.Context
+	breakRequested bool
 }
 
 func (s *State) SetValue(k string, v interface{}) error {
@@ -76,6 +77,7 @@ func (s *State) Reset() {
 	s.Buffer.Reset()
 	s.Errors = nil
 	s.Ctx = context.Background()
+	s.breakRequested = false
 	s.isTaken = false
 }
 
@@ -93,6 +95,18 @@ func (s *State) AddError(err error) {
 	if s.PanicOnError {
 		panic(err)
 	}
+}
+
+func (s *State) RequestBreak() {
+	s.breakRequested = true
+}
+
+func (s *State) HasBreak() bool {
+	return s.breakRequested
+}
+
+func (s *State) ConsumeBreak() {
+	s.breakRequested = false
 }
 
 func (s *State) Take() bool {

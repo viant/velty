@@ -33,6 +33,9 @@ func (p *Planner) compileStmt(statement ast.Statement) (est.New, error) {
 		return p.compileBlock(&stmt2.Block{Stmt: actual})
 	case *stmt2.Evaluate:
 		return p.compileEvaluate(actual)
+	case *stmt2.Break:
+		*p.Control |= est.ControlHasBreak
+		return stmt.Break(), nil
 	}
 
 	return nil, fmt.Errorf("unsupported stmt: %T", statement)
@@ -103,12 +106,21 @@ func (p *Planner) compileForLoop(actual *stmt2.ForLoop) (est.New, error) {
 		return nil, err
 	}
 
-	block, err := p.newCompute(&actual.Body)
+	block, err := p.compileBlock(&actual.Body)
 	if err != nil {
 		return nil, err
 	}
-
-	return stmt.ForLoop(init, post, condition, block)
+	return func(control est.Control) (est.Compute, error) {
+		loopBody, err := block(control | est.ControlInLoop)
+		if err != nil {
+			return nil, err
+		}
+		loop, err := stmt.ForLoop(init, post, condition, loopBody)
+		if err != nil {
+			return nil, err
+		}
+		return loop(control)
+	}, nil
 }
 
 func (p *Planner) compileForEachLoop(actual *stmt2.ForEach) (est.New, error) {

@@ -17,6 +17,17 @@ func (s *Block) compute(state *est.State) unsafe.Pointer {
 	return result
 }
 
+func (s *Block) computeWithBreak(state *est.State) unsafe.Pointer {
+	var result unsafe.Pointer
+	for i := 0; i < len(s.Stmt); i++ {
+		result = s.Stmt[i](state)
+		if state.HasBreak() {
+			return result
+		}
+	}
+	return result
+}
+
 type stmt1 struct {
 	est.Compute
 }
@@ -608,6 +619,10 @@ func NewBlock(stmtsNew []est.New) est.New {
 		stmts, err := computers.New(control)
 		if err != nil {
 			return nil, err
+		}
+		if control.HasBreak() {
+			b := &Block{Stmt: stmts}
+			return b.computeWithBreak, nil
 		}
 		switch len(stmts) {
 		case 0:

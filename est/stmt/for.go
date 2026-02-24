@@ -19,6 +19,10 @@ func (f *For) compute(state *est.State) unsafe.Pointer {
 	f.Init(state)
 	for *(*bool)(f.Condition.Exec(state)) {
 		ptr = f.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 		f.Post(state)
 	}
 

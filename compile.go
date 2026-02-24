@@ -12,6 +12,8 @@ import (
 
 // Compile create Execution Plan and State provider for the Execution Plan.
 func (p *Planner) Compile(template []byte) (*est.Execution, func() *est.State, error) {
+	*p.Control = 0
+
 	var (
 		root *stmt.Block
 		err  error

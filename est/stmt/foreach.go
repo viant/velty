@@ -53,6 +53,10 @@ func (e *ForEach) compute(state *est.State) unsafe.Pointer {
 		e.Item.Sel.Set(state.MemPtr, v)
 		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 	}
 
 	return resultPtr
@@ -68,6 +72,10 @@ func (e *ForEach) computePtr(state *est.State) unsafe.Pointer {
 		e.Item.Sel.SetValue(state.MemPtr, v)
 		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 	}
 
 	return resultPtr
@@ -83,6 +91,10 @@ func (e *ForEach) computeIndirectPtr(state *est.State) unsafe.Pointer {
 		e.Item.Sel.SetValue(state.MemPtr, v)
 		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 	}
 
 	return resultPtr
@@ -97,6 +109,10 @@ func (e *ForEach) computeIndirect(state *est.State) unsafe.Pointer {
 		e.Item.Sel.SetValue(state.MemPtr, v)
 		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 	}
 
 	return resultPtr
@@ -112,6 +128,10 @@ func (e *ForEach) computeLiteral(state *est.State) unsafe.Pointer {
 		e.Item.Sel.SetValue(state.MemPtr, v)
 		foreachSetter(state, i, l)
 		resultPtr = e.Block(state)
+		if state.HasBreak() {
+			state.ConsumeBreak()
+			break
+		}
 	}
 
 	return resultPtr
@@ -125,7 +145,7 @@ func ForEachLoop(block est.New, itemExpr *op.Expression, sliceExpr *op.Expressio
 		}
 
 		loop := &ForEach{}
-		loop.Block, err = block(control)
+		loop.Block, err = block(control | est.ControlInLoop)
 		if err != nil {
 			return nil, err
 		}

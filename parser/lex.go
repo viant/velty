@@ -21,6 +21,7 @@ const (
 	setToken
 	forEachToken
 	forToken
+	breakToken
 	appendToken
 	evaluateToken
 	endToken
@@ -90,6 +91,7 @@ var Else = parsly.NewToken(elseToken, "Else", matcher.NewFragment("else"))
 var Set = parsly.NewToken(setToken, "Set", matcher.NewFragment("set"))
 var ForEach = parsly.NewToken(forEachToken, "ForEach", matcher.NewFragment("foreach"))
 var For = parsly.NewToken(forToken, "For", matcher.NewFragment("for"))
+var Break = parsly.NewToken(breakToken, "Break", matcher.NewFragment("break"))
 var In = parsly.NewToken(inToken, "In", matcher.NewFragment("in"))
 var Evaluate = parsly.NewToken(evaluateToken, "Evaluate", matcher.NewFragment("evaluate"))
 var End = parsly.NewToken(endToken, "End", matcher.NewFragment("end"))
