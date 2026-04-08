@@ -67,7 +67,11 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 					newArg := *args[0]
 					newArg.Comp = nil
 					if parents[i-1].Func != nil {
-						newArg.Value = newArg.AsValue(ptr)
+						if newArg.Type != nil && newArg.Type.Kind() == reflect.Ptr && newArg.XType != nil {
+							newArg.Value = newArg.XType.Interface(xunsafe.RefPointer(ptr))
+						} else {
+							newArg.Value = newArg.AsValue(ptr)
+						}
 					} else {
 						newArg.Value = newArg.AsInterface(ptr)
 
