@@ -5,6 +5,36 @@ func Normalize(key interface{}) interface{} {
 		return nil
 	}
 	switch actual := key.(type) {
+	case *uint64:
+		if actual == nil {
+			return nil
+		}
+		return *actual
+	case *uint32:
+		if actual == nil {
+			return nil
+		}
+		return *actual
+	case *uint16:
+		if actual == nil {
+			return nil
+		}
+		return *actual
+	case *uint8:
+		if actual == nil {
+			return nil
+		}
+		return *actual
+	case *uint:
+		if actual == nil {
+			return nil
+		}
+		return *actual
+	case *uintptr:
+		if actual == nil {
+			return nil
+		}
+		return *actual
 	case *int64:
 		if actual == nil {
 			return nil

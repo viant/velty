@@ -135,10 +135,12 @@ func matchCall(cursor *parsly.Cursor, spans *spanState) (ast.Expression, error) 
 		callStart := cursor.Pos - len(id)
 		callEnd := cursor.Pos - 1
 		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
-		call, err := matchFunctionCall(newCursor, spans)
+		childSpans := spans.child()
+		call, err := matchFunctionCall(newCursor, childSpans)
 		if err != nil {
 			return nil, err
 		}
+		spans.merge(childSpans, callStart+1)
 
 		call.X, err = matchCall(cursor, spans)
 		if err != nil {
@@ -153,10 +155,12 @@ func matchCall(cursor *parsly.Cursor, spans *spanState) (ast.Expression, error) 
 		idxStart := cursor.Pos - len(id)
 		idxEnd := cursor.Pos - 1
 		newCursor := parsly.NewCursor("", []byte(id[1:len(id)-1]), 0)
-		_, expression, err := matchOperand(newCursor, spans, Number)
+		childSpans := spans.child()
+		_, expression, err := matchOperand(newCursor, childSpans, Number)
 		if err != nil {
 			return nil, err
 		}
+		spans.merge(childSpans, idxStart+1)
 
 		index := &expr.SliceIndex{
 			X: expression,
@@ -200,12 +204,22 @@ func parseIdentity(cursor *parsly.Cursor, spans *spanState) (*expr.Select, error
 func matchFunctionCall(cursor *parsly.Cursor, spans *spanState) (*expr.Call, error) {
 	expressions := make([]ast.Expression, 0)
 
-	for cursor.Pos < cursor.InputSize-1 {
+	for cursor.Pos < cursor.InputSize {
+		cursor.MatchOne(WhiteSpace)
+		if cursor.Pos >= cursor.InputSize {
+			break
+		}
 		argumentCursor := extractArgument(cursor)
-		_, expression, err := matchOperand(argumentCursor, spans, String, Boolean, Number)
+		childSpans := spans.child()
+		argumentStart := cursor.Pos - len(argumentCursor.Input)
+		if argumentCursor == cursor {
+			argumentStart = 0
+		}
+		_, expression, err := matchOperand(argumentCursor, childSpans, String, Boolean, Number)
 		if err != nil {
 			return nil, err
 		}
+		spans.merge(childSpans, argumentStart)
 
 		expressions = append(expressions, expression)
 	}

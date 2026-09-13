@@ -114,6 +114,15 @@ func (f *Func) CallFunc(accumulator *Selector, operands []*Operand, state *est.S
 	if err != nil {
 		state.AddError(err)
 	}
+	if f.XType != nil && f.XType.Type().Kind() == reflect.Interface {
+		pointer := accumulator.Pointer(state.MemPtr)
+		if anIface == nil {
+			reflect.NewAt(f.XType.Type(), pointer).Elem().SetZero()
+		} else {
+			accumulator.SetValue(state.MemPtr, anIface)
+		}
+		return pointer
+	}
 	if anIface != nil {
 		accumulator.SetValue(state.MemPtr, anIface)
 		if f.XType.Type().Kind() == reflect.Map {

@@ -98,11 +98,18 @@ func (in *indexSliceByFunc) Kind() []reflect.Kind {
 func (in *indexSliceByFunc) Handler() interface{} {
 	return func(slice interface{}, field string) (interface{}, error) {
 		sliceType := reflect.TypeOf(slice)
-		if sliceType.Kind() != reflect.Slice {
+		if sliceType == nil || sliceType.Kind() != reflect.Slice {
 			return nil, fmt.Errorf("unsupported IndexBy receiver, got %T", slice)
 		}
 
 		elemType := sliceType.Elem()
+		baseType := elemType
+		for baseType.Kind() == reflect.Ptr {
+			baseType = baseType.Elem()
+		}
+		if baseType.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("IndexBy requires struct rows, got %s", sliceType)
+		}
 		upstream := in.upstream(elemType)
 		xField, err := in.Field(upstream, elemType, field)
 		if err != nil {
@@ -119,20 +126,32 @@ func (in *indexSliceByFunc) Handler() interface{} {
 			return resultMap.Interface(), nil
 		}
 
-		xSlice := xunsafe.NewSlice(sliceType)
-		slicePtr := xunsafe.AsPointer(slice)
-
-		sliceLen := xSlice.Len(slicePtr)
-		for i := 0; i < sliceLen; i++ {
-			sliceValueAt := xSlice.ValueAt(slicePtr, i)
-			fieldValue := sliceValueAt
-			for _, upstreamType := range upstream {
-				fieldValue = upstreamType.Deref(fieldValue)
+		values := reflect.ValueOf(slice)
+		for i := 0; i < values.Len(); i++ {
+			entry := values.Index(i)
+			record := entry
+			for record.Kind() == reflect.Ptr {
+				if record.IsNil() {
+					break
+				}
+				record = record.Elem()
 			}
-
+			if record.Kind() != reflect.Struct {
+				continue
+			}
+			keyField := record.FieldByName(xField.Name)
+			if !keyField.IsValid() || !keyField.CanInterface() {
+				return nil, fmt.Errorf("IndexBy key field %s is not accessible", field)
+			}
+			fieldValue := keyField.Interface()
 			key := keys.Normalize(fieldValue)
-			fieldValue = xField.Value(xunsafe.AsPointer(key))
-			resultMap.SetMapIndex(reflect.ValueOf(fieldValue), reflect.ValueOf(sliceValueAt))
+			if key == nil {
+				continue
+			}
+			if !reflect.TypeOf(key).Comparable() {
+				return nil, fmt.Errorf("IndexBy key field %s is not comparable", field)
+			}
+			resultMap.SetMapIndex(reflect.ValueOf(key), entry)
 		}
 		resultMapIface := resultMap.Interface()
 		if err != nil {

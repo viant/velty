@@ -103,7 +103,14 @@ func (m Maps) GetString(aMap interface{}, key interface{}) (string, error) {
 var HasKeyFunc = &StaticKindFunc{
 	kind: reflect.Map,
 	handler: func(aMap, aKey interface{}) (bool, error) {
-		return reflect.ValueOf(aMap).MapIndex(reflect.ValueOf(keys.Normalize(aKey))).IsValid(), nil
+		key := keys.Normalize(aKey)
+		if key == nil {
+			return false, nil
+		}
+		if !reflect.TypeOf(key).Comparable() {
+			return false, fmt.Errorf("map key %T is not comparable", key)
+		}
+		return reflect.ValueOf(aMap).MapIndex(reflect.ValueOf(key)).IsValid(), nil
 	},
 	resultType: reflect.TypeOf(true),
 }

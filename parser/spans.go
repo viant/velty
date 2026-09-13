@@ -50,3 +50,18 @@ func (s *spanState) Spans() map[ast.Node]NodeSpan {
 	}
 	return s.spans
 }
+
+func (s *spanState) child() *spanState {
+	if s == nil || !s.record {
+		return nil
+	}
+	return newSpanState(true)
+}
+func (s *spanState) merge(child *spanState, offset int) {
+	if s == nil || !s.record || child == nil {
+		return
+	}
+	for node, span := range child.spans {
+		s.recordSpan(node, span.Start+offset, span.End+offset)
+	}
+}
