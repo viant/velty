@@ -9,7 +9,6 @@ import (
 	"github.com/viant/xreflect"
 	"github.com/viant/xunsafe"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -60,12 +59,12 @@ func (p *Planner) EmbedVariable(val interface{}) error {
 }
 
 func (p *Planner) addSelectors(prefix string, field reflect.StructField, fieldName string) error {
-	detector := NewCycleDetector(field.Type)
+	var detector *CycleDetector
 	return p.createSelectors(prefix, field, nil, 0, 0, false, detector, fieldName)
 }
 
 func (p *Planner) createSelectors(prefix string, field reflect.StructField, parent *op.Selector, offsetSoFar, initialOffset uintptr, indirect bool, cycleDetector *CycleDetector, fieldName string) error {
-	cycleNode, cycleSelector := p.cycle(cycleDetector, field, parent)
+	cycleNode, hasCycle := cycleDetector.Child(field.Type, parent)
 
 	if field.Anonymous {
 		initialOffset += field.Offset
@@ -74,8 +73,8 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 	indirect = indirect || field.Type.Kind() == reflect.Ptr || field.Type.Kind() == reflect.Slice
 	vTag := Parse(field.Tag.Get(velty))
 
-	newParent, err := p.indexSelectorIfNeeded(prefix, field, parent, offsetSoFar, initialOffset, indirect, cycleSelector, fieldName)
-	if err != nil || cycleSelector != nil {
+	newParent, err := p.indexSelectorIfNeeded(prefix, field, parent, offsetSoFar, initialOffset, indirect, fieldName)
+	if err != nil || hasCycle {
 		return err
 	}
 
@@ -100,14 +99,6 @@ func (p *Planner) createSelectors(prefix string, field reflect.StructField, pare
 	}
 
 	return p.addChildrenSelectors(prefix, field, offsetSoFar, initialOffset, indirect, cycleNode, newParent)
-}
-
-func (p *Planner) cycle(cycleDetector *CycleDetector, field reflect.StructField, parent *op.Selector) (*CycleDetector, *op.Selector) {
-	child, cycle := cycleDetector.Child(field.Type, parent)
-	if cycle {
-		return child, child.parentSelector
-	}
-	return child, nil
 }
 
 func (p *Planner) addChildrenSelectors(holderPrefix string, field reflect.StructField, offsetSoFar, initialOffset uintptr, indirect bool, detector *CycleDetector, parent *op.Selector) error {
@@ -141,7 +132,7 @@ func (p *Planner) addChildrenSelectors(holderPrefix string, field reflect.Struct
 	return nil
 }
 
-func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, offset uintptr, anonymousOffset uintptr, indirect bool, cycleSelector *op.Selector, name string) (*op.Selector, error) {
+func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField, parent *op.Selector, offset uintptr, anonymousOffset uintptr, indirect bool, name string) (*op.Selector, error) {
 	if field.Anonymous && field.Type.Kind() != reflect.Ptr {
 		return parent, nil
 	}
@@ -149,12 +140,7 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 	newField := xunsafe.NewField(field)
 	newField.Offset += anonymousOffset
 	var err error
-	var fieldSelector *op.Selector
-	if cycleSelector != nil {
-		fieldSelector = op.NewCycleSelector(prefix+name, newField, parent, indirect, offset, cycleSelector)
-	} else {
-		fieldSelector = op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
-	}
+	fieldSelector := op.SelectorWithField(prefix+name, newField, parent, indirect, offset)
 	fieldSelector.NodeID = p.nextNodeID()
 
 	if field.Anonymous {
@@ -170,7 +156,12 @@ func (p *Planner) indexSelectorIfNeeded(prefix string, field reflect.StructField
 
 func elemIfNeeded(rType reflect.Type) (reflect.Type, bool) {
 	wasPtr := false
+	seen := map[reflect.Type]bool{}
 	for rType.Kind() == reflect.Ptr || rType.Kind() == reflect.Slice || rType.Kind() == reflect.Map {
+		if seen[rType] {
+			break
+		}
+		seen[rType] = true
 		wasPtr = true
 		rType = rType.Elem()
 	}
@@ -218,23 +209,13 @@ func (p *Planner) selector(selector *expr.Select) (*op.Selector, error) {
 		return resultSelector, err
 	}
 
-	parentType := resultSelector.Type
-	selectorId := selector.ID
-
-	upstreamSelector := p.copyWithParent(resultSelector, resultSelector.Parent)
 	for call != nil {
-		parentType = deref(parentType)
-		resultSelector, call, err = p.matchSelector(call, resultSelector, selectorId, parentType)
+		resultSelector, call, err = p.matchSelector(call, resultSelector, resultSelector.ID, deref(resultSelector.Type))
 		if err != nil {
 			return nil, err
 		}
-
-		parentType = resultSelector.Type
-		selectorId = resultSelector.ID
-		upstreamSelector = p.copyWithParent(resultSelector, upstreamSelector)
 	}
-
-	return upstreamSelector, nil
+	return resultSelector, nil
 }
 
 func (p *Planner) matchFirstSelector(selector *expr.Select) (*op.Selector, ast.Expression, error) {
@@ -251,15 +232,7 @@ func (p *Planner) matchFirstSelector(selector *expr.Select) (*op.Selector, ast.E
 	return nil, nil, nil
 }
 
-func (p *Planner) copyWithParent(dest, parent *op.Selector) *op.Selector {
-	selCopy := *dest
-	selCopy.Parent = parent
-	return &selCopy
-}
-
 func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector, selectorId string, parentType reflect.Type) (*op.Selector, ast.Expression, error) {
-	var err error
-
 	switch actual := call.(type) {
 	case *expr.Call:
 		// Direct method on current selector (e.g., $foo.ToUpper())
@@ -297,46 +270,20 @@ func (p *Planner) matchSelector(call ast.Expression, resultSelector *op.Selector
 			}
 		}
 
-		// Resolve the field first, then apply any call or index chained to it.
-		if _, err = p.fieldByName(parentType, actual, actual.ID); err != nil {
-			return nil, nil, err
-		}
-
-		selectorId = selectorId + fieldSeparator + actual.ID
-		var found bool
-		resultSelector, found = p.selectors.ById(selectorId)
-		if !found {
-			return nil, nil, fmt.Errorf("not found selector for the %v", strings.ReplaceAll(selectorId, fieldSeparator, "."))
-		}
-
-		// Defer handling of calls or indexes to the next iteration with the updated selectorId.
-		return resultSelector, actual.X, nil
+		fieldSelector, err := p.selectField(resultSelector, parentType, actual.ID)
+		return fieldSelector, actual.X, err
 	}
 
 	return resultSelector, nil, nil
 }
 
-func (p *Planner) fieldByName(parentType reflect.Type, actual *expr.Select, selectorId string) (*xunsafe.Field, error) {
-	field := xunsafe.FieldByName(parentType, actual.ID)
-	if field != nil {
-		if Parse(field.Tag.Get(velty)).Omit {
-			return nil, fmt.Errorf("can't create selector for field %v", field.Name)
-		}
-		return field, nil
-	}
-
-	for i := 0; i < parentType.NumField(); i++ {
-		vTag := Parse(parentType.Field(i).Tag.Get(velty))
-		if vTag.nameEqual(actual.ID) {
-			return xunsafe.NewField(parentType.Field(i)), nil
-		}
-	}
-
-	return nil, fmt.Errorf("not found field %v at %v", strings.ReplaceAll(selectorId, fieldSeparator, "."), parentType.String())
-}
-
 func deref(rType reflect.Type) reflect.Type {
+	seen := map[reflect.Type]bool{}
 	for {
+		if seen[rType] {
+			return rType
+		}
+		seen[rType] = true
 		switch rType.Kind() {
 		case reflect.Ptr, reflect.Slice:
 			rType = rType.Elem()
@@ -419,21 +366,22 @@ func (p *Planner) newFuncSelector(selectorId string, methodName string, call *ex
 		return nil, err
 	}
 
-	accumulator := p.accumulator(aFunc.ResultType)
-	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
-	newSelector.NodeID = p.nextNodeID()
-	newSelector.Args = operands
-	newSelector.Type = aFunc.ResultType
-	if newSelector.Type == xreflect.InterfaceType {
+	resultType := aFunc.ResultType
+	if resultType == xreflect.InterfaceType {
 		actualType, err := p.Functions.TryDetectResultType(prev, methodName, call)
 		if err != nil {
 			return nil, err
 		}
-
 		if actualType != nil {
-			newSelector.Type = actualType
+			resultType = actualType
 		}
 	}
+	accumulator := p.accumulator(resultType)
+	newSelector := op.FunctionSelector(selectorId, accumulator.Field, aFunc, prev)
+	newSelector.NodeID = p.nextNodeID()
+	newSelector.Args = operands
+	newSelector.Type = resultType
+
 	if p.planListener != nil {
 		var recvType reflect.Type
 		if prev != nil {

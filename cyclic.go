@@ -5,92 +5,42 @@ import (
 	"reflect"
 )
 
-type (
-	CycleDetector struct {
-		rType          reflect.Type
-		allTypes       map[reflect.Type]*MultiCycleDetector
-		parent         *CycleDetector
-		parentSelector *op.Selector
-		name           string
-	}
+// CycleDetector tracks types on one registration ancestry, not across siblings.
+type CycleDetector struct {
+	rType  reflect.Type
+	parent *CycleDetector
+}
 
-	MultiCycleDetector struct {
-		index    map[reflect.Type]int
-		children []*CycleDetector
-	}
-)
+// MultiCycleDetector is retained for callers using Get directly.
+type MultiCycleDetector struct{}
 
 func NewCycleDetector(rType reflect.Type) *CycleDetector {
-	return newCycleDetector(nil, nil, rType, nil)
-}
-
-func newCycleDetector(parent *CycleDetector, state map[reflect.Type]*MultiCycleDetector, rType reflect.Type, parentSelector *op.Selector) *CycleDetector {
-	if state == nil {
-		state = map[reflect.Type]*MultiCycleDetector{}
-	}
-
 	rType, _ = elemIfNeeded(rType)
-	return &CycleDetector{
-		allTypes:       state,
-		parent:         parent,
-		rType:          rType,
-		parentSelector: parentSelector,
-		name:           rType.String(),
-	}
+	return &CycleDetector{rType: rType}
 }
 
-func (c *CycleDetector) Child(rType reflect.Type, parentSelector *op.Selector) (next *CycleDetector, hasCycle bool) {
-	cycle := c.getChildrenCycleHolder(rType)
-	return cycle.Get(c, rType, parentSelector)
+func (c *CycleDetector) Child(rType reflect.Type, _ *op.Selector) (*CycleDetector, bool) {
+	rType, _ = elemIfNeeded(rType)
+	for ancestor := c; ancestor != nil; ancestor = ancestor.parent {
+		if ancestor.rType == rType {
+			return ancestor, true
+		}
+	}
+	return &CycleDetector{rType: rType, parent: c}, false
 }
 
 func (d *MultiCycleDetector) Get(c *CycleDetector, rType reflect.Type, parentSelector *op.Selector) (*CycleDetector, bool) {
-	detector, parent := d.getOrCreate(c, rType, parentSelector)
-
-	return detector, parent != nil
-}
-
-func (d *MultiCycleDetector) getOrCreate(c *CycleDetector, rType reflect.Type, parentSelector *op.Selector) (current *CycleDetector, parent *CycleDetector) {
-	i, ok := d.index[rType]
-	if ok {
-		next := d.children[i]
-		if next.Has(next) {
-			return c, next
-		}
-
-		return next, nil
-	}
-
-	detector := newCycleDetector(c, c.allTypes, rType, parentSelector)
-	d.index[rType] = len(d.children)
-	d.children = append(d.children, detector)
-
-	return detector, nil
-}
-
-func (c *CycleDetector) getChildrenCycleHolder(rType reflect.Type) *MultiCycleDetector {
-	cycle, ok := c.allTypes[rType]
-	if ok {
-		return cycle
-	}
-
-	cycle = &MultiCycleDetector{
-		index: map[reflect.Type]int{},
-	}
-
-	c.allTypes[rType] = cycle
-	return cycle
+	return c.Child(rType, parentSelector)
 }
 
 func (c *CycleDetector) Has(parent *CycleDetector) bool {
-	curr := c
-	for curr != nil {
-		if curr.rType == parent.rType && curr.rType != nil {
+	if parent == nil {
+		return false
+	}
+	for ancestor := c; ancestor != nil; ancestor = ancestor.parent {
+		if ancestor.rType != nil && ancestor.rType == parent.rType {
 			return true
 		}
-
-		curr = curr.parent
 	}
-
 	return false
 }

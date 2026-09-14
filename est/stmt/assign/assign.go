@@ -162,7 +162,7 @@ func (a *assign) assignValue() est.Compute {
 			return func(state *est.State) unsafe.Pointer {
 				destPtr := a.x.Exec(state)
 				srcPtr := a.y.Exec(state)
-				*(*bool)(destPtr) = *(*bool)(destPtr)
+				*(*bool)(destPtr) = *(*bool)(srcPtr)
 				return srcPtr
 			}
 		} else {
@@ -170,7 +170,7 @@ func (a *assign) assignValue() est.Compute {
 				destPtr := a.x.Exec(state)
 				srcPtr := a.y.Exec(state)
 				if srcPtr != nil {
-					*(**bool)(destPtr) = *(**bool)(destPtr)
+					*(**bool)(destPtr) = *(**bool)(srcPtr)
 				}
 				return srcPtr
 			}

@@ -66,7 +66,7 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 					copy(args, parents[i].Args)
 					newArg := *args[0]
 					newArg.Comp = nil
-					if parents[i-1].Func != nil {
+					if parents[i-1].Func != nil || parents[i-1].Slice != nil || parents[i-1].Map != nil || parents[i-1].InterfaceExec != nil {
 						if newArg.Type != nil && newArg.Type.Kind() == reflect.Ptr && newArg.XType != nil {
 							newArg.Value = newArg.XType.Interface(xunsafe.RefPointer(ptr))
 						} else {
@@ -96,6 +96,11 @@ func Upstream(selector *Selector, derefLast bool, refLast bool) func(state *est.
 			}
 
 			if ptr == nil {
+				// A computed nil pointer can still be a valid method receiver.
+				// A field traversal through nil continues to yield a zero value.
+				if i+1 < parentLen && parents[i+1].Func != nil && parents[i].Type.Kind() == reflect.Ptr {
+					continue
+				}
 				return zeroValuePtr
 			}
 		}
