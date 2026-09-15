@@ -15,9 +15,13 @@ func parse(input []byte, spans *spanState) (*stmt.Block, error) {
 		return &stmt.Block{}, nil
 	}
 
+	return parseCursor(parsly.NewCursor("", input, 0), spans, false)
+}
+
+func parseCursor(cursor *parsly.Cursor, spans *spanState, single bool) (*stmt.Block, error) {
+	input := cursor.Input
 	builder := NewBuilder()
 	var tokenMatch *parsly.TokenMatch
-	cursor := parsly.NewCursor("", input, 0)
 outer:
 	for cursor.Pos < len(input) {
 		tokenMatch = cursor.MatchOne(SpecialSign)
@@ -64,6 +68,9 @@ outer:
 
 			statement, match, err := matchStatement(cursor, spans)
 			if err != nil {
+				if single && (match != 0 || builder.BufferSize() == 0) {
+					return nil, cursorErr(cursor, err)
+				}
 				rawValue := cursor.Input[lastPosition:cursor.Pos]
 				if errr := builder.PushStatement(appendToken, stmt.NewAppend(string(rawValue))); errr != nil {
 					return nil, cursorErr(cursor, errr)
@@ -73,6 +80,9 @@ outer:
 
 			if err = builder.PushStatement(match, statement); err != nil {
 				return nil, cursorErr(cursor, err)
+			}
+			if single && builder.BufferSize() == 0 {
+				return builder.Block(), nil
 			}
 		}
 	}
@@ -156,12 +166,12 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 	case ifToken, elseIfToken:
 		expressionCursor, err := matchExpressionBlock(cursor)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		ifStmt, err := matchIf(expressionCursor, spans)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 		return ifStmt, expressionCode, nil
 	case elseToken:
@@ -177,7 +187,7 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 	case setToken:
 		expressionCursor, err := matchExpressionBlock(cursor)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		assignStmt, err := matchAssign(expressionCursor, spans)
@@ -189,12 +199,12 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 	case forEachToken:
 		expressionCursor, err := matchExpressionBlock(cursor)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		forEachStmt, err := matchForEach(expressionCursor, spans)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		return forEachStmt, expressionCode, nil
@@ -202,12 +212,12 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 	case forToken:
 		expressionCursor, err := matchExpressionBlock(cursor)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		forStmt, err := matchFor(expressionCursor, spans)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		return forStmt, expressionCode, nil
@@ -218,12 +228,12 @@ func matchStatement(cursor *parsly.Cursor, spans *spanState) (ast.Statement, int
 	case evaluateToken:
 		evaluateCursor, err := matchExpressionBlock(cursor)
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 		_, operand, err := matchOperand(evaluateCursor, spans, String)
 
 		if err != nil {
-			return nil, 0, err
+			return nil, expressionCode, err
 		}
 
 		return &stmt.Evaluate{X: operand}, expressionCode, nil
